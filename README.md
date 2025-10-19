@@ -1,164 +1,297 @@
-# Xpend - Strategic Sourcing Platform
+# Xpend V2 - Strategic Sourcing Platform
 
-Una plataforma colaborativa para planificación de Strategic Sourcing y gestión de Spend, construida con Next.js, TypeScript, TailwindCSS y Supabase.
+**Versión:** 2.0.0  
+**Website:** [xpend.cl](https://xpend.cl)
 
-**Website**: [xpend.cl](https://xpend.cl)
+Una plataforma colaborativa de próxima generación para planificación de Strategic Sourcing y gestión de Spend, construida con Next.js 14, TypeScript, TailwindCSS y Supabase.
 
-## 🚀 Características
+---
 
-- **Multi-tenant**: Soporte para múltiples usuarios y empresas con roles y permisos
-- **Gestión de Proyectos**: Crear proyectos de sourcing con fases configurables, hitos y dependencias
-- **Repositorio de Licitaciones**: Sistema centralizado con historial y versionado de documentos
-- **Análisis de Spend**: Importar y analizar bases de gasto por categoría, proveedor y período
-- **Dashboard Interactivo**: Métricas y visualizaciones en tiempo real
-- **Chat por Proyecto**: Sistema de comentarios colaborativo
-- **Gestión de Archivos**: Almacenamiento seguro con Supabase Storage
+## 🎨 Identidad de Marca
 
-## 🛠️ Tecnologías
+### Colores Corporativos
+- **Petrol Blue** (`#2D3E3D`) - Color principal
+- **Turquoise** (`#2AD4D2`) - Acentos primarios
+- **Mint** (`#3BE7AE`) - Llamados a la acción
+- **Lime** (`#C6FF00`) - Highlights y énfasis
 
-- **Frontend**: Next.js 14, React 18, TypeScript
-- **Styling**: TailwindCSS, Lucide React Icons
-- **Backend**: Supabase (Auth, Database, Storage, Realtime)
-- **UI Components**: Radix UI, Custom Components
-- **Charts**: Recharts
-- **Forms**: React Hook Form, Zod validation
-- **File Processing**: PapaParse, XLSX
+### Logo
+Disponibles en `/public`:
+- `xpend-logo.png` / `xpend-logo.svg`
+- `xpend-logo-white.png` / `xpend-logo-white.svg`
 
-## 📋 Prerrequisitos
+---
 
-- Node.js 18+ 
-- npm o yarn
-- Cuenta de Supabase
+## ✨ Características Principales
 
-## 🚀 Instalación
+### 🔐 Multi-tenant & Autenticación
+- Soporte para múltiples empresas aisladas
+- Roles: Admin, Manager, Analyst, Viewer
+- Row Level Security (RLS) en todas las tablas
+- Autenticación con Supabase Auth
 
-1. **Clonar el repositorio**
-   ```bash
-   git clone <repository-url>
-   cd xpend
-   ```
+### 📊 Dashboard Interactivo
+- Métricas en tiempo real
+- 5 tipos de gráficos (Recharts)
+- Spend por categoría, proveedor y período
+- Próximos hitos y proyectos activos
 
-2. **Instalar dependencias**
-   ```bash
-   npm install
-   # o
-   yarn install
-   ```
+### 🏆 Gestión de Licitaciones
+- Estados: Planificado → Revisión → Publicada → Evaluación → Adjudicada → Contrato
+- Tipos: RFP, RFQ, RFI
+- Cálculo automático de ahorros (Baseline vs Adjudicado)
+- Gestión de documentos versionados
+- Asignación de departamentos y responsables
 
-3. **Configurar variables de entorno**
-   ```bash
-   cp env.example .env.local
-   ```
-   
-   Edita `.env.local` con tus credenciales de Supabase:
-   ```env
-   NEXT_PUBLIC_SUPABASE_URL=tu_supabase_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_supabase_anon_key
-   SUPABASE_SERVICE_ROLE_KEY=tu_supabase_service_role_key
-   NEXT_PUBLIC_APP_URL=http://localhost:3000
-   ```
+### 🏢 Gestión de Proveedores (⭐ Feature Destacado)
+- **Evaluación Administrativa** (3 criterios: Documentación, Financiera, Experiencia)
+- **Evaluación Técnica por Licitación** (Prevención riesgos, Propuesta técnica)
+- **Sistema de Semáforo Visual**:
+  - 🟢 Verde: >80 puntos (vigente)
+  - 🟡 Amarillo: 60-79 puntos (vigente)
+  - 🔴 Rojo: <60 puntos o expirada
+  - ⚪ Gris: Sin evaluación
+- Ponderación configurable por licitación
+- Gestión de NDA (upload y tracking)
+- Historial de participaciones
 
-4. **Configurar la base de datos**
-   - Crea un nuevo proyecto en [Supabase](https://supabase.com)
-   - Ejecuta el script SQL en `supabase-schema.sql` en el SQL Editor de Supabase
-   - Configura las políticas RLS según tus necesidades
-
-5. **Configurar Storage**
-   - En Supabase Dashboard, ve a Storage
-   - Crea buckets para:
-     - `project-files` (archivos de proyectos)
-     - `licitacion-documents` (documentos de licitaciones)
-     - `spend-data` (archivos de datos de gasto)
-
-6. **Ejecutar el proyecto**
-   ```bash
-   npm run dev
-   # o
-   yarn dev
-   ```
-
-7. **Abrir en el navegador**
-   ```
-   http://localhost:3000
-   ```
-
-## 📁 Estructura del Proyecto
-
-```
-src/
-├── app/                    # App Router de Next.js
-│   ├── auth/              # Páginas de autenticación
-│   ├── dashboard/         # Dashboard principal
-│   ├── projects/          # Gestión de proyectos
-│   ├── licitaciones/      # Repositorio de licitaciones
-│   ├── spend/             # Análisis de gastos
-│   └── settings/          # Configuración
-├── components/            # Componentes reutilizables
-│   ├── ui/               # Componentes base (Button, Card, etc.)
-│   ├── layout/           # Layout components (Sidebar, Topbar)
-│   ├── forms/            # Formularios
-│   └── charts/           # Componentes de gráficos
-├── lib/                  # Utilidades y configuración
-│   ├── supabase.ts       # Cliente de Supabase
-│   └── utils.ts          # Funciones utilitarias
-├── types/                # Definiciones de TypeScript
-└── hooks/                # Custom React hooks
-```
-
-## 🗄️ Esquema de Base de Datos
-
-### Tablas Principales
-
-- **companies**: Información de empresas
-- **users**: Usuarios del sistema con roles
-- **projects**: Proyectos de sourcing
-- **project_phases**: Fases de los proyectos
-- **project_milestones**: Hitos de los proyectos
-- **licitaciones**: Licitaciones y procesos de compra
-- **spend_data**: Datos de gastos
-- **spend_categories**: Categorías de gastos
-
-### Roles de Usuario
-
-- **admin**: Acceso completo al sistema
-- **manager**: Gestión de proyectos y licitaciones
-- **analyst**: Análisis de datos y reportes
-- **viewer**: Solo lectura
-
-## 🔐 Autenticación
-
-El sistema utiliza Supabase Auth con:
-- Registro e inicio de sesión
-- Autenticación multi-tenant
-- Roles y permisos por empresa
-- Row Level Security (RLS)
-
-## 📊 Funcionalidades
-
-### Dashboard
-- Métricas generales del sistema
-- Proyectos activos y su progreso
-- Próximos hitos
-- Análisis de gastos por categoría
-
-### Proyectos
-- Crear y gestionar proyectos de sourcing
+### 📁 Proyectos de Sourcing
 - Fases configurables con dependencias
 - Hitos y seguimiento de progreso
 - Sistema de comentarios colaborativo
 - Gestión de archivos adjuntos
 
-### Licitaciones
-- Repositorio central de licitaciones
-- Historial y versionado de documentos
-- Seguimiento de propuestas
-- Estados del proceso de licitación
-
-### Spend Analysis
+### 💰 Análisis de Spend
 - Importar datos desde CSV/XLSX
-- Análisis por categoría, proveedor y período
+- Análisis por categoría, proveedor, período
 - Visualizaciones interactivas
 - Exportación de reportes
+
+### 📈 Reportes
+- Generación de reportes configurables
+- Filtros avanzados
+- Exportación múltiples formatos
+
+---
+
+## 🛠️ Stack Tecnológico
+
+### Frontend
+- **Next.js 14.0.4** - App Router
+- **React 18** - UI Framework
+- **TypeScript 5** - Tipado estático
+- **TailwindCSS 3.3** - Styling
+- **Lucide React** - Iconografía
+
+### UI Components
+- **Radix UI** - Componentes accesibles primitivos
+- **Recharts** - Gráficos y visualizaciones
+- **React Hook Form** - Manejo de formularios
+- **Zod** - Validación de schemas
+- **React Dropzone** - Upload de archivos
+
+### Backend & Database
+- **Supabase**
+  - PostgreSQL Database
+  - Authentication
+  - Storage (documentos y archivos)
+  - Row Level Security
+  - Realtime subscriptions
+
+### Utilidades
+- **PapaParse** - Parsing de CSV
+- **XLSX** - Manejo de Excel
+- **date-fns** - Manejo de fechas
+- **clsx + tailwind-merge** - Gestión de clases CSS
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+xpend-v2/
+├── database/               # Scripts SQL organizados
+│   ├── schemas/           # Schemas principales
+│   │   ├── supabase-schema.sql
+│   │   ├── suppliers-schema.sql
+│   │   ├── reports-schema.sql
+│   │   └── setup-*.sql
+│   ├── migrations/        # Migraciones de datos
+│   │   ├── migracion-licitaciones-supabase.sql
+│   │   └── verificar-migracion.sql
+│   └── seeds/            # Datos de prueba
+│       └── seed-departments.sql
+│
+├── docs/                  # Documentación técnica
+│   ├── CONFIGURAR-SUPABASE.md
+│   ├── CONFIGURAR-REPORTES.md
+│   ├── MIGRACION-LICITACIONES.md
+│   └── SETUP-REPORTS.md
+│
+├── public/               # Archivos estáticos
+│   └── xpend-logo*.{png,svg}
+│
+├── src/
+│   ├── app/             # Next.js App Router
+│   │   ├── auth/       # Autenticación
+│   │   ├── dashboard/  # Dashboard principal
+│   │   ├── licitaciones/  # Gestión de licitaciones
+│   │   ├── suppliers/  # Gestión de proveedores
+│   │   ├── projects/   # Proyectos de sourcing
+│   │   ├── spend/      # Análisis de gastos
+│   │   ├── reports/    # Reportes
+│   │   ├── users/      # Gestión de usuarios
+│   │   ├── settings/   # Configuración
+│   │   ├── login/      # Login page
+│   │   ├── signup/     # Registro
+│   │   └── home/       # Landing page
+│   │
+│   ├── components/
+│   │   ├── auth/       # Auth components
+│   │   ├── layout/     # Layout (Sidebar, Topbar)
+│   │   └── ui/         # UI components base
+│   │
+│   ├── contexts/       # React Contexts
+│   ├── hooks/          # Custom hooks
+│   ├── lib/            # Utilidades y configuración
+│   └── types/          # TypeScript types
+│
+├── .env.local          # Variables de entorno (no en git)
+├── package.json
+├── tsconfig.json
+├── tailwind.config.ts
+└── README.md
+```
+
+---
+
+## 🚀 Instalación y Setup
+
+### Prerrequisitos
+- Node.js 18+
+- npm o yarn
+- Cuenta de Supabase
+
+### 1. Clonar e instalar
+
+```bash
+git clone <repository-url>
+cd xpend-v2
+npm install
+```
+
+### 2. Configurar variables de entorno
+
+Crea `.env.local` en la raíz:
+
+```env
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=tu_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
+
+# App Configuration
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+### 3. Configurar Supabase
+
+1. Crea un proyecto en [Supabase](https://supabase.com)
+2. Ejecuta los schemas en orden:
+   ```sql
+   -- En SQL Editor de Supabase:
+   database/schemas/supabase-schema.sql
+   database/schemas/suppliers-schema.sql
+   database/schemas/reports-schema.sql
+   ```
+3. Crea los buckets de Storage:
+   - `project-files`
+   - `licitacion-documents`
+   - `spend-data`
+   - `supplier-documents`
+
+4. (Opcional) Carga datos de prueba:
+   ```sql
+   database/seeds/seed-departments.sql
+   ```
+
+### 4. Ejecutar el proyecto
+
+```bash
+npm run dev
+```
+
+Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
+
+---
+
+## 📖 Documentación
+
+Toda la documentación técnica está en la carpeta `/docs`:
+
+- **[CONFIGURAR-SUPABASE.md](docs/CONFIGURAR-SUPABASE.md)** - Setup completo de Supabase
+- **[CONFIGURAR-REPORTES.md](docs/CONFIGURAR-REPORTES.md)** - Configuración del módulo de reportes
+- **[MIGRACION-LICITACIONES.md](docs/MIGRACION-LICITACIONES.md)** - Guía de migración de licitaciones
+- **[SETUP-REPORTS.md](docs/SETUP-REPORTS.md)** - Setup del sistema de reportes
+
+---
+
+## 🗄️ Base de Datos
+
+### Tablas Principales
+
+#### Core
+- `companies` - Empresas (multi-tenant)
+- `profiles` - Usuarios con roles
+- `departments` - Departamentos por empresa
+
+#### Licitaciones
+- `licitaciones` - Licitaciones y procesos de compra
+- `licitacion_documents` - Documentos versionados
+- `licitacion_suppliers` - Relación licitación-proveedor
+- `licitacion_weightings` - Ponderaciones admin/técnica
+
+#### Proveedores
+- `suppliers` - Proveedores
+- `administrative_evaluations` - Evaluaciones administrativas
+- `technical_evaluations` - Evaluaciones técnicas por licitación
+
+#### Proyectos
+- `projects` - Proyectos de sourcing
+- `project_phases` - Fases de proyectos
+- `project_milestones` - Hitos
+- `project_files` - Archivos adjuntos
+- `project_comments` - Comentarios
+
+#### Spend
+- `spend_data` - Datos de gastos
+- `spend_categories` - Categorías de gastos
+
+---
+
+## 🎯 Características Destacadas
+
+### Modo Dual: Mock / Funcional
+El sistema incluye un **VersionContext** que permite:
+- **Modo Mock**: Datos de demostración sin Supabase
+- **Modo Funcional**: Conexión con Supabase real
+- Detección automática de configuración
+
+### Cálculo Automático de Ahorros
+```
+Ahorro = Baseline - Monto Adjudicado
+% Ahorro = (Ahorro / Baseline) × 100
+```
+
+### Sistema de Evaluación de Proveedores
+- Evaluación administrativa (3 criterios, 0-100 pts c/u)
+- Evaluación técnica por licitación (2 criterios)
+- Ponderación configurable (ej: 60% admin, 40% técnica)
+- Cálculo automático de score final ponderado
+- Sistema de semáforo visual intuitivo
+- Control de vigencia de evaluaciones
+
+---
 
 ## 🚀 Despliegue
 
@@ -170,35 +303,48 @@ El sistema utiliza Supabase Auth con:
 
 ### Otras plataformas
 
-El proyecto es compatible con cualquier plataforma que soporte Next.js:
+Compatible con:
 - Netlify
-- Railway
+- Railway  
 - DigitalOcean App Platform
+- Cualquier plataforma con soporte Next.js
+
+---
 
 ## 🤝 Contribución
 
 1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+2. Crea una rama (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add AmazingFeature'`)
 4. Push a la rama (`git push origin feature/AmazingFeature`)
 5. Abre un Pull Request
 
+---
+
 ## 📝 Licencia
 
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+Este proyecto está bajo la Licencia MIT.
+
+---
 
 ## 📞 Soporte
 
-Para soporte técnico o preguntas:
-- Email: soporte@xpend.cl
-- Website: [xpend.cl](https://xpend.cl)
+- **Website**: [xpend.cl](https://xpend.cl)
+- **Email**: soporte@xpend.cl
 
-## 🗺️ Roadmap
+---
+
+## 🗺️ Roadmap V2
 
 - [ ] Integración con APIs de proveedores
-- [ ] Notificaciones en tiempo real
+- [ ] Notificaciones en tiempo real (Supabase Realtime)
 - [ ] Módulo de contratos
-- [ ] Análisis predictivo
-- [ ] Mobile app
-- [ ] Integración con ERPs
+- [ ] Análisis predictivo con IA
+- [ ] Mobile app (React Native)
+- [ ] Integración con ERPs (SAP, Oracle)
+- [ ] Marketplace de proveedores
+- [ ] Workflow de aprobaciones configurable
 
+---
+
+**Construido con ❤️ para equipos de Strategic Sourcing**
