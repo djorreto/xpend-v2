@@ -1,0 +1,31 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+.next
+out
+build
+dist
+
+# Environment
+.env
+.env.*
+
+# Database
+database/
+
+# Testing
+coverage
+
+# Misc
+.DS_Store
+*.pem
+*.log
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+

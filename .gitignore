@@ -36,11 +36,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# IDE
-.vscode/
+# IDE (excluir settings compartidos)
 .idea/
 *.swp
 *.swo
+
+# VSCode - Solo configuración personal, NO la compartida del equipo
+# .vscode/ está intencionalmente NO ignorado para compartir settings
 
 # OS
 Thumbs.db

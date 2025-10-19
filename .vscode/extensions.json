@@ -1,0 +1,25 @@
+{
+  "recommendations": [
+    // Esenciales
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+
+    // TypeScript
+    "usernamehw.errorlens",
+    "yoavbls.pretty-ts-errors",
+
+    // Git
+    "eamodio.gitlens",
+
+    // Utilidades
+    "christian-kohler.path-intellisense",
+    "formulahendry.auto-rename-tag",
+    "naumovs.color-highlight",
+
+    // Next.js y React
+    "dsznajder.es7-react-js-snippets"
+  ],
+  "unwantedRecommendations": []
+}
+
