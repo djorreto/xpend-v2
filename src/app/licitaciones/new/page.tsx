@@ -274,9 +274,9 @@ export default function NewLicitacionPage() {
       if (formData.sourcing_plan_id && formData.sourcing_plan_id !== 'none') {
         await supabase
           .from('sourcing_plans')
-          .update({ 
+          .update({
             licitacion_id: data.id,
-            status: 'in_progress' 
+            status: 'in_progress'
           })
           .eq('id', formData.sourcing_plan_id)
       }

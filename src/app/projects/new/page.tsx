@@ -143,9 +143,9 @@ export default function NewProjectPage() {
       if (sourcingPlanId && sourcingPlanId !== 'none') {
         await supabase
           .from('sourcing_plans')
-          .update({ 
+          .update({
             project_id: data.id,
-            status: 'in_progress' 
+            status: 'in_progress'
           })
           .eq('id', sourcingPlanId)
       }

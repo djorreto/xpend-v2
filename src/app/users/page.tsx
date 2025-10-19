@@ -22,6 +22,8 @@ import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
+import { UserEditModal } from '@/components/forms/user-edit-modal'
+import { UserInviteModal } from '@/components/forms/user-invite-modal'
 
 interface UserProfile {
   id: string
@@ -57,6 +59,9 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [inviteModalOpen, setInviteModalOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
   const { addToast } = useToast()
 
   useEffect(() => {
@@ -156,30 +161,17 @@ export default function UsersPage() {
     }
   }
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', userId)
+  const handleEditUser = (user: UserProfile) => {
+    setSelectedUser(user)
+    setEditModalOpen(true)
+  }
 
-      if (error) throw error
+  const handleUserUpdated = (updatedUser: UserProfile) => {
+    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u))
+  }
 
-      setUsers(prev => prev.map(u => 
-        u.id === userId ? { ...u, role: newRole } : u
-      ))
-      addToast({
-        type: 'success',
-        title: 'Rol actualizado',
-        message: 'El rol del usuario ha sido actualizado'
-      })
-    } catch (err) {
-      addToast({
-        type: 'error',
-        title: 'Error',
-        message: 'No se pudo actualizar el rol'
-      })
-    }
+  const handleUserCreated = (newUser: UserProfile) => {
+    setUsers(prev => [newUser, ...prev])
   }
 
   const filteredUsers = users.filter(user =>
@@ -218,7 +210,7 @@ export default function UsersPage() {
               Gestiona los usuarios de tu empresa
             </p>
           </div>
-          <Button>
+          <Button onClick={() => setInviteModalOpen(true)}>
             <UserPlus className="mr-2 h-4 w-4" />
             Invitar Usuario
           </Button>
@@ -292,13 +284,10 @@ export default function UsersPage() {
                     variant="outline"
                     size="sm"
                     className="flex-1"
-                    onClick={() => handleRoleChange(userProfile.id, 
-                      userProfile.role === 'admin' ? 'manager' : 
-                      userProfile.role === 'manager' ? 'analyst' :
-                      userProfile.role === 'analyst' ? 'viewer' : 'admin'
-                    )}
+                    onClick={() => handleEditUser(userProfile)}
                   >
                     <Edit className="h-4 w-4" />
+                    Editar
                   </Button>
                   <Button
                     variant="outline"
@@ -322,7 +311,7 @@ export default function UsersPage() {
               <p className="text-muted-foreground text-center mb-4">
                 Invita usuarios a tu empresa para comenzar a colaborar
               </p>
-              <Button>
+              <Button onClick={() => setInviteModalOpen(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Invitar Usuario
               </Button>
@@ -342,6 +331,24 @@ export default function UsersPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Modals */}
+        <UserEditModal
+          isOpen={editModalOpen}
+          onClose={() => {
+            setEditModalOpen(false)
+            setSelectedUser(null)
+          }}
+          user={selectedUser}
+          onSave={handleUserUpdated}
+        />
+
+        <UserInviteModal
+          isOpen={inviteModalOpen}
+          onClose={() => setInviteModalOpen(false)}
+          companyId={company?.id}
+          onUserCreated={handleUserCreated}
+        />
       </div>
     </MainLayout>
   )

@@ -26,6 +26,7 @@ import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
+import { PermissionsMatrix } from '@/components/forms/permissions-matrix'
 
 interface CompanySettings {
   name: string
@@ -749,6 +750,11 @@ export default function SettingsPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Permissions Matrix - Solo visible para admins */}
+        {user?.role === 'admin' && (
+          <PermissionsMatrix companyId={company?.id} />
+        )}
       </div>
     </MainLayout>
   )
