@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { 
-  FolderOpen, 
-  Gavel, 
-  TrendingUp, 
+import {
+  FolderOpen,
+  Gavel,
+  TrendingUp,
   DollarSign,
   Calendar,
   Target,
@@ -22,12 +22,12 @@ import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
 import { useVersion } from '@/contexts/version-context'
 import { mockDashboardData, mockChartData } from '@/lib/mock-data'
-import { 
-  SpendByCategoryChart, 
-  SpendDistributionChart, 
-  MonthlyTrendChart, 
-  ProjectEvolutionChart, 
-  SavingsByProjectChart 
+import {
+  SpendByCategoryChart,
+  SpendDistributionChart,
+  MonthlyTrendChart,
+  ProjectEvolutionChart,
+  SavingsByProjectChart
 } from '@/components/ui/charts'
 
 interface DashboardMetrics {
@@ -85,7 +85,7 @@ export default function DashboardPage() {
       const budget = project.budget || 0
       const spent = project.spent || 0
       const savings = Math.max(0, budget - spent) // Ahorro = presupuesto - gastado
-      
+
       return {
         project: project.name,
         ahorro: savings,
@@ -101,7 +101,7 @@ export default function DashboardPage() {
 
       // Si Supabase no está configurado, usar modo mockup
       const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      
+
       if (isMockup || !isSupabaseConfigured) {
         // Use mock data
         setUser({
@@ -114,7 +114,7 @@ export default function DashboardPage() {
           name: 'Perico los Palotes S.A.',
           industry: 'Tecnología'
         })
-        
+
         // Transform mock data to match interface
         const mockMetrics: DashboardMetrics = {
           totalProjects: mockDashboardData.projects.total,
@@ -211,7 +211,7 @@ export default function DashboardPage() {
       if (licitacionesError) throw licitacionesError
 
       const totalLicitaciones = licitaciones?.length || 0
-      const activeLicitaciones = licitaciones?.filter(l => 
+      const activeLicitaciones = licitaciones?.filter(l =>
         ['published', 'in_progress', 'evaluation'].includes(l.status)
       ).length || 0
 
@@ -334,7 +334,7 @@ export default function DashboardPage() {
   if (error) {
     return (
       <MainLayout user={user} companyName={company?.name || 'SpendPlan.cl'}>
-        <ErrorMessage 
+        <ErrorMessage
           title="Error al cargar el dashboard"
           message={error}
           onRetry={loadDashboardData}
@@ -346,7 +346,7 @@ export default function DashboardPage() {
   if (!metrics) {
     return (
       <MainLayout user={user} companyName={company?.name || 'SpendPlan.cl'}>
-        <ErrorMessage 
+        <ErrorMessage
           title="Sin datos"
           message="No se encontraron datos para mostrar"
         />
@@ -368,7 +368,7 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Proyectos Activos - Turquoise */}
           <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader 
+            <CardHeader
               className="flex justify-between pb-2"
               style={{ background: 'linear-gradient(to right, rgba(42, 212, 210, 0.15), rgba(42, 212, 210, 0.25))' }}
             >
@@ -387,7 +387,7 @@ export default function DashboardPage() {
 
           {/* Licitaciones Activas - Mint */}
           <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader 
+            <CardHeader
               className="flex justify-between pb-2"
               style={{ background: 'linear-gradient(to right, rgba(59, 231, 174, 0.15), rgba(59, 231, 174, 0.25))' }}
             >
@@ -406,7 +406,7 @@ export default function DashboardPage() {
 
           {/* Spend Total - Petrol Blue */}
           <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader 
+            <CardHeader
               className="flex justify-between pb-2"
               style={{ background: 'linear-gradient(to right, rgba(45, 62, 61, 0.1), rgba(45, 62, 61, 0.2))' }}
             >
@@ -425,7 +425,7 @@ export default function DashboardPage() {
 
           {/* Eficiencia */}
           <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader 
+            <CardHeader
               className="flex justify-between pb-2"
               style={{ background: 'linear-gradient(to right, rgba(45, 62, 61, 0.1), rgba(45, 62, 61, 0.2))' }}
             >
@@ -457,8 +457,8 @@ export default function DashboardPage() {
                     <CardDescription>Cumplimiento del plan anual de Strategic Sourcing</CardDescription>
                   </div>
                 </div>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => router.push('/sourcing-plan')}
                   className="flex items-center gap-2"
                 >
@@ -550,14 +550,14 @@ export default function DashboardPage() {
         {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Gráfico de gastos por categoría */}
-          <SpendByCategoryChart 
+          <SpendByCategoryChart
             data={metrics.spendByCategory}
             title="Gastos por Categoría"
             description="Distribución de gastos por categoría en el último período"
           />
 
           {/* Gráfico de distribución de gastos */}
-          <SpendDistributionChart 
+          <SpendDistributionChart
             data={metrics.spendByCategory}
             title="Distribución de Gastos"
             description="Porcentaje de gastos por categoría"
@@ -567,14 +567,14 @@ export default function DashboardPage() {
         {/* Gráficos de tendencias */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Tendencia mensual */}
-          <MonthlyTrendChart 
+          <MonthlyTrendChart
             data={isMockup ? mockChartData.monthlyTrend : []}
             title="Tendencia Mensual"
             description="Evolución de gastos y ahorros por mes"
           />
 
           {/* Evolución de proyectos */}
-          <ProjectEvolutionChart 
+          <ProjectEvolutionChart
             data={isMockup ? mockChartData.projectEvolution : []}
             title="Evolución de Proyectos"
             description="Cantidad de proyectos por estado a lo largo del tiempo"
@@ -584,14 +584,14 @@ export default function DashboardPage() {
         {/* Gráfico de ahorros por proyecto */}
         <div className="grid grid-cols-1 gap-6">
           {(() => {
-            const savingsData = isMockup 
-              ? mockChartData.savingsByProject 
-              : generateSavingsData(metrics.recentProjects).length > 0 
-                ? generateSavingsData(metrics.recentProjects) 
+            const savingsData = isMockup
+              ? mockChartData.savingsByProject
+              : generateSavingsData(metrics.recentProjects).length > 0
+                ? generateSavingsData(metrics.recentProjects)
                 : mockChartData.savingsByProject
-            
+
             return (
-              <SavingsByProjectChart 
+              <SavingsByProjectChart
                 data={savingsData}
                 title="Ahorros por Proyecto"
                 description="Comparación entre presupuesto asignado y ahorros generados"

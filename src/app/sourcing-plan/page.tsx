@@ -262,12 +262,82 @@ export default function SourcingPlanPage() {
   }
 
   const handleExportPlan = () => {
-    // Función para exportar a Excel/CSV
-    addToast({
-      type: 'info',
-      title: 'Próximamente',
-      message: 'Función de exportación en desarrollo'
-    })
+    try {
+      // Preparar datos para CSV
+      const csvHeaders = [
+        'Año',
+        'Trimestre',
+        'Título',
+        'Descripción',
+        'Categoría',
+        'Tipo',
+        'Estado',
+        'Spot',
+        'Spend Estimado',
+        'Spend Real',
+        'Moneda',
+        'Ahorro Proyectado %',
+        'Ahorro Proyectado Monto',
+        'Ahorro Real %',
+        'Ahorro Real Monto',
+        'Cumplimiento %',
+        'Notas'
+      ].join(',')
+
+      const csvRows = filteredPlans.map(plan => {
+        const achievementRate = plan.projected_savings_amount && plan.actual_savings_amount
+          ? ((plan.actual_savings_amount / plan.projected_savings_amount) * 100).toFixed(1)
+          : ''
+
+        return [
+          plan.plan_year,
+          plan.quarter,
+          `"${plan.title.replace(/"/g, '""')}"`,
+          `"${(plan.description || '').replace(/"/g, '""')}"`,
+          `"${(plan.category || '').replace(/"/g, '""')}"`,
+          typeLabels[plan.initiative_type],
+          statusLabels[plan.status],
+          plan.is_spot ? 'Sí' : 'No',
+          plan.estimated_spend || '',
+          plan.actual_spend || '',
+          plan.currency,
+          plan.projected_savings_percentage || '',
+          plan.projected_savings_amount || '',
+          plan.actual_savings_percentage || '',
+          plan.actual_savings_amount || '',
+          achievementRate,
+          `"${(plan.notes || '').replace(/"/g, '""')}"`
+        ].join(',')
+      }).join('\n')
+
+      const csvContent = `\uFEFF${csvHeaders}\n${csvRows}`
+      
+      // Crear blob y descargar
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      
+      const fileName = `sourcing-plan-${filters.plan_year || 'all'}-${new Date().toISOString().split('T')[0]}.csv`
+      link.setAttribute('href', url)
+      link.setAttribute('download', fileName)
+      link.style.visibility = 'hidden'
+      
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      addToast({
+        type: 'success',
+        title: 'Exportación exitosa',
+        message: `Se exportaron ${filteredPlans.length} iniciativas`
+      })
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'Error al exportar',
+        message: 'No se pudo generar el archivo CSV'
+      })
+    }
   }
 
   if (loading) {
