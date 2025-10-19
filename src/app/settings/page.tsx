@@ -9,11 +9,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  Settings, 
-  Building2, 
-  User, 
-  Bell, 
+import {
+  Settings,
+  Building2,
+  User,
+  Bell,
   Shield,
   Save,
   Loader2,
@@ -403,8 +403,8 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="currency">Moneda por Defecto</Label>
-                <Select 
-                  value={companySettings.settings?.currency || 'USD'} 
+                <Select
+                  value={companySettings.settings?.currency || 'USD'}
                   onValueChange={(value) => setCompanySettings(prev => ({
                     ...prev,
                     settings: { ...prev.settings, currency: value }
@@ -437,8 +437,8 @@ export default function SettingsPage() {
 
             <div className="space-y-2">
               <Label htmlFor="timezone">Zona Horaria</Label>
-              <Select 
-                value={companySettings.settings?.timezone || 'UTC'} 
+              <Select
+                value={companySettings.settings?.timezone || 'UTC'}
                 onValueChange={(value) => setCompanySettings(prev => ({
                   ...prev,
                   settings: { ...prev.settings, timezone: value }
@@ -665,8 +665,8 @@ export default function SettingsPage() {
 
             <div className="pt-4 border-t">
               <p className="text-sm text-muted-foreground">
-                Las gerencias te permiten organizar las licitaciones por departamento. 
-                Las gerencias inactivas no aparecerán al crear nuevas licitaciones pero se 
+                Las gerencias te permiten organizar las licitaciones por departamento.
+                Las gerencias inactivas no aparecerán al crear nuevas licitaciones pero se
                 mantendrán asociadas a las licitaciones existentes.
               </p>
             </div>

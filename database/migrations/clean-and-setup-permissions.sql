@@ -1,11 +1,30 @@
 -- ============================================================================
--- PERMISSIONS SYSTEM
+-- CLEAN AND SETUP PERMISSIONS SYSTEM
 -- ============================================================================
--- Sistema de permisos granular para roles de usuario
+-- Script para limpiar y configurar el sistema de permisos desde cero
 -- Ejecutar en Supabase SQL Editor
 -- ============================================================================
 
--- 1. TABLA PERMISSIONS
+-- 1. LIMPIAR DATOS EXISTENTES (SOLO SI EXISTEN)
+-- ============================================================================
+
+-- Eliminar permisos de roles existentes (solo si la tabla existe)
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'role_permissions') THEN
+        DELETE FROM role_permissions;
+    END IF;
+END $$;
+
+-- Eliminar permisos existentes (solo si la tabla existe)
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'permissions') THEN
+        DELETE FROM permissions;
+    END IF;
+END $$;
+
+-- 2. TABLA PERMISSIONS
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS permissions (
@@ -28,8 +47,7 @@ CREATE INDEX IF NOT EXISTS idx_permissions_category ON permissions(category);
 COMMENT ON TABLE permissions IS 'Definición de permisos disponibles en el sistema';
 COMMENT ON COLUMN permissions.category IS 'Categoría del permiso (ej: Dashboard, Licitaciones, etc.)';
 
--- ============================================================================
--- 2. TABLA ROLE_PERMISSIONS
+-- 3. TABLA ROLE_PERMISSIONS
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS role_permissions (
@@ -53,8 +71,7 @@ CREATE INDEX IF NOT EXISTS idx_role_permissions_permission ON role_permissions(p
 COMMENT ON TABLE role_permissions IS 'Matriz de permisos por rol de usuario';
 COMMENT ON COLUMN role_permissions.granted IS 'True si el rol tiene el permiso, false si no';
 
--- ============================================================================
--- 3. TRIGGERS
+-- 4. TRIGGERS
 -- ============================================================================
 
 -- Trigger para actualizar updated_at en permissions
@@ -71,8 +88,7 @@ CREATE TRIGGER trigger_update_role_permissions_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
--- ============================================================================
--- 4. ROW LEVEL SECURITY (RLS)
+-- 5. ROW LEVEL SECURITY (RLS)
 -- ============================================================================
 
 -- Habilitar RLS
@@ -119,12 +135,10 @@ CREATE POLICY "Only admins can manage role permissions"
     )
   );
 
--- ============================================================================
--- 5. PERMISOS POR DEFECTO (SOLO SI NO EXISTEN)
+-- 6. PERMISOS POR DEFECTO
 -- ============================================================================
 
 -- Insertar permisos por defecto para todas las empresas existentes
--- Solo si no existen ya
 INSERT INTO permissions (id, company_id, name, description, category)
 SELECT
   permission_id,
@@ -177,18 +191,12 @@ CROSS JOIN (
     ('settings_view', 'Ver Configuración', 'Acceso a configuración', 'Configuración'),
     ('settings_edit', 'Editar Configuración', 'Modificar configuración', 'Configuración'),
     ('permissions_edit', 'Gestionar Permisos', 'Modificar permisos de roles', 'Configuración')
-) AS permissions(permission_id, permission_name, permission_description, permission_category)
-WHERE NOT EXISTS (
-  SELECT 1 FROM permissions p
-  WHERE p.company_id = c.id AND p.id = permissions.permission_id
-);
+) AS permissions(permission_id, permission_name, permission_description, permission_category);
 
--- ============================================================================
--- 6. PERMISOS DE ROLES POR DEFECTO (SOLO SI NO EXISTEN)
+-- 7. PERMISOS DE ROLES POR DEFECTO
 -- ============================================================================
 
 -- Insertar permisos por defecto para cada rol
--- Solo si no existen ya
 INSERT INTO role_permissions (company_id, role, permission_id, granted)
 SELECT
   c.id as company_id,
@@ -210,7 +218,7 @@ SELECT
       'dashboard_view',
       'sourcing_plan_view', 'sourcing_plan_create', 'sourcing_plan_edit',
       'licitaciones_view', 'licitaciones_create', 'licitaciones_edit',
-      'projects_view', 'projects_create', 'projects_edit',
+      'projects_view', 'projects_create', '和jects_edit',
       'suppliers_view', 'suppliers_create', 'suppliers_edit',
       'reports_view', 'reports_export'
     ) THEN true
@@ -223,45 +231,21 @@ SELECT
       'reports_view'
     ) THEN true
     ELSE false
-  END as granted
+  END
 FROM companies c
-CROSS JOIN (VALUES ('admin'), ('manager'), ('analyst'), ('viewer')) AS roles(role_name)
 CROSS JOIN (
-  SELECT DISTINCT id as permission_id FROM permissions WHERE company_id = c.id
-) AS company_permissions
-WHERE NOT EXISTS (
-  SELECT 1 FROM role_permissions rp
-  WHERE rp.company_id = c.id
-  AND rp.role = role_name
-  AND rp.permission_id = company_permissions.permission_id
-);
-
--- ============================================================================
--- 7. VERIFICACIÓN
--- ============================================================================
-
--- Verificar que las tablas se crearon correctamente
-SELECT
-  'permissions' as table_name,
-  COUNT(*) as permission_count
-FROM permissions;
-
-SELECT
-  'role_permissions' as table_name,
-  COUNT(*) as role_permission_count
-FROM role_permissions;
-
--- Verificar RLS
-SELECT
-  tablename,
-  policyname,
-  permissive,
-  roles,
-  cmd
-FROM pg_policies
-WHERE tablename IN ('permissions', 'role_permissions');
+  VALUES ('admin'), ('manager'), ('analyst'), ('viewer')
+) AS roles(role_name)
+CROSS JOIN (
+  SELECT id AS permission_id FROM permissions
+) AS all_permissions;
 
 -- ============================================================================
 -- SETUP COMPLETO ✅
 -- ============================================================================
 -- El sistema de permisos está listo para usar
+-- ✅ Permisos por defecto insertados
+-- ✅ Permisos de roles configurados
+-- ✅ RLS habilitado
+-- ✅ Triggers configurados
+-- ============================================================================

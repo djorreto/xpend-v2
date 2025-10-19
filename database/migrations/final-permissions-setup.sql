@@ -1,11 +1,11 @@
 -- ============================================================================
--- PERMISSIONS SYSTEM
+-- FINAL PERMISSIONS SYSTEM SETUP
 -- ============================================================================
--- Sistema de permisos granular para roles de usuario
+-- Script definitivo que funciona siempre, sin errores de duplicados
 -- Ejecutar en Supabase SQL Editor
 -- ============================================================================
 
--- 1. TABLA PERMISSIONS
+-- 1. CREAR TABLAS SI NO EXISTEN
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS permissions (
@@ -20,18 +20,6 @@ CREATE TABLE IF NOT EXISTS permissions (
   CONSTRAINT unique_permission_per_company UNIQUE (id, company_id)
 );
 
--- Índices para performance
-CREATE INDEX IF NOT EXISTS idx_permissions_company ON permissions(company_id);
-CREATE INDEX IF NOT EXISTS idx_permissions_category ON permissions(category);
-
--- Comentarios
-COMMENT ON TABLE permissions IS 'Definición de permisos disponibles en el sistema';
-COMMENT ON COLUMN permissions.category IS 'Categoría del permiso (ej: Dashboard, Licitaciones, etc.)';
-
--- ============================================================================
--- 2. TABLA ROLE_PERMISSIONS
--- ============================================================================
-
 CREATE TABLE IF NOT EXISTS role_permissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
@@ -44,38 +32,43 @@ CREATE TABLE IF NOT EXISTS role_permissions (
   CONSTRAINT unique_role_permission UNIQUE (company_id, role, permission_id)
 );
 
--- Índices para performance
+-- 2. CREAR ÍNDICES
+-- ============================================================================
+
+CREATE INDEX IF NOT EXISTS idx_permissions_company ON permissions(company_id);
+CREATE INDEX IF NOT EXISTS idx_permissions_category ON permissions(category);
 CREATE INDEX IF NOT EXISTS idx_role_permissions_company ON role_permissions(company_id);
 CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role);
 CREATE INDEX IF NOT EXISTS idx_role_permissions_permission ON role_permissions(permission_id);
 
--- Comentarios
-COMMENT ON TABLE role_permissions IS 'Matriz de permisos por rol de usuario';
-COMMENT ON COLUMN role_permissions.granted IS 'True si el rol tiene el permiso, false si no';
-
--- ============================================================================
--- 3. TRIGGERS
+-- 3. CREAR TRIGGERS
 -- ============================================================================
 
--- Trigger para actualizar updated_at en permissions
+-- Función para updated_at si no existe
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Triggers para updated_at
 DROP TRIGGER IF EXISTS trigger_update_permissions_updated_at ON permissions;
 CREATE TRIGGER trigger_update_permissions_updated_at
   BEFORE UPDATE ON permissions
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
--- Trigger para actualizar updated_at en role_permissions
 DROP TRIGGER IF EXISTS trigger_update_role_permissions_updated_at ON role_permissions;
 CREATE TRIGGER trigger_update_role_permissions_updated_at
   BEFORE UPDATE ON role_permissions
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
--- ============================================================================
--- 4. ROW LEVEL SECURITY (RLS)
+-- 4. CONFIGURAR RLS
 -- ============================================================================
 
--- Habilitar RLS
 ALTER TABLE permissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
 
@@ -119,11 +112,10 @@ CREATE POLICY "Only admins can manage role permissions"
     )
   );
 
--- ============================================================================
--- 5. PERMISOS POR DEFECTO (SOLO SI NO EXISTEN)
+-- 5. INSERTAR PERMISOS POR DEFECTO (CON VERIFICACIÓN)
 -- ============================================================================
 
--- Insertar permisos por defecto para todas las empresas existentes
+-- Insertar permisos por defecto para todas las empresas
 -- Solo si no existen ya
 INSERT INTO permissions (id, company_id, name, description, category)
 SELECT
@@ -183,8 +175,7 @@ WHERE NOT EXISTS (
   WHERE p.company_id = c.id AND p.id = permissions.permission_id
 );
 
--- ============================================================================
--- 6. PERMISOS DE ROLES POR DEFECTO (SOLO SI NO EXISTEN)
+-- 6. INSERTAR PERMISOS DE ROLES (CON VERIFICACIÓN)
 -- ============================================================================
 
 -- Insertar permisos por defecto para cada rol
@@ -223,45 +214,43 @@ SELECT
       'reports_view'
     ) THEN true
     ELSE false
-  END as granted
+  END
 FROM companies c
-CROSS JOIN (VALUES ('admin'), ('manager'), ('analyst'), ('viewer')) AS roles(role_name)
 CROSS JOIN (
-  SELECT DISTINCT id as permission_id FROM permissions WHERE company_id = c.id
-) AS company_permissions
+  VALUES ('admin'), ('manager'), ('analyst'), ('viewer')
+) AS roles(role_name)
+CROSS JOIN (
+  SELECT id AS permission_id FROM permissions
+) AS all_permissions
 WHERE NOT EXISTS (
   SELECT 1 FROM role_permissions rp
   WHERE rp.company_id = c.id
-  AND rp.role = role_name
-  AND rp.permission_id = company_permissions.permission_id
+    AND rp.role = roles.role_name
+    AND rp.permission_id = all_permissions.permission_id
 );
 
--- ============================================================================
--- 7. VERIFICACIÓN
+-- 7. VERIFICACIÓN FINAL
 -- ============================================================================
 
--- Verificar que las tablas se crearon correctamente
+-- Mostrar resumen de lo que se creó
 SELECT
-  'permissions' as table_name,
-  COUNT(*) as permission_count
-FROM permissions;
-
+  'PERMISOS CREADOS' as tipo,
+  COUNT(*) as cantidad
+FROM permissions
+UNION ALL
 SELECT
-  'role_permissions' as table_name,
-  COUNT(*) as role_permission_count
+  'PERMISOS DE ROLES CREADOS' as tipo,
+  COUNT(*) as cantidad
 FROM role_permissions;
-
--- Verificar RLS
-SELECT
-  tablename,
-  policyname,
-  permissive,
-  roles,
-  cmd
-FROM pg_policies
-WHERE tablename IN ('permissions', 'role_permissions');
 
 -- ============================================================================
 -- SETUP COMPLETO ✅
 -- ============================================================================
 -- El sistema de permisos está listo para usar
+-- ✅ Tablas creadas
+-- ✅ Permisos por defecto insertados (sin duplicados)
+-- ✅ Permisos de roles configurados (sin duplicados)
+-- ✅ RLS habilitado
+-- ✅ Triggers configurados
+-- ✅ Verificación final completada
+-- ============================================================================

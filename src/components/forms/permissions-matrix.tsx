@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -35,42 +35,42 @@ const roleLabels = {
 const defaultPermissions: Permission[] = [
   // Dashboard
   { id: 'dashboard_view', name: 'Ver Dashboard', description: 'Acceso al dashboard principal', category: 'Dashboard' },
-  
+
   // Sourcing Plan
   { id: 'sourcing_plan_view', name: 'Ver Sourcing Plan', description: 'Ver el plan de sourcing', category: 'Sourcing Plan' },
   { id: 'sourcing_plan_create', name: 'Crear Iniciativas', description: 'Crear nuevas iniciativas en el plan', category: 'Sourcing Plan' },
   { id: 'sourcing_plan_edit', name: 'Editar Iniciativas', description: 'Modificar iniciativas existentes', category: 'Sourcing Plan' },
   { id: 'sourcing_plan_delete', name: 'Eliminar Iniciativas', description: 'Eliminar iniciativas del plan', category: 'Sourcing Plan' },
   { id: 'sourcing_plan_export', name: 'Exportar Plan', description: 'Exportar el plan a CSV/Excel', category: 'Sourcing Plan' },
-  
+
   // Licitaciones
   { id: 'licitaciones_view', name: 'Ver Licitaciones', description: 'Ver lista de licitaciones', category: 'Licitaciones' },
   { id: 'licitaciones_create', name: 'Crear Licitaciones', description: 'Crear nuevas licitaciones', category: 'Licitaciones' },
   { id: 'licitaciones_edit', name: 'Editar Licitaciones', description: 'Modificar licitaciones existentes', category: 'Licitaciones' },
   { id: 'licitaciones_delete', name: 'Eliminar Licitaciones', description: 'Eliminar licitaciones', category: 'Licitaciones' },
-  
+
   // Proyectos
   { id: 'projects_view', name: 'Ver Proyectos', description: 'Ver lista de proyectos', category: 'Proyectos' },
   { id: 'projects_create', name: 'Crear Proyectos', description: 'Crear nuevos proyectos', category: 'Proyectos' },
   { id: 'projects_edit', name: 'Editar Proyectos', description: 'Modificar proyectos existentes', category: 'Proyectos' },
   { id: 'projects_delete', name: 'Eliminar Proyectos', description: 'Eliminar proyectos', category: 'Proyectos' },
-  
+
   // Proveedores
   { id: 'suppliers_view', name: 'Ver Proveedores', description: 'Ver lista de proveedores', category: 'Proveedores' },
   { id: 'suppliers_create', name: 'Crear Proveedores', description: 'Crear nuevos proveedores', category: 'Proveedores' },
   { id: 'suppliers_edit', name: 'Editar Proveedores', description: 'Modificar proveedores existentes', category: 'Proveedores' },
   { id: 'suppliers_delete', name: 'Eliminar Proveedores', description: 'Eliminar proveedores', category: 'Proveedores' },
-  
+
   // Reportes
   { id: 'reports_view', name: 'Ver Reportes', description: 'Acceso a reportes y análisis', category: 'Reportes' },
   { id: 'reports_export', name: 'Exportar Reportes', description: 'Exportar reportes a PDF/Excel', category: 'Reportes' },
-  
+
   // Usuarios
   { id: 'users_view', name: 'Ver Usuarios', description: 'Ver lista de usuarios', category: 'Usuarios' },
   { id: 'users_create', name: 'Crear Usuarios', description: 'Invitar nuevos usuarios', category: 'Usuarios' },
   { id: 'users_edit', name: 'Editar Usuarios', description: 'Modificar usuarios existentes', category: 'Usuarios' },
   { id: 'users_delete', name: 'Eliminar Usuarios', description: 'Eliminar usuarios', category: 'Usuarios' },
-  
+
   // Configuración
   { id: 'settings_view', name: 'Ver Configuración', description: 'Acceso a configuración', category: 'Configuración' },
   { id: 'settings_edit', name: 'Editar Configuración', description: 'Modificar configuración', category: 'Configuración' },
@@ -289,7 +289,7 @@ export function PermissionsMatrix({ companyId }: PermissionsMatrixProps) {
                           <td key={role} className="text-center p-3">
                             <Checkbox
                               checked={rolePermissions[role]?.[permission.id] || false}
-                              onCheckedChange={(checked) => 
+                              onCheckedChange={(checked) =>
                                 handlePermissionChange(role, permission.id, checked as boolean)
                               }
                             />

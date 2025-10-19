@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/popover'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { supabaseBrowser } from '@/lib/supabase'
 import { X, Upload, User, Mail, Shield, Save } from 'lucide-react'
@@ -65,13 +65,13 @@ export function UserEditModal({ isOpen, onClose, user, onSave }: UserEditModalPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!user) return
 
     try {
       setLoading(true)
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .update({
           full_name: formData.full_name || null,
@@ -83,8 +83,13 @@ export function UserEditModal({ isOpen, onClose, user, onSave }: UserEditModalPr
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id)
+        .select()
+        .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Error updating user:', error)
+        throw error
+      }
 
       onSave({
         ...user,
@@ -103,11 +108,12 @@ export function UserEditModal({ isOpen, onClose, user, onSave }: UserEditModalPr
       })
 
       onClose()
-    } catch (err) {
+    } catch (err: any) {
+      console.error('Error al actualizar usuario:', err)
       addToast({
         type: 'error',
         title: 'Error al actualizar usuario',
-        message: err instanceof Error ? err.message : 'Error desconocido'
+        message: err?.message || err?.error_description || JSON.stringify(err)
       })
     } finally {
       setLoading(false)
@@ -130,7 +136,7 @@ export function UserEditModal({ isOpen, onClose, user, onSave }: UserEditModalPr
 
     try {
       setUploading(true)
-      
+
       const fileExt = file.name.split('.').pop()
       const fileName = `${user.id}/avatar.${fileExt}`
       const filePath = `avatars/${fileName}`
@@ -191,7 +197,7 @@ export function UserEditModal({ isOpen, onClose, user, onSave }: UserEditModalPr
                   {formData.full_name?.charAt(0) || user.email.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <label 
+              <label
                 htmlFor="avatar-upload"
                 className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-1 cursor-pointer hover:bg-primary/90 transition-colors"
               >
