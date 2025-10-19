@@ -270,13 +270,13 @@ export default function NewLicitacionPage() {
 
       if (error) throw error
 
-      // If sourcing_plan_id is provided, update the sourcing plan with the licitacion_id
-      if (formData.sourcing_plan_id) {
+      // If sourcing_plan_id is provided and not "none", update the sourcing plan with the licitacion_id
+      if (formData.sourcing_plan_id && formData.sourcing_plan_id !== 'none') {
         await supabase
           .from('sourcing_plans')
-          .update({
+          .update({ 
             licitacion_id: data.id,
-            status: 'in_progress'
+            status: 'in_progress' 
           })
           .eq('id', formData.sourcing_plan_id)
       }
@@ -550,7 +550,7 @@ export default function NewLicitacionPage() {
                     <SelectValue placeholder="Selecciona una iniciativa del plan..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sin asociar</SelectItem>
+                    <SelectItem value="none">Sin asociar</SelectItem>
                     {sourcingPlans.map((plan) => (
                       <SelectItem key={plan.id} value={plan.id}>
                         {plan.title} ({plan.plan_year} {plan.quarter})

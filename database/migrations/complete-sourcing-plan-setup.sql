@@ -11,50 +11,50 @@
 CREATE TABLE IF NOT EXISTS sourcing_plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-  
+
   -- Planificación temporal
   plan_year INTEGER NOT NULL,
   quarter TEXT NOT NULL CHECK (quarter IN ('Q1', 'Q2', 'Q3', 'Q4')),
-  
+
   -- Información básica
   title TEXT NOT NULL,
   description TEXT,
   category TEXT,
   initiative_type TEXT NOT NULL CHECK (initiative_type IN ('licitacion', 'project')),
-  
+
   -- Montos estimados
   estimated_spend DECIMAL(15,2) NOT NULL,
   actual_spend DECIMAL(15,2),
   currency TEXT NOT NULL DEFAULT 'CLP',
-  
+
   -- Ahorros proyectados
   projected_savings_percentage DECIMAL(5,2),
   projected_savings_amount DECIMAL(15,2),
-  
+
   -- Ahorros reales
   actual_savings_percentage DECIMAL(5,2),
   actual_savings_amount DECIMAL(15,2),
-  
+
   -- Estado y seguimiento
   status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'in_progress', 'completed', 'cancelled')),
   is_spot BOOLEAN DEFAULT FALSE,
-  
+
   -- Asociaciones
   licitacion_id TEXT REFERENCES licitaciones(id) ON DELETE SET NULL,
   project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
-  
+
   -- Responsables
   department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
   responsible_user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
-  
+
   -- Notas
   notes TEXT,
-  
+
   -- Auditoría
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
-  
+
   -- Constraints
   CONSTRAINT unique_plan_initiative UNIQUE (company_id, plan_year, quarter, title)
 );
@@ -174,7 +174,7 @@ CREATE POLICY "Only admins can delete sourcing plans"
   ON sourcing_plans FOR DELETE
   USING (
     company_id IN (
-      SELECT company_id FROM profiles 
+      SELECT company_id FROM profiles
       WHERE id = auth.uid() AND role = 'admin'
     )
   );
@@ -184,21 +184,21 @@ CREATE POLICY "Only admins can delete sourcing plans"
 -- ============================================================================
 
 -- Add sourcing_plan_id to licitaciones table
-ALTER TABLE licitaciones 
+ALTER TABLE licitaciones
 ADD COLUMN IF NOT EXISTS sourcing_plan_id UUID REFERENCES sourcing_plans(id) ON DELETE SET NULL;
 
-CREATE INDEX IF NOT EXISTS idx_licitaciones_sourcing_plan 
-ON licitaciones(sourcing_plan_id) 
+CREATE INDEX IF NOT EXISTS idx_licitaciones_sourcing_plan
+ON licitaciones(sourcing_plan_id)
 WHERE sourcing_plan_id IS NOT NULL;
 
 COMMENT ON COLUMN licitaciones.sourcing_plan_id IS 'Link to the sourcing plan initiative (optional)';
 
 -- Add sourcing_plan_id to projects table
-ALTER TABLE projects 
+ALTER TABLE projects
 ADD COLUMN IF NOT EXISTS sourcing_plan_id UUID REFERENCES sourcing_plans(id) ON DELETE SET NULL;
 
-CREATE INDEX IF NOT EXISTS idx_projects_sourcing_plan 
-ON projects(sourcing_plan_id) 
+CREATE INDEX IF NOT EXISTS idx_projects_sourcing_plan
+ON projects(sourcing_plan_id)
 WHERE sourcing_plan_id IS NOT NULL;
 
 COMMENT ON COLUMN projects.sourcing_plan_id IS 'Link to the sourcing plan initiative (optional)';
@@ -208,14 +208,14 @@ COMMENT ON COLUMN projects.sourcing_plan_id IS 'Link to the sourcing plan initia
 -- ============================================================================
 
 -- Verificar que la tabla se creó correctamente
-SELECT 
+SELECT
   'sourcing_plans' as table_name,
   COUNT(*) as column_count
 FROM information_schema.columns
 WHERE table_name = 'sourcing_plans';
 
 -- Verificar RLS
-SELECT 
+SELECT
   tablename,
   policyname,
   permissive,

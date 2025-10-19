@@ -139,13 +139,13 @@ export default function NewProjectPage() {
 
       if (error) throw error
 
-      // If sourcing_plan_id is provided, update the sourcing plan with the project_id
-      if (sourcingPlanId) {
+      // If sourcing_plan_id is provided and not "none", update the sourcing plan with the project_id
+      if (sourcingPlanId && sourcingPlanId !== 'none') {
         await supabase
           .from('sourcing_plans')
-          .update({
+          .update({ 
             project_id: data.id,
-            status: 'in_progress'
+            status: 'in_progress' 
           })
           .eq('id', sourcingPlanId)
       }
@@ -341,7 +341,7 @@ export default function NewProjectPage() {
                     <SelectValue placeholder="Selecciona una iniciativa del plan..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sin asociar</SelectItem>
+                    <SelectItem value="none">Sin asociar</SelectItem>
                     {sourcingPlans.map((plan) => (
                       <SelectItem key={plan.id} value={plan.id}>
                         {plan.title} ({plan.plan_year} {plan.quarter})

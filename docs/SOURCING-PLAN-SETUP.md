@@ -60,7 +60,7 @@ Después de ejecutar el script, verifica que todo esté correcto:
 En el SQL Editor, ejecuta:
 
 ```sql
-SELECT column_name, data_type 
+SELECT column_name, data_type
 FROM information_schema.columns
 WHERE table_name = 'sourcing_plans'
 ORDER BY ordinal_position;
@@ -105,7 +105,7 @@ Deberías ver **3 triggers**:
 ### 4. Verificar Foreign Keys en Licitaciones
 
 ```sql
-SELECT column_name 
+SELECT column_name
 FROM information_schema.columns
 WHERE table_name = 'licitaciones' AND column_name = 'sourcing_plan_id';
 ```
@@ -115,7 +115,7 @@ Deberías ver la columna `sourcing_plan_id`.
 ### 5. Verificar Foreign Keys en Projects
 
 ```sql
-SELECT column_name 
+SELECT column_name
 FROM information_schema.columns
 WHERE table_name = 'projects' AND column_name = 'sourcing_plan_id';
 ```
@@ -168,14 +168,14 @@ Una vez instalado:
 
 **Causa**: Las foreign keys no se agregaron.
 
-**Solución**: 
+**Solución**:
 1. Ejecuta el script `add-sourcing-plan-foreign-keys.sql`
 2. O ejecuta manualmente:
    ```sql
-   ALTER TABLE licitaciones 
+   ALTER TABLE licitaciones
    ADD COLUMN sourcing_plan_id UUID REFERENCES sourcing_plans(id);
-   
-   ALTER TABLE projects 
+
+   ALTER TABLE projects
    ADD COLUMN sourcing_plan_id UUID REFERENCES sourcing_plans(id);
    ```
 
@@ -286,7 +286,7 @@ Si tienes problemas:
 
 ## 🎉 ¡Felicidades!
 
-El módulo **Sourcing Plan** está instalado y listo para usar. 
+El módulo **Sourcing Plan** está instalado y listo para usar.
 
 Ahora puedes:
 - Planificar tus iniciativas de Strategic Sourcing
