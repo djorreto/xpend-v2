@@ -633,3 +633,376 @@ export const mockChartData = {
     { project: 'Análisis de Mercado', ahorro: 15000, presupuesto: 150000 }
   ]
 }
+
+// ===== MOCK DATA PARA SOURCING PLAN =====
+export const mockSourcingPlansData = [
+  // ===== AÑO 2025 - Q1 =====
+  {
+    id: 'sp-2025-q1-001',
+    company_id: 'company-1',
+    plan_year: 2025,
+    quarter: 'Q1',
+    initiative_type: 'licitacion',
+    title: 'Renovación Servicios Cloud Computing',
+    description: 'Renovación y optimización de servicios de cloud (AWS, Azure)',
+    category: 'Tecnología',
+    estimated_spend: 350000,
+    currency: 'USD',
+    projected_savings_percentage: 15,
+    projected_savings_amount: 52500,
+    current_suppliers: [
+      { id: 'supp-1', name: 'AWS' },
+      { id: 'supp-2', name: 'Microsoft Azure' }
+    ],
+    status: 'completed',
+    actual_spend: 315000,
+    actual_savings_amount: 35000,
+    actual_savings_percentage: 10,
+    is_spot: false,
+    planned_start_date: '2025-01-15',
+    planned_end_date: '2025-03-31',
+    actual_start_date: '2025-01-20',
+    actual_completion_date: '2025-03-25',
+    responsible_user_id: 'user-1',
+    created_by: 'user-1',
+    notes: 'Completado exitosamente. Ahorro menor al proyectado por cambios en requerimientos.',
+    created_at: '2024-11-01T10:00:00Z',
+    updated_at: '2025-03-25T15:30:00Z'
+  },
+  {
+    id: 'sp-2025-q1-002',
+    company_id: 'company-1',
+    plan_year: 2025,
+    quarter: 'Q1',
+    initiative_type: 'project',
+    title: 'Consolidación de Proveedores de Limpieza',
+    description: 'Consolidar múltiples proveedores de limpieza en contrato marco',
+    category: 'Servicios Profesionales',
+    estimated_spend: 120000,
+    currency: 'USD',
+    projected_savings_percentage: 20,
+    projected_savings_amount: 24000,
+    current_suppliers: [
+      { id: 'supp-3', name: 'CleanCo' },
+      { id: 'supp-4', name: 'Facilities Plus' }
+    ],
+    status: 'in_progress',
+    actual_start_date: '2025-02-01',
+    is_spot: false,
+    planned_start_date: '2025-02-01',
+    planned_end_date: '2025-03-31',
+    responsible_user_id: 'user-2',
+    created_by: 'user-1',
+    notes: 'En proceso de negociación. Avance 70%',
+    created_at: '2024-11-01T10:00:00Z',
+    updated_at: '2025-03-15T10:00:00Z'
+  },
+  
+  // ===== AÑO 2025 - Q2 =====
+  {
+    id: 'sp-2025-q2-001',
+    company_id: 'company-1',
+    plan_year: 2025,
+    quarter: 'Q2',
+    initiative_type: 'licitacion',
+    title: 'Licitación Seguros Corporativos',
+    description: 'Renovación de pólizas de seguros corporativos',
+    category: 'Seguros',
+    estimated_spend: 280000,
+    currency: 'USD',
+    projected_savings_percentage: 12,
+    projected_savings_amount: 33600,
+    current_suppliers: [
+      { id: 'supp-5', name: 'Seguros Generales S.A.' }
+    ],
+    status: 'planned',
+    is_spot: false,
+    planned_start_date: '2025-04-01',
+    planned_end_date: '2025-06-30',
+    responsible_user_id: 'user-3',
+    created_by: 'user-1',
+    notes: 'Pendiente de inicio. Preparación de bases técnicas.',
+    created_at: '2024-12-01T10:00:00Z',
+    updated_at: '2024-12-01T10:00:00Z'
+  },
+  {
+    id: 'sp-2025-q2-002',
+    company_id: 'company-1',
+    plan_year: 2025,
+    quarter: 'Q2',
+    initiative_type: 'licitacion',
+    title: 'Renovación Flota Vehículos',
+    description: 'Licitación para renovación de flota de vehículos corporativos',
+    category: 'Vehículos',
+    estimated_spend: 450000,
+    currency: 'USD',
+    projected_savings_percentage: 8,
+    projected_savings_amount: 36000,
+    current_suppliers: [
+      { id: 'supp-6', name: 'Automotriz Premium' }
+    ],
+    status: 'planned',
+    is_spot: false,
+    planned_start_date: '2025-05-01',
+    planned_end_date: '2025-06-30',
+    responsible_user_id: 'user-2',
+    created_by: 'user-1',
+    notes: 'Alta prioridad para Q2.',
+    created_at: '2024-12-01T10:00:00Z',
+    updated_at: '2024-12-01T10:00:00Z'
+  },
+  {
+    id: 'sp-2025-q2-003',
+    company_id: 'company-1',
+    plan_year: 2025,
+    quarter: 'Q2',
+    initiative_type: 'project',
+    title: 'Optimización Gastos Marketing Digital',
+    description: 'Renegociación con proveedores de marketing digital',
+    category: 'Marketing',
+    estimated_spend: 180000,
+    currency: 'USD',
+    projected_savings_percentage: 18,
+    projected_savings_amount: 32400,
+    current_suppliers: [
+      { id: 'supp-7', name: 'Digital Agency Pro' },
+      { id: 'supp-8', name: 'Social Media Experts' }
+    ],
+    status: 'planned',
+    is_spot: false,
+    planned_start_date: '2025-04-15',
+    planned_end_date: '2025-06-15',
+    responsible_user_id: 'user-3',
+    created_by: 'user-1',
+    created_at: '2024-12-01T10:00:00Z',
+    updated_at: '2024-12-01T10:00:00Z'
+  },
+  
+  // ===== AÑO 2025 - Q3 =====
+  {
+    id: 'sp-2025-q3-001',
+    company_id: 'company-1',
+    plan_year: 2025,
+    quarter: 'Q3',
+    initiative_type: 'licitacion',
+    title: 'Renovación Licencias Software',
+    description: 'Renovación de licencias Microsoft, Adobe, etc.',
+    category: 'Tecnología',
+    estimated_spend: 220000,
+    currency: 'USD',
+    projected_savings_percentage: 10,
+    projected_savings_amount: 22000,
+    current_suppliers: [
+      { id: 'supp-9', name: 'Microsoft' },
+      { id: 'supp-10', name: 'Adobe Systems' }
+    ],
+    status: 'planned',
+    is_spot: false,
+    planned_start_date: '2025-07-01',
+    planned_end_date: '2025-09-30',
+    responsible_user_id: 'user-1',
+    created_by: 'user-1',
+    created_at: '2024-12-15T10:00:00Z',
+    updated_at: '2024-12-15T10:00:00Z'
+  },
+  {
+    id: 'sp-2025-q3-002',
+    company_id: 'company-1',
+    plan_year: 2025,
+    quarter: 'Q3',
+    initiative_type: 'project',
+    title: 'Consolidación Servicios TI',
+    description: 'Integración de múltiples contratos de soporte TI',
+    category: 'Tecnología',
+    estimated_spend: 380000,
+    currency: 'USD',
+    projected_savings_percentage: 22,
+    projected_savings_amount: 83600,
+    status: 'planned',
+    is_spot: false,
+    planned_start_date: '2025-08-01',
+    planned_end_date: '2025-09-30',
+    responsible_user_id: 'user-2',
+    created_by: 'user-1',
+    created_at: '2024-12-15T10:00:00Z',
+    updated_at: '2024-12-15T10:00:00Z'
+  },
+  
+  // ===== AÑO 2025 - Q4 =====
+  {
+    id: 'sp-2025-q4-001',
+    company_id: 'company-1',
+    plan_year: 2025,
+    quarter: 'Q4',
+    initiative_type: 'licitacion',
+    title: 'Suministros de Oficina 2026',
+    description: 'Licitación anual de suministros y materiales de oficina',
+    category: 'Suministros',
+    estimated_spend: 95000,
+    currency: 'USD',
+    projected_savings_percentage: 15,
+    projected_savings_amount: 14250,
+    status: 'planned',
+    is_spot: false,
+    planned_start_date: '2025-10-01',
+    planned_end_date: '2025-12-15',
+    responsible_user_id: 'user-3',
+    created_by: 'user-1',
+    created_at: '2025-01-10T10:00:00Z',
+    updated_at: '2025-01-10T10:00:00Z'
+  },
+  
+  // ===== INICIATIVAS SPOT (No planificadas) =====
+  {
+    id: 'sp-spot-001',
+    company_id: 'company-1',
+    plan_year: 2025,
+    quarter: 'Q1',
+    initiative_type: 'licitacion',
+    title: 'Reparación Urgente Infraestructura',
+    description: 'Licitación spot para reparaciones urgentes',
+    category: 'Infraestructura',
+    estimated_spend: 85000,
+    currency: 'USD',
+    projected_savings_percentage: 0,
+    projected_savings_amount: 0,
+    status: 'completed',
+    actual_spend: 82000,
+    actual_savings_amount: 3000,
+    actual_savings_percentage: 3.5,
+    is_spot: true,
+    actual_start_date: '2025-01-10',
+    actual_completion_date: '2025-02-28',
+    responsible_user_id: 'user-2',
+    created_by: 'user-2',
+    notes: 'Iniciativa no planificada por necesidad urgente.',
+    created_at: '2025-01-10T08:00:00Z',
+    updated_at: '2025-02-28T16:00:00Z'
+  },
+  
+  // ===== AÑO 2024 (Histórico) =====
+  {
+    id: 'sp-2024-q4-001',
+    company_id: 'company-1',
+    plan_year: 2024,
+    quarter: 'Q4',
+    initiative_type: 'licitacion',
+    title: 'Servicios de Seguridad 2025',
+    description: 'Licitación de servicios de seguridad para el año 2025',
+    category: 'Servicios Profesionales',
+    estimated_spend: 240000,
+    currency: 'USD',
+    projected_savings_percentage: 18,
+    projected_savings_amount: 43200,
+    status: 'completed',
+    actual_spend: 205000,
+    actual_savings_amount: 35000,
+    actual_savings_percentage: 14.6,
+    is_spot: false,
+    planned_start_date: '2024-10-01',
+    planned_end_date: '2024-12-15',
+    actual_start_date: '2024-10-05',
+    actual_completion_date: '2024-12-10',
+    responsible_user_id: 'user-1',
+    created_by: 'user-1',
+    notes: 'Completado exitosamente. Buenos resultados.',
+    created_at: '2024-08-01T10:00:00Z',
+    updated_at: '2024-12-10T17:00:00Z'
+  },
+  {
+    id: 'sp-2024-q3-001',
+    company_id: 'company-1',
+    plan_year: 2024,
+    quarter: 'Q3',
+    initiative_type: 'project',
+    title: 'Modernización Infraestructura IT',
+    description: 'Proyecto de actualización de infraestructura tecnológica',
+    category: 'Tecnología',
+    estimated_spend: 500000,
+    currency: 'USD',
+    projected_savings_percentage: 25,
+    projected_savings_amount: 125000,
+    status: 'completed',
+    actual_spend: 420000,
+    actual_savings_amount: 80000,
+    actual_savings_percentage: 16,
+    is_spot: false,
+    planned_start_date: '2024-07-01',
+    planned_end_date: '2024-09-30',
+    actual_start_date: '2024-07-10',
+    actual_completion_date: '2024-09-25',
+    responsible_user_id: 'user-2',
+    created_by: 'user-1',
+    notes: 'Proyecto estratégico completado con éxito.',
+    created_at: '2024-05-01T10:00:00Z',
+    updated_at: '2024-09-25T18:00:00Z'
+  }
+]
+
+// Estadísticas calculadas del Sourcing Plan
+export const mockSourcingPlanStats = {
+  year: 2025,
+  total_planned: 9,
+  total_completed: 1,
+  total_in_progress: 1,
+  total_cancelled: 0,
+  total_spot: 1,
+  
+  total_estimated_spend: 2165000,
+  total_actual_spend: 315000,
+  total_projected_savings: 300350,
+  total_actual_savings: 35000,
+  
+  completion_rate: 11.1, // 1 de 9
+  savings_achievement_rate: 66.7, // 35000 de 52500 proyectado
+  
+  by_quarter: [
+    {
+      quarter: 'Q1',
+      planned: 2,
+      completed: 1,
+      projected_savings: 76500,
+      actual_savings: 35000,
+      achievement_rate: 45.8
+    },
+    {
+      quarter: 'Q2',
+      planned: 3,
+      completed: 0,
+      projected_savings: 102000,
+      actual_savings: 0,
+      achievement_rate: 0
+    },
+    {
+      quarter: 'Q3',
+      planned: 2,
+      completed: 0,
+      projected_savings: 105600,
+      actual_savings: 0,
+      achievement_rate: 0
+    },
+    {
+      quarter: 'Q4',
+      planned: 1,
+      completed: 0,
+      projected_savings: 14250,
+      actual_savings: 0,
+      achievement_rate: 0
+    }
+  ],
+  
+  by_type: [
+    {
+      type: 'licitacion',
+      count: 6,
+      projected_savings: 192350,
+      actual_savings: 35000
+    },
+    {
+      type: 'project',
+      count: 3,
+      projected_savings: 140000,
+      actual_savings: 0
+    }
+  ]
+}

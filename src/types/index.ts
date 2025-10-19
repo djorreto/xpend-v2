@@ -390,3 +390,165 @@ export interface SupplierStats {
   average_technical_score: number
 }
 
+// ===== TIPOS PARA SOURCING PLAN =====
+
+export interface SourcingPlan {
+  id: string
+  company_id: string
+  
+  // Información de planificación
+  plan_year: number
+  quarter: Quarter
+  
+  // Tipo y descripción
+  initiative_type: InitiativeType
+  title: string
+  description?: string
+  
+  // Categoría y departamento
+  category?: string
+  department_id?: string
+  department?: Department
+  
+  // Montos y ahorros proyectados
+  estimated_spend: number
+  currency: string
+  projected_savings_percentage?: number
+  projected_savings_amount?: number
+  
+  // Proveedores actuales
+  current_suppliers?: Array<{
+    id: string
+    name: string
+  }>
+  
+  // Estado del plan
+  status: PlanStatus
+  
+  // Resultado real
+  actual_spend?: number
+  actual_savings_amount?: number
+  actual_savings_percentage?: number
+  
+  // Asociación con ejecución
+  linked_licitacion_id?: string
+  linked_project_id?: string
+  is_spot: boolean
+  
+  // Fechas
+  planned_start_date?: string
+  planned_end_date?: string
+  actual_start_date?: string
+  actual_completion_date?: string
+  
+  // Responsable
+  responsible_user_id?: string
+  responsible_user?: User
+  created_by?: string
+  created_by_user?: User
+  
+  // Notas
+  notes?: string
+  
+  // Timestamps
+  created_at: string
+  updated_at: string
+}
+
+export type Quarter = 'Q1' | 'Q2' | 'Q3' | 'Q4'
+export type InitiativeType = 'licitacion' | 'project'
+export type PlanStatus = 'planned' | 'in_progress' | 'completed' | 'cancelled'
+
+// Tipos para formularios de Sourcing Plan
+export interface CreateSourcingPlanData {
+  plan_year: number
+  quarter: Quarter
+  initiative_type: InitiativeType
+  title: string
+  description?: string
+  category?: string
+  department_id?: string
+  estimated_spend: number
+  currency?: string
+  projected_savings_percentage?: number
+  current_suppliers?: Array<{
+    id: string
+    name: string
+  }>
+  planned_start_date?: string
+  planned_end_date?: string
+  responsible_user_id?: string
+  notes?: string
+}
+
+export interface UpdateSourcingPlanData extends Partial<CreateSourcingPlanData> {
+  status?: PlanStatus
+  actual_spend?: number
+  actual_start_date?: string
+  actual_completion_date?: string
+}
+
+// Filtros para Sourcing Plan
+export interface SourcingPlanFilters {
+  plan_year?: number
+  quarter?: Quarter
+  initiative_type?: InitiativeType
+  status?: PlanStatus
+  department_id?: string
+  responsible_user_id?: string
+  is_spot?: boolean
+  search?: string
+}
+
+// Estadísticas del Sourcing Plan
+export interface SourcingPlanStats {
+  year: number
+  total_planned: number
+  total_completed: number
+  total_in_progress: number
+  total_cancelled: number
+  total_spot: number
+  
+  // Financiero
+  total_estimated_spend: number
+  total_actual_spend: number
+  total_projected_savings: number
+  total_actual_savings: number
+  
+  // Cumplimiento
+  completion_rate: number // % de completados sobre planificados
+  savings_achievement_rate: number // % de ahorro real sobre proyectado
+  
+  // Por trimestre
+  by_quarter: Array<{
+    quarter: Quarter
+    planned: number
+    completed: number
+    projected_savings: number
+    actual_savings: number
+    achievement_rate: number
+  }>
+  
+  // Por tipo
+  by_type: Array<{
+    type: InitiativeType
+    count: number
+    projected_savings: number
+    actual_savings: number
+  }>
+}
+
+// Dashboard con Sourcing Plan
+export interface DashboardWithPlan extends DashboardMetrics {
+  sourcing_plan: {
+    current_year_stats: SourcingPlanStats
+    comparison_previous_years: Array<{
+      year: number
+      total_savings: number
+      achievement_rate: number
+    }>
+    upcoming_initiatives: Array<SourcingPlan>
+    at_risk_initiatives: Array<SourcingPlan>
+  }
+}
+
