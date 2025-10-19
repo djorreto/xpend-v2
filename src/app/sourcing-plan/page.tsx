@@ -311,17 +311,17 @@ export default function SourcingPlanPage() {
       }).join('\n')
 
       const csvContent = `\uFEFF${csvHeaders}\n${csvRows}`
-      
+
       // Crear blob y descargar
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
       const link = document.createElement('a')
       const url = URL.createObjectURL(blob)
-      
+
       const fileName = `sourcing-plan-${filters.plan_year || 'all'}-${new Date().toISOString().split('T')[0]}.csv`
       link.setAttribute('href', url)
       link.setAttribute('download', fileName)
       link.style.visibility = 'hidden'
-      
+
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
