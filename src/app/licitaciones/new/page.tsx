@@ -31,7 +31,7 @@ export default function NewLicitacionPage() {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
-  
+
   // Form data
   const [formData, setFormData] = useState({
     id: '',
@@ -59,7 +59,7 @@ export default function NewLicitacionPage() {
     tender_link: '',
     tender_file: null as File | null
   })
-  
+
   const router = useRouter()
   const { addToast } = useToast()
 
@@ -227,7 +227,7 @@ export default function NewLicitacionPage() {
     setSaving(true)
     try {
       let tenderDocData = null
-      
+
       // Upload tender document if exists
       if (formData.tender_file) {
         tenderDocData = await uploadTenderDocument(formData.tender_file, formData.id)
@@ -274,9 +274,9 @@ export default function NewLicitacionPage() {
       if (formData.sourcing_plan_id) {
         await supabase
           .from('sourcing_plans')
-          .update({ 
+          .update({
             licitacion_id: data.id,
-            status: 'in_progress' 
+            status: 'in_progress'
           })
           .eq('id', formData.sourcing_plan_id)
       }

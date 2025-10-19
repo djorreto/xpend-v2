@@ -60,7 +60,7 @@ export default function EditSourcingPlanPage() {
       setError(null)
 
       const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      
+
       if (isMockup || !isSupabaseConfigured) {
         // Modo mockup
         setUser({
@@ -72,10 +72,10 @@ export default function EditSourcingPlanPage() {
           name: 'Xpend Demo',
           id: 'company-1'
         })
-        
+
         const mockPlan = mockSourcingPlansData.find(p => p.id === planId)
         if (!mockPlan) throw new Error('Iniciativa no encontrada')
-        
+
         setFormData({
           plan_year: mockPlan.plan_year,
           quarter: mockPlan.quarter,
@@ -92,7 +92,7 @@ export default function EditSourcingPlanPage() {
           is_spot: mockPlan.is_spot,
           notes: mockPlan.notes || ''
         })
-        
+
         setLoading(false)
         return
       }
@@ -163,7 +163,7 @@ export default function EditSourcingPlanPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Validaciones básicas
     if (!formData.title.trim()) {
       addToast({
@@ -188,14 +188,14 @@ export default function EditSourcingPlanPage() {
 
       const estimatedSpend = parseFloat(formData.estimated_spend)
       const actualSpend = formData.actual_spend ? parseFloat(formData.actual_spend) : null
-      
-      const savingsPercentage = formData.projected_savings_percentage 
-        ? parseFloat(formData.projected_savings_percentage) 
+
+      const savingsPercentage = formData.projected_savings_percentage
+        ? parseFloat(formData.projected_savings_percentage)
         : null
-      const projectedSavingsAmount = savingsPercentage 
-        ? (estimatedSpend * savingsPercentage) / 100 
+      const projectedSavingsAmount = savingsPercentage
+        ? (estimatedSpend * savingsPercentage) / 100
         : null
-      
+
       const actualSavingsPercentage = formData.actual_savings_percentage
         ? parseFloat(formData.actual_savings_percentage)
         : null
@@ -204,24 +204,24 @@ export default function EditSourcingPlanPage() {
         : null
 
       const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      
+
       if (isMockup || !isSupabaseConfigured) {
         // Modo mockup - simular guardado
         await new Promise(resolve => setTimeout(resolve, 1000))
-        
+
         addToast({
           type: 'success',
           title: 'Iniciativa actualizada',
           message: `${formData.title} se actualizó exitosamente`
         })
-        
+
         router.push(`/sourcing-plan/${planId}`)
         return
       }
 
       // Modo funcional con Supabase
       const supabase = supabaseBrowser()
-      
+
       const updatedPlan = {
         plan_year: formData.plan_year,
         quarter: formData.quarter,
@@ -255,7 +255,7 @@ export default function EditSourcingPlanPage() {
         title: 'Iniciativa actualizada',
         message: `${formData.title} se actualizó exitosamente`
       })
-      
+
       router.push(`/sourcing-plan/${planId}`)
     } catch (err) {
       addToast({

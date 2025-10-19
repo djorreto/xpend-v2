@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Plus, 
-  Search, 
-  Filter, 
+import {
+  Plus,
+  Search,
+  Filter,
   Calendar,
   TrendingUp,
   TrendingDown,
@@ -80,7 +80,7 @@ export default function SourcingPlanPage() {
   const [plans, setPlans] = useState<SourcingPlan[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Filtros
   const [filters, setFilters] = useState<SourcingPlanFilters>({
     plan_year: new Date().getFullYear()
@@ -101,7 +101,7 @@ export default function SourcingPlanPage() {
       setError(null)
 
       const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      
+
       if (isMockup || !isSupabaseConfigured) {
         // Modo mockup
         setUser({
@@ -113,10 +113,10 @@ export default function SourcingPlanPage() {
           name: 'Xpend Demo',
           id: 'company-1'
         })
-        
+
         // Filtrar mock data
         let filteredPlans = [...mockSourcingPlansData]
-        
+
         if (filters.plan_year) {
           filteredPlans = filteredPlans.filter(p => p.plan_year === filters.plan_year)
         }
@@ -132,7 +132,7 @@ export default function SourcingPlanPage() {
         if (filters.is_spot !== undefined) {
           filteredPlans = filteredPlans.filter(p => p.is_spot === filters.is_spot)
         }
-        
+
         setPlans(filteredPlans)
         setStats(mockSourcingPlanStats)
         setLoading(false)
@@ -189,7 +189,7 @@ export default function SourcingPlanPage() {
         if (plansError) throw plansError
 
         setPlans(plansData || [])
-        
+
         // Calcular estadísticas (simplificado para ahora)
         // En producción, esto sería mejor hacerlo con una función de Supabase o API endpoint
         calculateStats(plansData || [])
@@ -390,8 +390,8 @@ export default function SourcingPlanPage() {
                     />
                   </div>
                 </div>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setShowFilters(!showFilters)}
                 >
                   <Filter className="mr-2 h-4 w-4" />

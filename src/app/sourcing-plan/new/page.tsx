@@ -52,7 +52,7 @@ export default function NewSourcingPlanPage() {
       setLoading(true)
 
       const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      
+
       if (isMockup || !isSupabaseConfigured) {
         // Modo mockup
         setUser({
@@ -111,7 +111,7 @@ export default function NewSourcingPlanPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Validaciones básicas
     if (!formData.title.trim()) {
       addToast({
@@ -135,33 +135,33 @@ export default function NewSourcingPlanPage() {
       setSaving(true)
 
       const estimatedSpend = parseFloat(formData.estimated_spend)
-      const savingsPercentage = formData.projected_savings_percentage 
-        ? parseFloat(formData.projected_savings_percentage) 
+      const savingsPercentage = formData.projected_savings_percentage
+        ? parseFloat(formData.projected_savings_percentage)
         : null
-      
-      const projectedSavingsAmount = savingsPercentage 
-        ? (estimatedSpend * savingsPercentage) / 100 
+
+      const projectedSavingsAmount = savingsPercentage
+        ? (estimatedSpend * savingsPercentage) / 100
         : null
 
       const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      
+
       if (isMockup || !isSupabaseConfigured) {
         // Modo mockup - simular guardado
         await new Promise(resolve => setTimeout(resolve, 1000))
-        
+
         addToast({
           type: 'success',
           title: 'Iniciativa creada',
           message: `${formData.title} se creó exitosamente`
         })
-        
+
         router.push('/sourcing-plan')
         return
       }
 
       // Modo funcional con Supabase
       const supabase = supabaseBrowser()
-      
+
       const newPlan = {
         company_id: company.id,
         plan_year: formData.plan_year,
@@ -194,7 +194,7 @@ export default function NewSourcingPlanPage() {
         title: 'Iniciativa creada',
         message: `${formData.title} se creó exitosamente`
       })
-      
+
       router.push('/sourcing-plan')
     } catch (err) {
       addToast({

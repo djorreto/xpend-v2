@@ -53,7 +53,7 @@ export function Sidebar({ companyName = 'Xpend' }: SidebarProps) {
       }}
     >
       {/* Header */}
-      <div 
+      <div
         className="flex items-center justify-between p-4 border-b"
         style={{
           backgroundColor: 'rgba(45, 62, 61, 0.9)',
@@ -62,7 +62,7 @@ export function Sidebar({ companyName = 'Xpend' }: SidebarProps) {
       >
         {!collapsed && (
           <div className="flex items-center space-x-3">
-            <div 
+            <div
               className="p-2 rounded-lg shadow-sm"
               style={{ backgroundColor: '#2AD4D2' }}
             >
@@ -120,7 +120,7 @@ export function Sidebar({ companyName = 'Xpend' }: SidebarProps) {
                 }
               }}
             >
-              <item.icon 
+              <item.icon
                 className="h-5 w-5 flex-shrink-0"
                 style={{ color: isActive ? '#2D3E3D' : '#3BE7AE' }}
               />
@@ -132,7 +132,7 @@ export function Sidebar({ companyName = 'Xpend' }: SidebarProps) {
 
       {/* Footer */}
       {!collapsed && (
-        <div 
+        <div
           className="p-4 border-t"
           style={{
             backgroundColor: 'rgba(45, 62, 61, 0.8)',

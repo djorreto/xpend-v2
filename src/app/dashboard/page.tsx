@@ -1,14 +1,19 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { 
   FolderOpen, 
   Gavel, 
   TrendingUp, 
   DollarSign,
-  Calendar
+  Calendar,
+  Target,
+  CheckCircle2,
+  ArrowRight
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { supabaseBrowser } from '@/lib/supabase'
@@ -49,9 +54,18 @@ interface DashboardMetrics {
     milestone: string
     dueDate: string
   }>
+  sourcingPlan?: {
+    totalPlanned: number
+    inProgress: number
+    completed: number
+    totalProjectedSavings: number
+    totalActualSavings: number
+    achievementRate: number
+  }
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
   const supabase = supabaseBrowser()
   const { isMockup } = useVersion()
   const [user, setUser] = useState<any>(null)
@@ -121,7 +135,15 @@ export default function DashboardPage() {
             project: m.projectName,
             milestone: m.milestone,
             dueDate: m.dueDate
-          }))
+          })),
+          sourcingPlan: {
+            totalPlanned: 8,
+            inProgress: 3,
+            completed: 2,
+            totalProjectedSavings: 1250000000,
+            totalActualSavings: 980000000,
+            achievementRate: 78.4
+          }
         }
         setMetrics(mockMetrics)
         setLoading(false)
@@ -257,6 +279,33 @@ export default function DashboardPage() {
         dueDate: m.due_date
       }))
 
+      // Sourcing Plan metrics (current year)
+      const currentYear = new Date().getFullYear()
+      const { data: sourcingPlans, error: sourcingPlanError } = await supabase
+        .from('sourcing_plans')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('plan_year', currentYear)
+
+      let sourcingPlanMetrics
+      if (!sourcingPlanError && sourcingPlans) {
+        const totalPlanned = sourcingPlans.filter(p => p.status === 'planned' && !p.is_spot).length
+        const inProgress = sourcingPlans.filter(p => p.status === 'in_progress').length
+        const completed = sourcingPlans.filter(p => p.status === 'completed').length
+        const totalProjectedSavings = sourcingPlans.reduce((sum, p) => sum + (p.projected_savings_amount || 0), 0)
+        const totalActualSavings = sourcingPlans.reduce((sum, p) => sum + (p.actual_savings_amount || 0), 0)
+        const achievementRate = totalProjectedSavings > 0 ? (totalActualSavings / totalProjectedSavings) * 100 : 0
+
+        sourcingPlanMetrics = {
+          totalPlanned,
+          inProgress,
+          completed,
+          totalProjectedSavings,
+          totalActualSavings,
+          achievementRate
+        }
+      }
+
       setMetrics({
         totalProjects,
         activeProjects,
@@ -266,7 +315,8 @@ export default function DashboardPage() {
         monthlySpend,
         spendByCategory,
         recentProjects: recentProjectsFormatted,
-        upcomingMilestones
+        upcomingMilestones,
+        sourcingPlan: sourcingPlanMetrics
       })
     } catch (err) {
       throw err
@@ -392,6 +442,80 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Sourcing Plan del Año */}
+        {metrics.sourcingPlan && (
+          <Card className="border-slate-200 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-lg bg-purple-600 shadow-sm">
+                    <Target className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Sourcing Plan {new Date().getFullYear()}</CardTitle>
+                    <CardDescription>Cumplimiento del plan anual de Strategic Sourcing</CardDescription>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  onClick={() => router.push('/sourcing-plan')}
+                  className="flex items-center gap-2"
+                >
+                  Ver Plan Completo
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                {/* Iniciativas Planificadas */}
+                <div className="flex flex-col items-center p-4 bg-blue-50 rounded-lg">
+                  <div className="text-3xl font-bold text-blue-600">{metrics.sourcingPlan.totalPlanned}</div>
+                  <p className="text-sm text-slate-600 mt-1">Planificadas</p>
+                </div>
+
+                {/* En Progreso */}
+                <div className="flex flex-col items-center p-4 bg-yellow-50 rounded-lg">
+                  <div className="text-3xl font-bold text-yellow-600">{metrics.sourcingPlan.inProgress}</div>
+                  <p className="text-sm text-slate-600 mt-1">En Progreso</p>
+                </div>
+
+                {/* Completadas */}
+                <div className="flex flex-col items-center p-4 bg-green-50 rounded-lg">
+                  <div className="text-3xl font-bold text-green-600 flex items-center gap-2">
+                    {metrics.sourcingPlan.completed}
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <p className="text-sm text-slate-600 mt-1">Completadas</p>
+                </div>
+
+                {/* Ahorro Proyectado */}
+                <div className="flex flex-col items-center p-4 bg-emerald-50 rounded-lg">
+                  <div className="text-xl font-bold text-emerald-600">
+                    {formatCurrency(metrics.sourcingPlan.totalProjectedSavings)}
+                  </div>
+                  <p className="text-sm text-slate-600 mt-1">Ahorro Proyectado</p>
+                </div>
+
+                {/* Ahorro Real */}
+                <div className="flex flex-col items-center p-4 bg-teal-50 rounded-lg border-2 border-teal-200">
+                  <div className="text-xl font-bold text-teal-600">
+                    {formatCurrency(metrics.sourcingPlan.totalActualSavings)}
+                  </div>
+                  <p className="text-sm text-slate-600 mt-1">Ahorro Real</p>
+                  <div className={`text-xs font-semibold mt-2 px-2 py-1 rounded-full ${
+                    metrics.sourcingPlan.achievementRate >= 100 ? 'bg-green-200 text-green-800' :
+                    metrics.sourcingPlan.achievementRate >= 80 ? 'bg-yellow-200 text-yellow-800' :
+                    'bg-red-200 text-red-800'
+                  }`}>
+                    {metrics.sourcingPlan.achievementRate.toFixed(1)}% cumplimiento
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Próximos Hitos */}
         <Card>
