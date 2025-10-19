@@ -32,6 +32,8 @@ export default function NewProjectPage() {
   const [endDate, setEndDate] = useState<Date | undefined>()
   const [budget, setBudget] = useState<string>('')
   const [currency, setCurrency] = useState('USD')
+  const [sourcingPlanId, setSourcingPlanId] = useState('')
+  const [sourcingPlans, setSourcingPlans] = useState<any[]>([])
   const router = useRouter()
   const { addToast } = useToast()
 
@@ -75,6 +77,23 @@ export default function NewProjectPage() {
         if (!companyError && companyData) {
           setCompany(companyData)
         }
+
+        // Load active sourcing plans (project type, planned or in_progress)
+        const currentYear = new Date().getFullYear()
+        const { data: plansData, error: plansError } = await supabase
+          .from('sourcing_plans')
+          .select('id, title, plan_year, quarter, status')
+          .eq('company_id', profile.company_id)
+          .eq('initiative_type', 'project')
+          .gte('plan_year', currentYear - 1)
+          .in('status', ['planned', 'in_progress'])
+          .is('project_id', null)
+          .order('plan_year', { ascending: false })
+          .order('quarter', { ascending: true })
+
+        if (!plansError && plansData) {
+          setSourcingPlans(plansData)
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar datos de usuario')
@@ -112,12 +131,24 @@ export default function NewProjectPage() {
           end_date: endDate ? format(endDate, 'yyyy-MM-dd') : null,
           budget: budget ? parseFloat(budget) : null,
           currency: currency,
+          sourcing_plan_id: sourcingPlanId || null,
           created_by: user.id,
         })
         .select()
         .single()
 
       if (error) throw error
+
+      // If sourcing_plan_id is provided, update the sourcing plan with the project_id
+      if (sourcingPlanId) {
+        await supabase
+          .from('sourcing_plans')
+          .update({ 
+            project_id: data.id,
+            status: 'in_progress' 
+          })
+          .eq('id', sourcingPlanId)
+      }
 
       addToast({
         type: 'success',
@@ -300,6 +331,27 @@ export default function NewProjectPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {/* Sourcing Plan */}
+              <div className="space-y-2">
+                <Label htmlFor="sourcing_plan_id">Iniciativa del Sourcing Plan (Opcional)</Label>
+                <Select value={sourcingPlanId} onValueChange={setSourcingPlanId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona una iniciativa del plan..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Sin asociar</SelectItem>
+                    {sourcingPlans.map((plan) => (
+                      <SelectItem key={plan.id} value={plan.id}>
+                        {plan.title} ({plan.plan_year} {plan.quarter})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Vincula este proyecto con una iniciativa del Sourcing Plan para seguimiento de ahorros
+                </p>
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>

@@ -609,7 +609,7 @@ export const mockChartData = {
     { month: 'Nov', gastos: 220000, ahorros: 40000, proyectos: 12 },
     { month: 'Dic', gastos: 180000, ahorros: 60000, proyectos: 12 }
   ],
-  
+
   projectEvolution: [
     { month: 'Ene', activos: 2, completados: 1, enPausa: 0 },
     { month: 'Feb', activos: 3, completados: 1, enPausa: 1 },
@@ -624,7 +624,7 @@ export const mockChartData = {
     { month: 'Nov', activos: 12, completados: 6, enPausa: 1 },
     { month: 'Dic', activos: 12, completados: 6, enPausa: 1 }
   ],
-  
+
   savingsByProject: [
     { project: 'Modernización IT', ahorro: 75000, presupuesto: 500000 },
     { project: 'Optimización Proveedores', ahorro: 5000, presupuesto: 200000 },
@@ -697,7 +697,7 @@ export const mockSourcingPlansData = [
     created_at: '2024-11-01T10:00:00Z',
     updated_at: '2025-03-15T10:00:00Z'
   },
-  
+
   // ===== AÑO 2025 - Q2 =====
   {
     id: 'sp-2025-q2-001',
@@ -777,7 +777,7 @@ export const mockSourcingPlansData = [
     created_at: '2024-12-01T10:00:00Z',
     updated_at: '2024-12-01T10:00:00Z'
   },
-  
+
   // ===== AÑO 2025 - Q3 =====
   {
     id: 'sp-2025-q3-001',
@@ -827,7 +827,7 @@ export const mockSourcingPlansData = [
     created_at: '2024-12-15T10:00:00Z',
     updated_at: '2024-12-15T10:00:00Z'
   },
-  
+
   // ===== AÑO 2025 - Q4 =====
   {
     id: 'sp-2025-q4-001',
@@ -851,7 +851,7 @@ export const mockSourcingPlansData = [
     created_at: '2025-01-10T10:00:00Z',
     updated_at: '2025-01-10T10:00:00Z'
   },
-  
+
   // ===== INICIATIVAS SPOT (No planificadas) =====
   {
     id: 'sp-spot-001',
@@ -879,7 +879,7 @@ export const mockSourcingPlansData = [
     created_at: '2025-01-10T08:00:00Z',
     updated_at: '2025-02-28T16:00:00Z'
   },
-  
+
   // ===== AÑO 2024 (Histórico) =====
   {
     id: 'sp-2024-q4-001',
@@ -947,15 +947,15 @@ export const mockSourcingPlanStats = {
   total_in_progress: 1,
   total_cancelled: 0,
   total_spot: 1,
-  
+
   total_estimated_spend: 2165000,
   total_actual_spend: 315000,
   total_projected_savings: 300350,
   total_actual_savings: 35000,
-  
+
   completion_rate: 11.1, // 1 de 9
   savings_achievement_rate: 66.7, // 35000 de 52500 proyectado
-  
+
   by_quarter: [
     {
       quarter: 'Q1',
@@ -990,7 +990,7 @@ export const mockSourcingPlanStats = {
       achievement_rate: 0
     }
   ],
-  
+
   by_type: [
     {
       type: 'licitacion',

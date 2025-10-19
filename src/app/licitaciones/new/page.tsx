@@ -26,6 +26,7 @@ export default function NewLicitacionPage() {
   const [company, setCompany] = useState<any>(null)
   const [users, setUsers] = useState<any[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
+  const [sourcingPlans, setSourcingPlans] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -45,6 +46,7 @@ export default function NewLicitacionPage() {
     awarded_amount: '',
     department_id: '',
     responsible_user_id: '',
+    sourcing_plan_id: '',
     request_date: undefined as Date | undefined,
     publication_date: undefined as Date | undefined,
     questions_date: undefined as Date | undefined,
@@ -123,6 +125,23 @@ export default function NewLicitacionPage() {
 
         if (!usersError && usersData) {
           setUsers(usersData)
+        }
+
+        // Load active sourcing plans (licitacion type, planned or in_progress)
+        const currentYear = new Date().getFullYear()
+        const { data: plansData, error: plansError } = await supabase
+          .from('sourcing_plans')
+          .select('id, title, plan_year, quarter, status')
+          .eq('company_id', profile.company_id)
+          .eq('initiative_type', 'licitacion')
+          .gte('plan_year', currentYear - 1)
+          .in('status', ['planned', 'in_progress'])
+          .is('licitacion_id', null)
+          .order('plan_year', { ascending: false })
+          .order('quarter', { ascending: true })
+
+        if (!plansError && plansData) {
+          setSourcingPlans(plansData)
         }
       }
     } catch (err) {
@@ -229,6 +248,7 @@ export default function NewLicitacionPage() {
           awarded_amount: formData.awarded_amount ? parseFloat(formData.awarded_amount) : null,
           department_id: formData.department_id || null,
           responsible_user_id: formData.responsible_user_id || null,
+          sourcing_plan_id: formData.sourcing_plan_id || null,
           request_date: formData.request_date ? format(formData.request_date, 'yyyy-MM-dd') : null,
           publication_date: formData.publication_date ? format(formData.publication_date, 'yyyy-MM-dd') : null,
           questions_date: formData.questions_date ? format(formData.questions_date, 'yyyy-MM-dd') : null,
@@ -249,6 +269,17 @@ export default function NewLicitacionPage() {
         .single()
 
       if (error) throw error
+
+      // If sourcing_plan_id is provided, update the sourcing plan with the licitacion_id
+      if (formData.sourcing_plan_id) {
+        await supabase
+          .from('sourcing_plans')
+          .update({ 
+            licitacion_id: data.id,
+            status: 'in_progress' 
+          })
+          .eq('id', formData.sourcing_plan_id)
+      }
 
       addToast({
         type: 'success',
@@ -509,6 +540,27 @@ export default function NewLicitacionPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {/* Sourcing Plan */}
+              <div className="space-y-2">
+                <Label htmlFor="sourcing_plan_id">Iniciativa del Sourcing Plan (Opcional)</Label>
+                <Select value={formData.sourcing_plan_id} onValueChange={(value) => handleInputChange('sourcing_plan_id', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona una iniciativa del plan..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Sin asociar</SelectItem>
+                    {sourcingPlans.map((plan) => (
+                      <SelectItem key={plan.id} value={plan.id}>
+                        {plan.title} ({plan.plan_year} {plan.quarter})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Vincula esta licitación con una iniciativa del Sourcing Plan para seguimiento de ahorros
+                </p>
               </div>
             </CardContent>
           </Card>

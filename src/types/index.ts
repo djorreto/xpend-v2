@@ -112,7 +112,7 @@ export interface Licitacion {
   status: LicitacionStatus
   type?: LicitacionType
   category?: LicitacionCategory
-  
+
   // Baseline y montos
   baseline_currency: string
   baseline_amount?: number
@@ -120,13 +120,13 @@ export interface Licitacion {
   awarded_amount?: number
   savings_amount?: number
   savings_percentage?: number
-  
+
   // Gerencia y responsable
   department_id?: string
   department?: Department
   responsible_user_id?: string
   responsible_user?: User
-  
+
   // Fechas del proceso
   request_date?: string
   publication_date?: string
@@ -137,13 +137,13 @@ export interface Licitacion {
   committee_date?: string
   award_date?: string
   contract_signature_date?: string
-  
+
   // Documentos
   tender_document_path?: string
   tender_document_name?: string
   tender_document_size?: number
   tender_link?: string
-  
+
   created_by?: string
   created_at: string
   updated_at: string
@@ -303,7 +303,7 @@ export interface LicitacionSupplier {
 
 export type LicitacionSupplierStatus = 'registered' | 'evaluated' | 'awarded' | 'rejected'
 
-export type ServiceType = 
+export type ServiceType =
   | 'tecnologia'
   | 'servicios_profesionales'
   | 'suministros'
@@ -395,61 +395,61 @@ export interface SupplierStats {
 export interface SourcingPlan {
   id: string
   company_id: string
-  
+
   // Información de planificación
   plan_year: number
   quarter: Quarter
-  
+
   // Tipo y descripción
   initiative_type: InitiativeType
   title: string
   description?: string
-  
+
   // Categoría y departamento
   category?: string
   department_id?: string
   department?: Department
-  
+
   // Montos y ahorros proyectados
   estimated_spend: number
   currency: string
   projected_savings_percentage?: number
   projected_savings_amount?: number
-  
+
   // Proveedores actuales
   current_suppliers?: Array<{
     id: string
     name: string
   }>
-  
+
   // Estado del plan
   status: PlanStatus
-  
+
   // Resultado real
   actual_spend?: number
   actual_savings_amount?: number
   actual_savings_percentage?: number
-  
+
   // Asociación con ejecución
   linked_licitacion_id?: string
   linked_project_id?: string
   is_spot: boolean
-  
+
   // Fechas
   planned_start_date?: string
   planned_end_date?: string
   actual_start_date?: string
   actual_completion_date?: string
-  
+
   // Responsable
   responsible_user_id?: string
   responsible_user?: User
   created_by?: string
   created_by_user?: User
-  
+
   // Notas
   notes?: string
-  
+
   // Timestamps
   created_at: string
   updated_at: string
@@ -508,17 +508,17 @@ export interface SourcingPlanStats {
   total_in_progress: number
   total_cancelled: number
   total_spot: number
-  
+
   // Financiero
   total_estimated_spend: number
   total_actual_spend: number
   total_projected_savings: number
   total_actual_savings: number
-  
+
   // Cumplimiento
   completion_rate: number // % de completados sobre planificados
   savings_achievement_rate: number // % de ahorro real sobre proyectado
-  
+
   // Por trimestre
   by_quarter: Array<{
     quarter: Quarter
@@ -528,7 +528,7 @@ export interface SourcingPlanStats {
     actual_savings: number
     achievement_rate: number
   }>
-  
+
   // Por tipo
   by_type: Array<{
     type: InitiativeType

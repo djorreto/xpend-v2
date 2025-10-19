@@ -7,60 +7,60 @@
 CREATE TABLE IF NOT EXISTS sourcing_plans (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-  
+
   -- Información de planificación
   plan_year INTEGER NOT NULL,
   quarter VARCHAR(2) NOT NULL CHECK (quarter IN ('Q1', 'Q2', 'Q3', 'Q4')),
-  
+
   -- Tipo y descripción
   initiative_type VARCHAR(20) NOT NULL CHECK (initiative_type IN ('licitacion', 'project')),
   title VARCHAR(255) NOT NULL,
   description TEXT,
-  
+
   -- Categoría y departamento
   category VARCHAR(100),
   department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
-  
+
   -- Montos y ahorros proyectados
   estimated_spend DECIMAL(15,2) NOT NULL DEFAULT 0,
   currency VARCHAR(3) NOT NULL DEFAULT 'USD',
   projected_savings_percentage DECIMAL(5,2) DEFAULT 0,
   projected_savings_amount DECIMAL(15,2) DEFAULT 0,
-  
+
   -- Proveedores actuales (si aplica)
   current_suppliers JSONB DEFAULT '[]', -- Array de {id, name}
-  
+
   -- Estado del plan
-  status VARCHAR(20) NOT NULL DEFAULT 'planned' 
+  status VARCHAR(20) NOT NULL DEFAULT 'planned'
     CHECK (status IN ('planned', 'in_progress', 'completed', 'cancelled')),
-  
+
   -- Resultado real (cuando se completa)
   actual_spend DECIMAL(15,2),
   actual_savings_amount DECIMAL(15,2),
   actual_savings_percentage DECIMAL(5,2),
-  
+
   -- Asociación con ejecución real
   linked_licitacion_id UUID REFERENCES licitaciones(id) ON DELETE SET NULL,
   linked_project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
   is_spot BOOLEAN DEFAULT false, -- Marcado como iniciativa Spot si no estaba planificada
-  
+
   -- Fechas
   planned_start_date DATE,
   planned_end_date DATE,
   actual_start_date DATE,
   actual_completion_date DATE,
-  
+
   -- Responsable
   responsible_user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
-  
+
   -- Notas y observaciones
   notes TEXT,
-  
+
   -- Timestamps
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  
+
   -- Índices compuestos
   CONSTRAINT unique_plan_year_quarter UNIQUE (company_id, plan_year, title)
 );
@@ -97,7 +97,7 @@ BEGIN
   IF NEW.projected_savings_percentage IS NOT NULL AND NEW.estimated_spend IS NOT NULL THEN
     NEW.projected_savings_amount = (NEW.estimated_spend * NEW.projected_savings_percentage / 100);
   END IF;
-  
+
   -- Calcular actual savings amount y percentage cuando se completa
   IF NEW.status = 'completed' AND NEW.estimated_spend IS NOT NULL AND NEW.actual_spend IS NOT NULL THEN
     NEW.actual_savings_amount = NEW.estimated_spend - NEW.actual_spend;
@@ -105,7 +105,7 @@ BEGIN
       NEW.actual_savings_percentage = ((NEW.estimated_spend - NEW.actual_spend) / NEW.estimated_spend) * 100;
     END IF;
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -151,8 +151,8 @@ CREATE POLICY sourcing_plans_insert_policy ON sourcing_plans
   FOR INSERT
   WITH CHECK (
     company_id IN (
-      SELECT company_id FROM profiles 
-      WHERE id = auth.uid() 
+      SELECT company_id FROM profiles
+      WHERE id = auth.uid()
       AND role IN ('admin', 'manager')
     )
   );
@@ -162,8 +162,8 @@ CREATE POLICY sourcing_plans_update_policy ON sourcing_plans
   FOR UPDATE
   USING (
     company_id IN (
-      SELECT company_id FROM profiles 
-      WHERE id = auth.uid() 
+      SELECT company_id FROM profiles
+      WHERE id = auth.uid()
       AND role IN ('admin', 'manager')
     )
   );
@@ -173,8 +173,8 @@ CREATE POLICY sourcing_plans_delete_policy ON sourcing_plans
   FOR DELETE
   USING (
     company_id IN (
-      SELECT company_id FROM profiles 
-      WHERE id = auth.uid() 
+      SELECT company_id FROM profiles
+      WHERE id = auth.uid()
       AND role = 'admin'
     )
   );
