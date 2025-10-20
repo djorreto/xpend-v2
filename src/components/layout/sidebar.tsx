@@ -17,7 +17,8 @@ import {
   Gavel,
   TrendingUp,
   Truck,
-  Target
+  Target,
+  Shield
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -35,11 +36,20 @@ const navigation = [
 
 interface SidebarProps {
   companyName?: string
+  userRole?: string
 }
 
-export function Sidebar({ companyName = 'Xpend' }: SidebarProps) {
+export function Sidebar({ companyName = 'Xpend', userRole }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
+
+  // Filter navigation based on user role
+  const filteredNavigation = userRole === 'super_admin'
+    ? [
+        { name: 'Super Admin', href: '/super-admin', icon: Shield },
+        ...navigation
+      ]
+    : navigation
 
   return (
     <div
@@ -94,7 +104,7 @@ export function Sidebar({ companyName = 'Xpend' }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1">
-        {navigation.map((item) => {
+        {filteredNavigation.map((item) => {
           const isActive = pathname === item.href
           return (
             <Link

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, User, LogOut, Settings, Home } from 'lucide-react'
+import { Search, User, LogOut, Settings, Home, Key } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -20,6 +20,7 @@ import { useToast } from '@/components/ui/toast'
 import { Logo } from '@/components/ui/logo'
 import { NotificationsDropdown } from '@/components/ui/notifications'
 import { VersionSelector } from '@/components/ui/version-selector'
+import { ChangePasswordModal } from '@/components/forms/change-password-modal'
 
 interface TopbarProps {
   user?: {
@@ -33,6 +34,7 @@ interface TopbarProps {
 export function Topbar({ user }: TopbarProps) {
   const supabase = supabaseBrowser()
   const [searchQuery, setSearchQuery] = useState('')
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const router = useRouter()
   const { addToast } = useToast()
 
@@ -130,6 +132,10 @@ export function Topbar({ user }: TopbarProps) {
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Configuración</span>
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setChangePasswordOpen(true)}>
+                <Key className="mr-2 h-4 w-4" />
+                <span>Cambiar Contraseña</span>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
@@ -139,6 +145,12 @@ export function Topbar({ user }: TopbarProps) {
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
     </header>
   )
 }

@@ -1,7 +1,10 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Sidebar } from './sidebar'
 import { Topbar } from './topbar'
+import { ChangePasswordModal } from '@/components/forms/change-password-modal'
+import { supabaseBrowser } from '@/lib/supabase'
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -19,10 +22,40 @@ export function MainLayout({
   user, 
   companyName = 'Xpend'
 }: MainLayoutProps) {
+  const [mustChangePassword, setMustChangePassword] = useState(false)
+  const [checkingPassword, setCheckingPassword] = useState(true)
+
+  useEffect(() => {
+    checkPasswordChange()
+  }, [])
+
+  const checkPasswordChange = async () => {
+    try {
+      const supabase = supabaseBrowser()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('must_change_password')
+          .eq('id', session.user.id)
+          .single()
+        
+        if (profile?.must_change_password) {
+          setMustChangePassword(true)
+        }
+      }
+    } catch (error) {
+      console.error('Error checking password change requirement:', error)
+    } finally {
+      setCheckingPassword(false)
+    }
+  }
+
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
-      <Sidebar companyName={companyName} />
+      <Sidebar companyName={companyName} userRole={user?.role} />
       
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -34,6 +67,15 @@ export function MainLayout({
           {children}
         </main>
       </div>
+
+      {/* Forced Password Change Modal */}
+      {!checkingPassword && mustChangePassword && (
+        <ChangePasswordModal
+          isOpen={true}
+          onClose={() => setMustChangePassword(false)}
+          isFirstLogin={true}
+        />
+      )}
     </div>
   )
 }

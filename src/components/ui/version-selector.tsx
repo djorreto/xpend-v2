@@ -14,8 +14,13 @@ import { useVersion } from '@/contexts/version-context'
 import { cn } from '@/lib/utils'
 
 export function VersionSelector() {
-  const { version, setVersion, isFunctional, isMockup } = useVersion()
+  const { version, setVersion, isFunctional, isMockup, isDemo } = useVersion()
   const [isOpen, setIsOpen] = useState(false)
+
+  // Hide version selector for demo users
+  if (isDemo) {
+    return null
+  }
 
   const versions = [
     {

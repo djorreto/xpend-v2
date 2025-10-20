@@ -1006,3 +1006,270 @@ export const mockSourcingPlanStats = {
     }
   ]
 }
+
+// Mock data for Settings Page
+export const mockSettingsData = {
+  company: {
+    id: 'company-1',
+    name: 'Perico los Palotes S.A.',
+    industry: 'Tecnología',
+    tax_id: '76.123.456-7',
+    address: 'Av. Apoquindo 4500, Las Condes, Santiago',
+    phone: '+56 2 2345 6789',
+    email: 'contacto@pericospalotes.cl',
+    website: 'https://www.pericospalotes.cl',
+    logo_url: null,
+    created_at: '2024-01-15T10:00:00Z'
+  },
+  departments: [
+    { id: '1', name: 'Tecnología', description: 'Infraestructura y Desarrollo', users_count: 8 },
+    { id: '2', name: 'Operaciones', description: 'Gestión Operativa', users_count: 12 },
+    { id: '3', name: 'Finanzas', description: 'Contabilidad y Tesorería', users_count: 5 },
+    { id: '4', name: 'Recursos Humanos', description: 'Gestión de Personal', users_count: 4 },
+    { id: '5', name: 'Comercial', description: 'Ventas y Marketing', users_count: 10 }
+  ],
+  integrations: [
+    {
+      id: '1',
+      name: 'SAP',
+      type: 'ERP',
+      status: 'connected',
+      last_sync: '2025-01-19T14:30:00Z',
+      description: 'Sistema ERP principal'
+    },
+    {
+      id: '2',
+      name: 'Mercado Público',
+      type: 'Marketplace',
+      status: 'connected',
+      last_sync: '2025-01-19T12:00:00Z',
+      description: 'Portal de licitaciones públicas'
+    },
+    {
+      id: '3',
+      name: 'ChileCompra',
+      type: 'Marketplace',
+      status: 'disconnected',
+      last_sync: null,
+      description: 'Sistema de compras públicas'
+    }
+  ],
+  notifications: {
+    email: true,
+    in_app: true,
+    project_updates: true,
+    licitacion_alerts: true,
+    supplier_changes: false,
+    spend_reports: true
+  }
+}
+
+// Mock data for Reports Page
+export const mockReportsData = [
+  {
+    id: '1',
+    name: 'Reporte de Gastos Mensuales',
+    type: 'spend',
+    description: 'Análisis detallado de gastos por categoría y departamento',
+    last_generated: '2025-01-15T10:30:00Z',
+    frequency: 'monthly',
+    format: 'PDF',
+    size_kb: 2048,
+    status: 'available'
+  },
+  {
+    id: '2',
+    name: 'Evaluación de Proveedores Q4 2024',
+    type: 'suppliers',
+    description: 'Métricas de desempeño de proveedores del último trimestre',
+    last_generated: '2024-12-28T16:00:00Z',
+    frequency: 'quarterly',
+    format: 'Excel',
+    size_kb: 1536,
+    status: 'available'
+  },
+  {
+    id: '3',
+    name: 'Dashboard Ejecutivo - Enero 2025',
+    type: 'executive',
+    description: 'Resumen ejecutivo de indicadores clave de Strategic Sourcing',
+    last_generated: '2025-01-18T08:00:00Z',
+    frequency: 'monthly',
+    format: 'PDF',
+    size_kb: 3072,
+    status: 'available'
+  },
+  {
+    id: '4',
+    name: 'Análisis de Ahorros 2024',
+    type: 'savings',
+    description: 'Reporte anual de ahorros logrados vs proyectados',
+    last_generated: '2025-01-05T12:00:00Z',
+    frequency: 'annually',
+    format: 'PowerPoint',
+    size_kb: 4096,
+    status: 'available'
+  },
+  {
+    id: '5',
+    name: 'Licitaciones en Progreso',
+    type: 'licitaciones',
+    description: 'Estado actual de todas las licitaciones activas',
+    last_generated: '2025-01-19T09:00:00Z',
+    frequency: 'weekly',
+    format: 'PDF',
+    size_kb: 1024,
+    status: 'generating'
+  }
+]
+
+// Mock data for Spend Analysis Page
+export const mockSpendAnalysisData = {
+  summary: {
+    total_spend: 2450000,
+    current_month: 215000,
+    previous_month: 198000,
+    change_percentage: 8.6,
+    ytd_spend: 215000,
+    budget: 3000000,
+    budget_used_percentage: 7.2
+  },
+  by_category: [
+    {
+      category: 'Tecnología',
+      amount: 850000,
+      percentage: 34.7,
+      transactions: 145,
+      avg_transaction: 5862,
+      top_supplier: 'Microsoft Chile',
+      trend: 'up',
+      change_vs_last_period: 12.5
+    },
+    {
+      category: 'Servicios Profesionales',
+      amount: 620000,
+      percentage: 25.3,
+      transactions: 87,
+      avg_transaction: 7126,
+      top_supplier: 'Deloitte',
+      trend: 'down',
+      change_vs_last_period: -5.2
+    },
+    {
+      category: 'Suministros de Oficina',
+      amount: 480000,
+      percentage: 19.6,
+      transactions: 312,
+      avg_transaction: 1538,
+      top_supplier: 'OfficeMax',
+      trend: 'stable',
+      change_vs_last_period: 1.3
+    },
+    {
+      category: 'Marketing y Publicidad',
+      amount: 320000,
+      percentage: 13.1,
+      transactions: 65,
+      avg_transaction: 4923,
+      top_supplier: 'Google Ads',
+      trend: 'up',
+      change_vs_last_period: 18.7
+    },
+    {
+      category: 'Infraestructura',
+      amount: 180000,
+      percentage: 7.3,
+      transactions: 42,
+      avg_transaction: 4286,
+      top_supplier: 'AWS',
+      trend: 'stable',
+      change_vs_last_period: 2.1
+    }
+  ],
+  by_department: [
+    {
+      department: 'Tecnología',
+      amount: 920000,
+      percentage: 37.6,
+      budget: 1200000,
+      budget_used: 76.7,
+      transactions: 187
+    },
+    {
+      department: 'Operaciones',
+      amount: 650000,
+      percentage: 26.5,
+      budget: 800000,
+      budget_used: 81.3,
+      transactions: 245
+    },
+    {
+      department: 'Comercial',
+      amount: 480000,
+      percentage: 19.6,
+      budget: 600000,
+      budget_used: 80.0,
+      transactions: 156
+    },
+    {
+      department: 'Finanzas',
+      amount: 250000,
+      percentage: 10.2,
+      budget: 300000,
+      budget_used: 83.3,
+      transactions: 98
+    },
+    {
+      department: 'Recursos Humanos',
+      amount: 150000,
+      percentage: 6.1,
+      budget: 200000,
+      budget_used: 75.0,
+      transactions: 67
+    }
+  ],
+  monthly_trend: [
+    { month: 'Ene 2024', amount: 195000 },
+    { month: 'Feb 2024', amount: 210000 },
+    { month: 'Mar 2024', amount: 225000 },
+    { month: 'Abr 2024', amount: 205000 },
+    { month: 'May 2024', amount: 198000 },
+    { month: 'Jun 2024', amount: 215000 },
+    { month: 'Jul 2024', amount: 202000 },
+    { month: 'Ago 2024', amount: 188000 },
+    { month: 'Sep 2024', amount: 220000 },
+    { month: 'Oct 2024', amount: 235000 },
+    { month: 'Nov 2024', amount: 218000 },
+    { month: 'Dic 2024', amount: 198000 }
+  ],
+  top_suppliers: [
+    { supplier: 'Microsoft Chile', amount: 285000, percentage: 11.6, transactions: 24 },
+    { supplier: 'AWS', amount: 220000, percentage: 9.0, transactions: 18 },
+    { supplier: 'Deloitte', amount: 195000, percentage: 8.0, transactions: 12 },
+    { supplier: 'Google Ads', amount: 165000, percentage: 6.7, transactions: 35 },
+    { supplier: 'OfficeMax', amount: 145000, percentage: 5.9, transactions: 89 }
+  ],
+  savings_opportunities: [
+    {
+      category: 'Tecnología',
+      opportunity: 'Consolidación de proveedores de software',
+      potential_savings: 85000,
+      confidence: 'high',
+      effort: 'medium'
+    },
+    {
+      category: 'Servicios Profesionales',
+      opportunity: 'Negociación de tarifas anuales',
+      potential_savings: 62000,
+      confidence: 'medium',
+      effort: 'low'
+    },
+    {
+      category: 'Suministros',
+      opportunity: 'Compra por volumen',
+      potential_savings: 48000,
+      confidence: 'high',
+      effort: 'low'
+    }
+  ]
+}
