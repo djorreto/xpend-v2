@@ -141,12 +141,20 @@ export default function SourcingPlanPage() {
 
       // Modo funcional con Supabase
       const supabase = supabaseBrowser()
-      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
-      if (userError || !authUser) throw new Error('Usuario no autenticado')
 
+      // 1) Asegurar que la sesión esté hidratada
+      let { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user?.id) {
+        await new Promise(r => setTimeout(r, 150))
+        ;({ data: { session } } = await supabase.auth.getSession())
+      }
+      const authUser = session?.user
+      if (!authUser) throw new Error('Usuario no autenticado')
+
+      // 2) Leer perfil protegido por RLS (id = auth.uid())
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, full_name, role, company_id')
         .eq('id', authUser.id)
         .single()
 

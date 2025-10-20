@@ -6,10 +6,10 @@ import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { 
-  Plus, 
-  Search, 
-  Filter, 
+import {
+  Plus,
+  Search,
+  Filter,
   MoreHorizontal,
   Calendar,
   DollarSign,
@@ -86,7 +86,7 @@ export default function ProjectsPage() {
 
       // Si Supabase no está configurado, usar modo mockup
       const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      
+
       if (isMockup || !isSupabaseConfigured) {
         // Use mock data
         setUser({
@@ -104,22 +104,23 @@ export default function ProjectsPage() {
         return
       }
 
-      // Usuario actual
-      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
-      if (userError || !authUser) {
-        throw new Error('Usuario no autenticado')
+      // 1) Asegurar que la sesión esté hidratada
+      let { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user?.id) {
+        await new Promise(r => setTimeout(r, 150))
+        ;({ data: { session } } = await supabase.auth.getSession())
       }
+      const authUser = session?.user
+      if (!authUser) throw new Error('Usuario no autenticado')
 
-      // Perfil
+      // 2) Leer perfil protegido por RLS (id = auth.uid())
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, full_name, role, company_id')
         .eq('id', authUser.id)
         .single()
 
-      if (profileError || !profile) {
-        throw new Error('Perfil no encontrado')
-      }
+      if (profileError || !profile) throw new Error('Perfil no encontrado')
 
       setUser({
         name: profile.full_name || authUser.email,
@@ -205,7 +206,7 @@ export default function ProjectsPage() {
   if (error) {
     return (
       <MainLayout user={user} companyName={company?.name || 'Spendora'}>
-        <ErrorMessage 
+        <ErrorMessage
           title="Error al cargar proyectos"
           message={error}
           onRetry={loadProjects}
@@ -302,24 +303,24 @@ export default function ProjectsPage() {
 
                 {/* Acciones */}
                 <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="flex-1"
                     onClick={() => router.push(`/projects/${project.id}`)}
                   >
                     Ver Detalles
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="flex-1"
                     onClick={() => router.push(`/projects/${project.id}/edit`)}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => handleDeleteProject(project.id)}
                   >

@@ -73,11 +73,14 @@ export default function UsersPage() {
       setLoading(true)
       setError(null)
 
-      // Get current user
-      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
-      if (userError || !authUser) {
-        throw new Error('Usuario no autenticado')
+      // Ensure session is hydrated
+      let { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user?.id) {
+        await new Promise(r => setTimeout(r, 150))
+        ;({ data: { session } } = await supabase.auth.getSession())
       }
+      const authUser = session?.user
+      if (!authUser) throw new Error('Usuario no autenticado')
 
       // Get user profile
       const { data: profile, error: profileError } = await supabase

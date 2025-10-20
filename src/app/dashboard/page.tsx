@@ -150,9 +150,14 @@ export default function DashboardPage() {
         return
       }
 
-      // Use real data from Supabase
-      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
-      if (userError || !authUser) throw new Error('Usuario no autenticado')
+      // Use real data from Supabase (asegurar sesión hidratada)
+      let { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user?.id) {
+        await new Promise(r => setTimeout(r, 150))
+        ;({ data: { session } } = await supabase.auth.getSession())
+      }
+      const authUser = session?.user
+      if (!authUser) throw new Error('Usuario no autenticado')
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')

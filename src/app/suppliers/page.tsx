@@ -8,14 +8,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Building2, 
-  FileText, 
-  Phone, 
-  Mail, 
+import {
+  Plus,
+  Search,
+  Filter,
+  Building2,
+  FileText,
+  Phone,
+  Mail,
   Globe,
   CheckCircle,
   XCircle,
@@ -33,18 +33,18 @@ import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
-import { 
-  mockSuppliersData, 
+import {
+  mockSuppliersData,
   mockAdministrativeEvaluationsData,
-  mockLicitacionSuppliersData 
+  mockLicitacionSuppliersData
 } from '@/lib/mock-data'
-import type { 
-  Supplier, 
-  AdministrativeEvaluation, 
-  LicitacionSupplier, 
+import type {
+  Supplier,
+  AdministrativeEvaluation,
+  LicitacionSupplier,
   ServiceType,
   SupplierFilters,
-  EvaluationTrafficLight 
+  EvaluationTrafficLight
 } from '@/types'
 
 const serviceTypeLabels: Record<ServiceType, string> = {
@@ -76,7 +76,7 @@ export default function SuppliersPage() {
   const [licitacionSuppliers, setLicitacionSuppliers] = useState<LicitacionSupplier[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Filtros
   const [filters, setFilters] = useState<SupplierFilters>({})
   const [searchQuery, setSearchQuery] = useState('')
@@ -113,22 +113,23 @@ export default function SuppliersPage() {
       // In functional mode, try to connect to Supabase
       const supabase = supabaseBrowser()
 
-      // Get current user
-      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
-      if (userError || !authUser) {
-        throw new Error('Usuario no autenticado')
+      // 1) Asegurar que la sesión esté hidratada
+      let { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user?.id) {
+        await new Promise(r => setTimeout(r, 150))
+        ;({ data: { session } } = await supabase.auth.getSession())
       }
+      const authUser = session?.user
+      if (!authUser) throw new Error('Usuario no autenticado')
 
-      // Get user profile
+      // 2) Leer perfil protegido por RLS (id = auth.uid())
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, full_name, role, company_id')
         .eq('id', authUser.id)
         .single()
 
-      if (profileError || !profile) {
-        throw new Error('Perfil no encontrado')
-      }
+      if (profileError || !profile) throw new Error('Perfil no encontrado')
 
       setUser({
         name: profile.full_name || authUser.email,
@@ -203,7 +204,7 @@ export default function SuppliersPage() {
 
   const getEvaluationTrafficLight = (supplier: Supplier): EvaluationTrafficLight => {
     const evaluation = administrativeEvaluations.find(evaluation => evaluation.supplier_id === supplier.id)
-    
+
     if (!evaluation) {
       return {
         status: 'pending',
@@ -214,7 +215,7 @@ export default function SuppliersPage() {
 
     const today = new Date()
     const validUntil = new Date(evaluation.valid_until)
-    
+
     if (validUntil < today) {
       return {
         status: 'expired',
@@ -401,8 +402,8 @@ export default function SuppliersPage() {
               </div>
               <Select
                 value={filters.service_type || 'all'}
-                onValueChange={(value) => setFilters(prev => ({ 
-                  ...prev, 
+                onValueChange={(value) => setFilters(prev => ({
+                  ...prev,
                   service_type: value === 'all' ? undefined : value as ServiceType
                 }))}
               >
@@ -418,8 +419,8 @@ export default function SuppliersPage() {
               </Select>
               <Select
                 value={filters.nda_signed === undefined ? 'all' : filters.nda_signed.toString()}
-                onValueChange={(value) => setFilters(prev => ({ 
-                  ...prev, 
+                onValueChange={(value) => setFilters(prev => ({
+                  ...prev,
                   nda_signed: value === 'all' ? undefined : value === 'true'
                 }))}
               >
@@ -434,8 +435,8 @@ export default function SuppliersPage() {
               </Select>
               <Select
                 value={filters.evaluation_valid === undefined ? 'all' : filters.evaluation_valid.toString()}
-                onValueChange={(value) => setFilters(prev => ({ 
-                  ...prev, 
+                onValueChange={(value) => setFilters(prev => ({
+                  ...prev,
                   evaluation_valid: value === 'all' ? undefined : value === 'true'
                 }))}
               >
@@ -473,7 +474,7 @@ export default function SuppliersPage() {
                   {filteredSuppliers.map((supplier) => {
                     const trafficLight = getEvaluationTrafficLight(supplier)
                     const participationCount = getSupplierParticipationCount(supplier.id)
-                    
+
                     return (
                       <tr key={supplier.id} className="border-b hover:bg-muted/30 transition-colors">
                         {/* Proveedor */}

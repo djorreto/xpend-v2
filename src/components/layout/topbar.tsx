@@ -82,12 +82,12 @@ export function Topbar({ user }: TopbarProps) {
                 <div className="flex items-center space-x-4">
                   {/* Version Selector */}
                   <VersionSelector />
-                  
+
                   {/* Logo */}
-                  <div className="hidden lg:flex items-center">
+                  <div className="hidden lg:flex items-center cursor-pointer" onClick={() => router.push('/home')}>
                     <Logo size="sm" />
                   </div>
-                  
+
                   {/* Notifications */}
                   <NotificationsDropdown />
 

@@ -70,7 +70,6 @@ export function Sidebar({ companyName = 'Xpend' }: SidebarProps) {
             </div>
             <div>
               <h1 className="text-lg font-bold text-white">{companyName}</h1>
-              <p className="text-xs font-medium" style={{ color: '#3BE7AE' }}>Strategic Sourcing</p>
             </div>
           </div>
         )}
@@ -140,8 +139,8 @@ export function Sidebar({ companyName = 'Xpend' }: SidebarProps) {
           }}
         >
           <div className="text-xs font-medium">
-            <p style={{ color: '#3BE7AE' }}>© 2025 xpend.cl</p>
-            <p className="text-white opacity-70">v1.0.0</p>
+            <p style={{ color: '#3BE7AE' }}>© 2025 Xpend™</p>
+            <p className="text-white opacity-70">v2.0.0</p>
           </div>
         </div>
       )}

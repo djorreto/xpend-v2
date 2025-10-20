@@ -1,14 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { 
-  ArrowRight, 
-  CheckCircle, 
-  BarChart3, 
-  Users, 
-  FileText, 
+import {
+  ArrowRight,
+  CheckCircle,
+  BarChart3,
+  Users,
+  FileText,
   TrendingUp,
   Target,
   Zap,
@@ -19,11 +19,23 @@ import {
   X
 } from 'lucide-react'
 import { Logo } from '@/components/ui/logo'
+import { supabaseBrowser } from '@/lib/supabase'
 
 export default function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
 
+
+  useEffect(() => {
+    checkAuth()
+  }, [])
+
+  const checkAuth = async () => {
+    const supabase = supabaseBrowser()
+    const { data: { session } } = await supabase.auth.getSession()
+    setIsAuthenticated(!!session)
+  }
 
   const handleDemo = () => {
     // Aquí podrías agregar lógica para abrir un modal de demo o redirigir
@@ -33,8 +45,8 @@ export default function HomePage() {
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #1a2625 0%, #2D3E3D 50%, #1a2625 100%)' }}>
       {/* Header - Elegante con border bottom destacado */}
-      <header className="relative z-50 backdrop-blur-md" style={{ 
-        backgroundColor: 'rgba(45, 62, 61, 0.98)', 
+      <header className="relative z-50 backdrop-blur-md" style={{
+        backgroundColor: 'rgba(45, 62, 61, 0.98)',
         borderBottom: '2px solid',
         borderImage: 'linear-gradient(90deg, transparent 0%, #3BE7AE 50%, transparent 100%) 1'
       }}>
@@ -48,7 +60,7 @@ export default function HomePage() {
             {/* Desktop Navigation - Elegante */}
             <nav className="hidden md:flex items-center space-x-8">
               <div className="relative group">
-                <button 
+                <button
                   className="text-white/90 flex items-center space-x-1 font-medium transition-all duration-300"
                   onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                   onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
@@ -57,32 +69,32 @@ export default function HomePage() {
                   <ChevronDown className="h-4 w-4" />
                 </button>
               </div>
-              <a 
-                href="/proveedores" 
+              <a
+                href="/proveedores"
                 className="text-white/90 font-medium transition-all duration-300"
                 onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                 onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
               >
                 Proveedores
               </a>
-              <a 
-                href="/nosotros" 
+              <a
+                href="/nosotros"
                 className="text-white/90 font-medium transition-all duration-300"
                 onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                 onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
               >
                 Nosotros
               </a>
-              <a 
-                href="/blog" 
+              <a
+                href="/blog"
                 className="text-white/90 font-medium transition-all duration-300"
                 onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                 onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
               >
                 Blog
               </a>
-              <a 
-                href="/faq" 
+              <a
+                href="/faq"
                 className="text-white/90 font-medium transition-all duration-300"
                 onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                 onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
@@ -93,43 +105,49 @@ export default function HomePage() {
 
             {/* Action Buttons - Elegante */}
             <div className="hidden md:flex items-center space-x-4">
-              <a href="/login">
-                <Button 
-                  variant="ghost" 
+              {isAuthenticated && (
+                <Button
+                  variant="ghost"
                   className="text-white/90 font-medium transition-all duration-300"
+                  onClick={async () => {
+                    const supabase = supabaseBrowser()
+                    await supabase.auth.signOut()
+                    setIsAuthenticated(false)
+                  }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(59, 231, 174, 0.15)'
-                    e.currentTarget.style.color = '#3BE7AE'
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+                    e.currentTarget.style.color = '#ffffff'
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = 'transparent'
                     e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'
                   }}
                 >
-                  Login
+                  Cerrar Sesión
+                </Button>
+              )}
+              <a href={isAuthenticated ? "/dashboard" : "/login"}>
+                <Button
+                  className="px-6 py-2.5 rounded-lg font-semibold shadow-lg transition-all duration-300"
+                  style={{
+                    backgroundColor: '#3BE7AE',
+                    color: '#2D3E3D',
+                    border: '1px solid rgba(59, 231, 174, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#2AD4D2'
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                    e.currentTarget.style.boxShadow = '0 10px 20px rgba(59, 231, 174, 0.3)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#3BE7AE'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = ''
+                  }}
+                >
+                  {isAuthenticated ? "Ir a Xpend" : "Login"}
                 </Button>
               </a>
-              <Button 
-                onClick={handleDemo}
-                className="px-6 py-2.5 rounded-lg font-semibold shadow-lg transition-all duration-300"
-                style={{ 
-                  backgroundColor: '#3BE7AE', 
-                  color: '#2D3E3D',
-                  border: '1px solid rgba(59, 231, 174, 0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#2AD4D2'
-                  e.currentTarget.style.transform = 'translateY(-1px)'
-                  e.currentTarget.style.boxShadow = '0 10px 20px rgba(59, 231, 174, 0.3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#3BE7AE'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = ''
-                }}
-              >
-                Agendar Demo
-              </Button>
             </div>
 
             {/* Mobile menu button */}
@@ -156,20 +174,27 @@ export default function HomePage() {
               <a href="/blog" className="block px-3 py-2 text-white hover:text-blue-200">Blog</a>
               <a href="/faq" className="block px-3 py-2 text-white hover:text-blue-200">FAQ</a>
               <div className="px-3 py-2 space-y-2">
-                <a href="/login" className="block">
-                  <Button 
-                    variant="ghost" 
+                {isAuthenticated && (
+                  <Button
+                    variant="ghost"
                     className="w-full text-white hover:text-blue-200 hover:bg-blue-800"
+                    onClick={async () => {
+                      const supabase = supabaseBrowser()
+                      await supabase.auth.signOut()
+                      setIsAuthenticated(false)
+                    }}
                   >
-                    Login
+                    Cerrar Sesión
+                  </Button>
+                )}
+                <a href={isAuthenticated ? "/dashboard" : "/login"} className="block">
+                  <Button
+                    className="w-full"
+                    style={{ backgroundColor: '#3BE7AE', color: '#2D3E3D' }}
+                  >
+                    {isAuthenticated ? "Ir a Xpend" : "Login"}
                   </Button>
                 </a>
-                <Button 
-                  onClick={handleDemo}
-                  className="w-full bg-green-500 hover:bg-green-600 text-white"
-                >
-                  Agendar Demo
-                </Button>
               </div>
             </div>
           </div>
@@ -183,8 +208,8 @@ export default function HomePage() {
             {/* Left Content */}
             <div className="text-white">
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-8" style={{ letterSpacing: '-0.02em' }}>
-                Coordina y optimiza tu 
-                <span style={{ 
+                Coordina y optimiza tu
+                <span style={{
                   background: 'linear-gradient(135deg, #3BE7AE 0%, #2AD4D2 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
@@ -194,12 +219,12 @@ export default function HomePage() {
               <p className="text-xl mb-10 leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
                 Libera a tu área de Strategic Sourcing de tareas operativas, desde el análisis de categorías hasta la gestión de proyectos, conectándola con el negocio para tomar decisiones más estratégicas.
               </p>
-              <Button 
+              <Button
                 onClick={handleDemo}
                 size="lg"
                 className="px-10 py-6 text-lg font-bold rounded-xl shadow-2xl transition-all duration-300"
-                style={{ 
-                  backgroundColor: '#C6FF00', 
+                style={{
+                  backgroundColor: '#C6FF00',
                   color: '#2D3E3D',
                   letterSpacing: '0.05em'
                 }}
@@ -311,7 +336,7 @@ export default function HomePage() {
       </section>
 
       {/* Separator elegante */}
-      <div className="h-20" style={{ 
+      <div className="h-20" style={{
         background: 'linear-gradient(to bottom, #1a2625 0%, #f9fafb 100%)'
       }}></div>
 
@@ -377,7 +402,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <Button 
+              <Button
                 onClick={handleDemo}
                 className="mt-10 px-8 py-4 rounded-xl font-bold text-lg shadow-xl transition-all duration-300"
                 style={{ backgroundColor: '#3BE7AE', color: '#2D3E3D' }}
@@ -405,7 +430,7 @@ export default function HomePage() {
                 </div>
                 <Menu className="h-5 w-5 text-gray-400" />
               </div>
-              
+
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50">
@@ -538,10 +563,10 @@ export default function HomePage() {
         {/* Decorative elements */}
         <div className="absolute top-0 left-0 w-96 h-96 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, #3BE7AE 0%, transparent 70%)' }}></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, #2AD4D2 0%, transparent 70%)' }}></div>
-        
+
         <div className="max-w-5xl mx-auto text-center relative z-10">
           <h2 className="text-5xl md:text-6xl font-bold text-white mb-8" style={{ letterSpacing: '-0.02em' }}>
-            ¿Listo para optimizar tu <span style={{ 
+            ¿Listo para optimizar tu <span style={{
               background: 'linear-gradient(135deg, #3BE7AE 0%, #2AD4D2 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -552,12 +577,12 @@ export default function HomePage() {
             Únete a las empresas que ya están transformando su gestión de compras estratégicas
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center">
-            <Button 
+            <Button
               onClick={handleDemo}
               size="lg"
               className="px-10 py-6 text-lg font-bold rounded-xl shadow-2xl transition-all duration-300"
-              style={{ 
-                backgroundColor: '#C6FF00', 
+              style={{
+                backgroundColor: '#C6FF00',
                 color: '#2D3E3D',
                 letterSpacing: '0.05em'
               }}
@@ -575,13 +600,13 @@ export default function HomePage() {
               Agendar Demo Gratuita
               <ArrowRight className="ml-2 h-6 w-6" />
             </Button>
-            <a href="/login">
-              <Button 
+            <a href={isAuthenticated ? "/dashboard" : "/login"}>
+              <Button
                 variant="outline"
                 size="lg"
                 className="px-10 py-6 text-lg font-bold rounded-xl transition-all duration-300"
-                style={{ 
-                  borderColor: '#3BE7AE', 
+                style={{
+                  borderColor: '#3BE7AE',
                   color: '#3BE7AE',
                   borderWidth: '2px'
                 }}
@@ -596,7 +621,7 @@ export default function HomePage() {
                   e.currentTarget.style.transform = 'translateY(0)'
                 }}
               >
-                Acceder a la Plataforma
+                {isAuthenticated ? "Ir a Dashboard" : "Acceder a la Plataforma"}
               </Button>
             </a>
           </div>
@@ -617,8 +642,8 @@ export default function HomePage() {
               <h3 className="text-lg font-bold mb-6 text-white">Producto</h3>
               <ul className="space-y-3 text-gray-400">
                 <li>
-                  <a 
-                    href="#" 
+                  <a
+                    href="#"
                     className="transition-colors duration-200"
                     onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                     onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -627,8 +652,8 @@ export default function HomePage() {
                   </a>
                 </li>
                 <li>
-                  <a 
-                    href="#" 
+                  <a
+                    href="#"
                     className="transition-colors duration-200"
                     onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                     onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -637,8 +662,8 @@ export default function HomePage() {
                   </a>
                 </li>
                 <li>
-                  <a 
-                    href="#" 
+                  <a
+                    href="#"
                     className="transition-colors duration-200"
                     onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                     onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -647,8 +672,8 @@ export default function HomePage() {
                   </a>
                 </li>
                 <li>
-                  <a 
-                    href="#" 
+                  <a
+                    href="#"
                     className="transition-colors duration-200"
                     onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                     onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -662,8 +687,8 @@ export default function HomePage() {
               <h3 className="text-lg font-bold mb-6 text-white">Empresa</h3>
               <ul className="space-y-3 text-gray-400">
                 <li>
-                  <a 
-                    href="#" 
+                  <a
+                    href="#"
                     className="transition-colors duration-200"
                     onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                     onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -672,8 +697,8 @@ export default function HomePage() {
                   </a>
                 </li>
                 <li>
-                  <a 
-                    href="#" 
+                  <a
+                    href="#"
                     className="transition-colors duration-200"
                     onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                     onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -682,8 +707,8 @@ export default function HomePage() {
                   </a>
                 </li>
                 <li>
-                  <a 
-                    href="#" 
+                  <a
+                    href="#"
                     className="transition-colors duration-200"
                     onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                     onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -692,8 +717,8 @@ export default function HomePage() {
                   </a>
                 </li>
                 <li>
-                  <a 
-                    href="#" 
+                  <a
+                    href="#"
                     className="transition-colors duration-200"
                     onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                     onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -707,8 +732,8 @@ export default function HomePage() {
               <h3 className="text-lg font-bold mb-6 text-white">Soporte</h3>
               <ul className="space-y-3 text-gray-400">
                 <li>
-                  <a 
-                    href="#" 
+                  <a
+                    href="#"
                     className="transition-colors duration-200"
                     onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                     onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -717,8 +742,8 @@ export default function HomePage() {
                   </a>
                 </li>
                 <li>
-                  <a 
-                    href="#" 
+                  <a
+                    href="#"
                     className="transition-colors duration-200"
                     onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                     onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -727,8 +752,8 @@ export default function HomePage() {
                   </a>
                 </li>
                 <li>
-                  <a 
-                    href="#" 
+                  <a
+                    href="#"
                     className="transition-colors duration-200"
                     onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                     onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -737,8 +762,8 @@ export default function HomePage() {
                   </a>
                 </li>
                 <li>
-                  <a 
-                    href="#" 
+                  <a
+                    href="#"
                     className="transition-colors duration-200"
                     onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                     onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -754,24 +779,24 @@ export default function HomePage() {
               © 2025 <span style={{ color: '#3BE7AE', fontWeight: 'bold' }}>xpend.cl</span> - Todos los derechos reservados.
             </p>
             <div className="flex space-x-8 mt-4 md:mt-0">
-              <a 
-                href="#" 
+              <a
+                href="#"
                 className="text-gray-400 text-sm font-medium transition-colors duration-200"
                 onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                 onMouseLeave={(e) => e.currentTarget.style.color = ''}
               >
                 Privacidad
               </a>
-              <a 
-                href="#" 
+              <a
+                href="#"
                 className="text-gray-400 text-sm font-medium transition-colors duration-200"
                 onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                 onMouseLeave={(e) => e.currentTarget.style.color = ''}
               >
                 Términos
               </a>
-              <a 
-                href="#" 
+              <a
+                href="#"
                 className="text-gray-400 text-sm font-medium transition-colors duration-200"
                 onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                 onMouseLeave={(e) => e.currentTarget.style.color = ''}
