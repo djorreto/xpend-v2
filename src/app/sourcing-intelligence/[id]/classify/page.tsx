@@ -19,7 +19,7 @@ export default function ClassifyPage() {
   const params = useParams()
   const supabase = supabaseBrowser()
   const uploadId = params.id as string
-  
+
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<any>(null)
   const [upload, setUpload] = useState<SIUpload | null>(null)
@@ -158,8 +158,8 @@ export default function ClassifyPage() {
       const result = await response.json()
       if (response.ok) {
         // Actualizar la línea en el estado local
-        setLines(lines.map(line => 
-          line.id === selectedLine.id 
+        setLines(lines.map(line =>
+          line.id === selectedLine.id
             ? { ...line, category: editCategory, subcategory: editSubcategory, needs_review: false }
             : line
         ))
@@ -449,7 +449,7 @@ export default function ClassifyPage() {
                 Modifica la categoría asignada a esta línea de gasto
               </DialogDescription>
             </DialogHeader>
-            
+
             {selectedLine && (
               <div className="space-y-4 py-4">
                 {/* Descripción de la línea */}

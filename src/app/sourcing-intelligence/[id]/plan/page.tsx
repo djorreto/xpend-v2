@@ -179,6 +179,12 @@ export default function PlanPage() {
           </div>
           <div className="flex space-x-3">
             <Button
+              onClick={() => router.push(`/sourcing-intelligence/${uploadId}/insights`)}
+              variant="outline"
+            >
+              📊 Informe Preliminar
+            </Button>
+            <Button
               onClick={() => router.push(`/sourcing-intelligence/${uploadId}/kraljic`)}
               variant="outline"
             >

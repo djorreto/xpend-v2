@@ -74,12 +74,12 @@ export default function KraljicPage() {
   // Transformar datos para el gráfico con tamaño proporcional al gasto
   const totalSpend = items.reduce((sum, item) => sum + item.total_spend, 0)
   const maxSpend = Math.max(...items.map(item => item.total_spend))
-  
+
   const chartData = items.map(item => {
     // Calcular tamaño del círculo basado en el gasto (20-400 para buena visualización)
     const spendPercentage = item.total_spend / totalSpend
     const size = Math.max(20, Math.min(400, spendPercentage * 2000))
-    
+
     return {
       name: item.category,
       impact: (item.impact_score || 0) * 100,
@@ -186,18 +186,25 @@ export default function KraljicPage() {
                     <Label value="← Impacto en el Negocio" angle={-90} position="insideLeft" />
                   </YAxis>
                   <Tooltip content={<CustomTooltip />} />
-
-                  {/* Líneas de cuadrantes */}
-                  <line x1="50%" y1="0" x2="50%" y2="100%" stroke="#ccc" strokeWidth={2} />
-                  <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#ccc" strokeWidth={2} />
-
-                  <Scatter data={chartData} fill="#8884d8">
+                  <Scatter data={chartData}>
                     {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={getQuadrantColor(entry.quadrant!)} />
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={getQuadrantColor(entry.quadrant!)}
+                        r={entry.z / 10} // Dividir por 10 para ajustar el tamaño visual
+                      />
                     ))}
                   </Scatter>
                 </ScatterChart>
               </ResponsiveContainer>
+            </div>
+            
+            {/* Leyenda de tamaños */}
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600">
+                <strong>💡 Nota:</strong> El tamaño de cada círculo representa el monto de gasto. 
+                Círculos más grandes = mayor gasto en esa categoría.
+              </p>
             </div>
           </CardContent>
         </Card>
