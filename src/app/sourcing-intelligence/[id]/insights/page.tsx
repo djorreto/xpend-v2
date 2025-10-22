@@ -154,7 +154,7 @@ export default function InsightsPage() {
     doc.setTextColor(180, 83, 9)
     doc.setFontSize(11)
     doc.setFont('helvetica', 'bold')
-    doc.text('⚠️  DISCLAIMER - GENERADO POR IA EXPERIMENTAL', pageWidth / 2, disclaimerY + 8, { align: 'center' })
+    doc.text('DISCLAIMER - GENERADO POR IA EXPERIMENTAL', pageWidth / 2, disclaimerY + 8, { align: 'center' })
 
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
@@ -250,18 +250,18 @@ export default function InsightsPage() {
     // Texto explicativo del análisis
     doc.setFillColor(248, 250, 252)
     doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 35, 2, 2, 'F')
-    
+
     doc.setFontSize(9)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...xpendDark)
-    doc.text('📊 Resumen del Análisis', margin + 5, yPos + 7)
-    
+    doc.text('RESUMEN DEL ANALISIS', margin + 5, yPos + 7)
+
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(60, 60, 60)
-    
+
     const analysisText = `Se ha realizado un análisis exhaustivo de ${items.length} categorías de gasto, representando un total de $${totalSpend.toLocaleString()} USD. El análisis revela que las 5 categorías principales concentran el ${topSpendPercentage.toFixed(1)}% del gasto total, lo que indica ${topSpendPercentage > 80 ? 'una alta concentración que puede representar riesgos de dependencia' : 'una distribución relativamente equilibrada'}. Se han identificado oportunidades de ahorro por $${plan.projected_savings_amount?.toLocaleString()} USD (${plan.projected_savings_percentage?.toFixed(1)}% del gasto total) mediante la implementación de estrategias de sourcing diferenciadas según la matriz de Kraljic.`
-    
+
     const analysisLines = doc.splitTextToSize(analysisText, pageWidth - 2 * margin - 10)
     doc.text(analysisLines, margin + 5, yPos + 14)
 
@@ -272,7 +272,7 @@ export default function InsightsPage() {
       doc.setFontSize(14)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(...xpendDark)
-      doc.text('💰 Principales Oportunidades de Ahorro', margin, yPos)
+      doc.text('PRINCIPALES OPORTUNIDADES DE AHORRO', margin, yPos)
       yPos += 8
 
       autoTable(doc, {
@@ -326,7 +326,7 @@ export default function InsightsPage() {
       doc.setFontSize(14)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(...xpendDark)
-      doc.text('⚠️  Alta Concentración de Proveedores (RIESGO)', margin, yPos)
+      doc.text('ALTA CONCENTRACION DE PROVEEDORES (RIESGO)', margin, yPos)
       yPos += 8
 
       autoTable(doc, {
@@ -359,25 +359,25 @@ export default function InsightsPage() {
       })
 
       yPos = (doc as any).lastAutoTable.finalY + 15
-      
+
       // Texto explicativo de riesgos
       if (yPos < pageHeight - 60) {
         doc.setFillColor(254, 242, 242)
         doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 25, 2, 2, 'F')
-        
+
         doc.setFontSize(8)
         doc.setFont('helvetica', 'bold')
         doc.setTextColor(...xpendRed)
-        doc.text('⚠️ Análisis de Riesgo:', margin + 5, yPos + 7)
-        
+        doc.text('ANALISIS DE RIESGO:', margin + 5, yPos + 7)
+
         doc.setFont('helvetica', 'normal')
         doc.setTextColor(60, 60, 60)
-        
+
         const riskText = `Se han detectado ${highConcentration.length} categorías con alta concentración de proveedores (>70% del gasto en un solo proveedor). Esta situación representa un riesgo significativo para la continuidad operacional. Se recomienda implementar estrategias de diversificación y dual sourcing para mitigar la dependencia de proveedores únicos.`
-        
+
         const riskLines = doc.splitTextToSize(riskText, pageWidth - 2 * margin - 10)
         doc.text(riskLines, margin + 5, yPos + 14)
-        
+
         yPos += 30
       }
     }
@@ -405,18 +405,18 @@ export default function InsightsPage() {
     // Introducción a recomendaciones
     doc.setFillColor(240, 249, 255)
     doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 30, 2, 2, 'F')
-    
+
     doc.setFontSize(9)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...xpendDark)
-    doc.text('🎯 Estrategia de Sourcing Diferenciada', margin + 5, yPos + 7)
-    
+    doc.text('ESTRATEGIA DE SOURCING DIFERENCIADA', margin + 5, yPos + 7)
+
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(60, 60, 60)
-    
+
     const introText = `Basándose en la Matriz de Kraljic, se propone una estrategia diferenciada según el impacto en el negocio y el riesgo de suministro de cada categoría. Las recomendaciones se organizan en tres enfoques principales: maximizar ahorros en categorías de apalancamiento, asegurar continuidad en cuellos de botella, y desarrollar asociaciones estratégicas en categorías críticas.`
-    
+
     const introLines = doc.splitTextToSize(introText, pageWidth - 2 * margin - 10)
     doc.text(introLines, margin + 5, yPos + 14)
 
@@ -430,7 +430,7 @@ export default function InsightsPage() {
       doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(22, 163, 74)
-      doc.text(`🟢 Categorías de Apalancamiento (${leverage.length})`, margin + 5, yPos + 7)
+      doc.text(`CATEGORIAS DE APALANCAMIENTO (${leverage.length})`, margin + 5, yPos + 7)
 
       doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
@@ -455,7 +455,7 @@ export default function InsightsPage() {
       doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(220, 38, 38)
-      doc.text(`🔴 Categorías Estratégicas (${strategic.length})`, margin + 5, yPos + 7)
+      doc.text(`CATEGORIAS ESTRATEGICAS (${strategic.length})`, margin + 5, yPos + 7)
 
       doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
@@ -480,7 +480,7 @@ export default function InsightsPage() {
       doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(161, 98, 7)
-      doc.text(`🟡 Cuellos de Botella (${bottleneck.length})`, margin + 5, yPos + 7)
+      doc.text(`CUELLOS DE BOTELLA (${bottleneck.length})`, margin + 5, yPos + 7)
 
       doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
@@ -503,7 +503,7 @@ export default function InsightsPage() {
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...xpendDark)
-    doc.text('🎯 Plan de Acción Trimestral', margin, yPos)
+    doc.text('PLAN DE ACCION TRIMESTRAL', margin, yPos)
 
     yPos += 10
 
