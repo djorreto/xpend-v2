@@ -7,8 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { supabaseBrowser } from '@/lib/supabase'
-import { Brain, CheckCircle, AlertCircle, ArrowRight, Sparkles, Filter } from 'lucide-react'
+import { Brain, CheckCircle, AlertCircle, ArrowRight, Sparkles, Filter, Edit } from 'lucide-react'
 import { SIUpload, SISpendLine } from '@/types'
 
 export default function ClassifyPage() {
@@ -16,7 +19,7 @@ export default function ClassifyPage() {
   const params = useParams()
   const supabase = supabaseBrowser()
   const uploadId = params.id as string
-
+  
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<any>(null)
   const [upload, setUpload] = useState<SIUpload | null>(null)
@@ -24,6 +27,11 @@ export default function ClassifyPage() {
   const [loading, setLoading] = useState(true)
   const [classifying, setClassifying] = useState(false)
   const [filter, setFilter] = useState<'all' | 'pending' | 'classified'>('all')
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [selectedLine, setSelectedLine] = useState<SISpendLine | null>(null)
+  const [editCategory, setEditCategory] = useState('')
+  const [editSubcategory, setEditSubcategory] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -122,6 +130,48 @@ export default function ClassifyPage() {
       }
     } catch (error: any) {
       alert(`❌ Error: ${error.message}`)
+    }
+  }
+
+  const handleEditLine = (line: SISpendLine) => {
+    setSelectedLine(line)
+    setEditCategory(line.category || '')
+    setEditSubcategory(line.subcategory || '')
+    setEditModalOpen(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!selectedLine || !editCategory) return
+
+    setSaving(true)
+    try {
+      const response = await fetch('/api/si/update-classification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          line_id: selectedLine.id,
+          category: editCategory,
+          subcategory: editSubcategory || null
+        })
+      })
+
+      const result = await response.json()
+      if (response.ok) {
+        // Actualizar la línea en el estado local
+        setLines(lines.map(line => 
+          line.id === selectedLine.id 
+            ? { ...line, category: editCategory, subcategory: editSubcategory, needs_review: false }
+            : line
+        ))
+        setEditModalOpen(false)
+        alert('✅ Clasificación actualizada correctamente')
+      } else {
+        alert(`❌ Error: ${result.error}`)
+      }
+    } catch (error: any) {
+      alert(`❌ Error: ${error.message}`)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -332,6 +382,15 @@ export default function ClassifyPage() {
                           </>
                         )}
                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditLine(line)}
+                        className="flex-shrink-0"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </Button>
                     </div>
 
                     {/* Descripción */}
@@ -380,6 +439,84 @@ export default function ClassifyPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Edit Modal */}
+        <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Editar Clasificación</DialogTitle>
+              <DialogDescription>
+                Modifica la categoría asignada a esta línea de gasto
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedLine && (
+              <div className="space-y-4 py-4">
+                {/* Descripción de la línea */}
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm font-medium text-gray-900 mb-1">
+                    {selectedLine.description}
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {selectedLine.supplier_name && `${selectedLine.supplier_name} • `}
+                    ${selectedLine.amount.toLocaleString()} {selectedLine.currency}
+                  </p>
+                </div>
+
+                {/* Campo de Categoría */}
+                <div className="space-y-2">
+                  <Label htmlFor="category">Categoría *</Label>
+                  <Input
+                    id="category"
+                    value={editCategory}
+                    onChange={(e) => setEditCategory(e.target.value)}
+                    placeholder="Ej: Servicios de TI"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Ejemplos: Servicios de TI, Suministros de Oficina, Servicios Generales, etc.
+                  </p>
+                </div>
+
+                {/* Campo de Subcategoría */}
+                <div className="space-y-2">
+                  <Label htmlFor="subcategory">Subcategoría (opcional)</Label>
+                  <Input
+                    id="subcategory"
+                    value={editSubcategory}
+                    onChange={(e) => setEditSubcategory(e.target.value)}
+                    placeholder="Ej: Software, Hardware, Cloud"
+                  />
+                </div>
+
+                {/* Botones */}
+                <div className="flex space-x-3 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditModalOpen(false)}
+                    className="flex-1"
+                    disabled={saving}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleSaveEdit}
+                    className="flex-1 bg-gradient-to-r from-[#2AD4D2] to-[#3BE7AE]"
+                    disabled={!editCategory || saving}
+                  >
+                    {saving ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                        Guardando...
+                      </>
+                    ) : (
+                      'Guardar Cambios'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   )

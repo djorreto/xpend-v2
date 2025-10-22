@@ -71,15 +71,26 @@ export default function KraljicPage() {
     }
   }
 
-  // Transformar datos para el gráfico
-  const chartData = items.map(item => ({
-    name: item.category,
-    impact: (item.impact_score || 0) * 100,
-    risk: (item.risk_score || 0) * 100,
-    spend: item.total_spend,
-    quadrant: item.kraljic_quadrant,
-    strategy: item.strategy
-  }))
+  // Transformar datos para el gráfico con tamaño proporcional al gasto
+  const totalSpend = items.reduce((sum, item) => sum + item.total_spend, 0)
+  const maxSpend = Math.max(...items.map(item => item.total_spend))
+  
+  const chartData = items.map(item => {
+    // Calcular tamaño del círculo basado en el gasto (20-400 para buena visualización)
+    const spendPercentage = item.total_spend / totalSpend
+    const size = Math.max(20, Math.min(400, spendPercentage * 2000))
+    
+    return {
+      name: item.category,
+      impact: (item.impact_score || 0) * 100,
+      risk: (item.risk_score || 0) * 100,
+      spend: item.total_spend,
+      spendPercentage: (spendPercentage * 100).toFixed(1),
+      z: size, // Tamaño del círculo
+      quadrant: item.kraljic_quadrant,
+      strategy: item.strategy
+    }
+  })
 
   const getQuadrantColor = (quadrant: string) => {
     const colors: Record<string, string> = {
@@ -95,12 +106,15 @@ export default function KraljicPage() {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="bg-white p-4 border rounded-lg shadow-lg">
-          <p className="font-bold mb-2">{data.name}</p>
-          <p className="text-sm">Impacto: {data.impact.toFixed(1)}%</p>
-          <p className="text-sm">Riesgo: {data.risk.toFixed(1)}%</p>
-          <p className="text-sm">Gasto: ${data.spend.toLocaleString()}</p>
-          <p className="text-sm">Estrategia: {data.strategy}</p>
+        <div className="bg-white p-4 border rounded-lg shadow-lg min-w-[200px]">
+          <p className="font-bold mb-2 text-lg">{data.name}</p>
+          <div className="space-y-1">
+            <p className="text-sm">📊 Impacto: <strong>{data.impact.toFixed(1)}%</strong></p>
+            <p className="text-sm">⚠️ Riesgo: <strong>{data.risk.toFixed(1)}%</strong></p>
+            <p className="text-sm">💰 Gasto: <strong>${data.spend.toLocaleString()}</strong></p>
+            <p className="text-sm">📈 % del Total: <strong>{data.spendPercentage}%</strong></p>
+            <p className="text-sm">🎯 Estrategia: <strong>{data.strategy}</strong></p>
+          </div>
         </div>
       )
     }
