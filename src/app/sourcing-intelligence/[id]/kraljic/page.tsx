@@ -16,7 +16,7 @@ export default function KraljicPage() {
   const params = useParams()
   const supabase = supabaseBrowser()
   const uploadId = params.id as string
-  
+
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<any>(null)
   const [items, setItems] = useState<SIPlanItem[]>([])
@@ -155,28 +155,28 @@ export default function KraljicPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <ScatterChart margin={{ top: 20, right: 20, bottom: 60, left: 60 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    type="number" 
-                    dataKey="risk" 
+                  <XAxis
+                    type="number"
+                    dataKey="risk"
                     name="Riesgo"
                     domain={[0, 100]}
                   >
                     <Label value="Riesgo de Suministro →" offset={-10} position="insideBottom" />
                   </XAxis>
-                  <YAxis 
-                    type="number" 
-                    dataKey="impact" 
+                  <YAxis
+                    type="number"
+                    dataKey="impact"
                     name="Impacto"
                     domain={[0, 100]}
                   >
                     <Label value="← Impacto en el Negocio" angle={-90} position="insideLeft" />
                   </YAxis>
                   <Tooltip content={<CustomTooltip />} />
-                  
+
                   {/* Líneas de cuadrantes */}
                   <line x1="50%" y1="0" x2="50%" y2="100%" stroke="#ccc" strokeWidth={2} />
                   <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#ccc" strokeWidth={2} />
-                  
+
                   <Scatter data={chartData} fill="#8884d8">
                     {chartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={getQuadrantColor(entry.quadrant!)} />
@@ -294,16 +294,16 @@ export default function KraljicPage() {
                   bottleneck: 'Cuello de Botella',
                   non_critical: 'No Críticas'
                 }
-                
+
                 if (quadrantItems.length === 0) return null
-                
+
                 return (
                   <div key={quadrant}>
                     <h4 className="font-medium mb-2">{quadrantLabels[quadrant]}</h4>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                       {quadrantItems.map(item => (
-                        <Badge 
-                          key={item.id} 
+                        <Badge
+                          key={item.id}
                           variant="outline"
                           className="justify-start"
                         >

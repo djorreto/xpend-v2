@@ -14,7 +14,7 @@ import { SILearningRule } from '@/types'
 export default function LearningRulesPage() {
   const router = useRouter()
   const supabase = supabaseBrowser()
-  
+
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<any>(null)
   const [rules, setRules] = useState<SILearningRule[]>([])
@@ -84,7 +84,7 @@ export default function LearningRulesPage() {
   const filteredRules = rules.filter(rule => {
     // Filtro por tipo
     if (filter !== 'all' && rule.rule_type !== filter) return false
-    
+
     // Filtro por búsqueda
     if (search) {
       const searchLower = search.toLowerCase()
@@ -93,7 +93,7 @@ export default function LearningRulesPage() {
         rule.category.toLowerCase().includes(searchLower)
       )
     }
-    
+
     return true
   })
 

@@ -292,14 +292,22 @@ export default function UploadPage() {
                       {field.label}
                     </label>
                     <Select
-                      value={mapping[field.key] || ''}
-                      onValueChange={(value) => setMapping({ ...mapping, [field.key]: value })}
+                      value={mapping[field.key] || 'none'}
+                      onValueChange={(value) => {
+                        if (value === 'none') {
+                          const newMapping = { ...mapping }
+                          delete newMapping[field.key]
+                          setMapping(newMapping)
+                        } else {
+                          setMapping({ ...mapping, [field.key]: value })
+                        }
+                      }}
                     >
                       <SelectTrigger className="flex-1">
                         <SelectValue placeholder="Seleccionar columna..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Sin mapear</SelectItem>
+                        <SelectItem value="none">Sin mapear</SelectItem>
                         {columns.map((col) => (
                           <SelectItem key={col} value={col}>
                             {col}
