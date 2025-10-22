@@ -25,7 +25,7 @@ const model = groq('llama-3.3-70b-versatile')
 export async function POST(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
-    
+
     // 1. Autenticación
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {

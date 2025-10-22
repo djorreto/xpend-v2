@@ -25,7 +25,7 @@ const model = groq('llama-3.3-70b-versatile')
 export async function POST(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
-    
+
     // 1. Autenticación
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
@@ -60,8 +60,8 @@ export async function POST(request: NextRequest) {
 
     if (linesError) throw linesError
     if (!lines || lines.length === 0) {
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         message: 'No hay líneas pendientes de clasificación',
         classified_count: 0
       })
@@ -85,9 +85,9 @@ export async function POST(request: NextRequest) {
 
     for (let i = 0; i < lines.length; i += batchSize) {
       const batch = lines.slice(i, i + batchSize)
-      
+
       // Crear prompt para el lote
-      const batchDescriptions = batch.map((line, idx) => 
+      const batchDescriptions = batch.map((line, idx) =>
         `${idx + 1}. Descripción: "${line.description}"${line.supplier_name ? `, Proveedor: "${line.supplier_name}"` : ''}`
       ).join('\n')
 
@@ -175,7 +175,7 @@ Responde SOLO con el JSON array, una clasificación por cada línea en el mismo 
 
     await supabase
       .from('si_uploads')
-      .update({ 
+      .update({
         status: allClassified ? 'classified' : 'processing'
       })
       .eq('id', upload_id)

@@ -12,7 +12,7 @@ import { SIUpload } from '@/types'
 export default function SourcingIntelligencePage() {
   const router = useRouter()
   const supabase = supabaseBrowser()
-  
+
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<any>(null)
   const [uploads, setUploads] = useState<SIUpload[]>([])
@@ -239,7 +239,7 @@ export default function SourcingIntelligencePage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-4">
                         <div className="text-right">
                           <div className="flex items-center space-x-2">

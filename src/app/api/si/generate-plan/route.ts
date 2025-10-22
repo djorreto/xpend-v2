@@ -8,7 +8,7 @@ export const maxDuration = 60
 export async function POST(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
-    
+
     // 1. Autenticación
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       .not('category', 'is', null)
 
     if (!lines || lines.length === 0) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'No hay líneas clasificadas para generar el plan'
       }, { status: 400 })
     }
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     // 5. Calcular métricas globales
     const total_spend = Array.from(categoryMap.values())
       .reduce((sum, cat) => sum + cat.total_spend, 0)
-    
+
     const max_spend = Math.max(...Array.from(categoryMap.values()).map(c => c.total_spend))
     const max_lines = Math.max(...Array.from(categoryMap.values()).map(c => c.lines.length))
     const max_suppliers = Math.max(...Array.from(categoryMap.values()).map(c => c.suppliers.size))
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
         risk_score: Math.min(risk_score, 1),
         kraljic_quadrant,
         status: 'pending',
-        priority: kraljic_quadrant === 'strategic' || kraljic_quadrant === 'bottleneck' ? 1 : 
+        priority: kraljic_quadrant === 'strategic' || kraljic_quadrant === 'bottleneck' ? 1 :
                   kraljic_quadrant === 'leverage' ? 2 : 3
       }
     })
@@ -184,9 +184,9 @@ export async function POST(request: NextRequest) {
     if (itemsError) throw itemsError
 
     // 8. Calcular totales del plan
-    const total_projected_savings = planItems.reduce((sum, item) => 
+    const total_projected_savings = planItems.reduce((sum, item) =>
       sum + (item.projected_savings_amount || 0), 0)
-    
+
     const projected_savings_percentage = (total_projected_savings / total_spend) * 100
 
     await supabase

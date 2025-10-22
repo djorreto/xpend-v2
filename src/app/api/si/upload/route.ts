@@ -10,7 +10,7 @@ export const maxDuration = 300 // 5 minutos
 export async function POST(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
-    
+
     // 1. Autenticación
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     // 3. Obtener archivo del form
     const formData = await request.formData()
     const file = formData.get('file') as File
-    
+
     if (!file) {
       return NextResponse.json({ error: 'No se proporcionó archivo' }, { status: 400 })
     }
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       const sheetName = workbook.SheetNames[0]
       const sheet = workbook.Sheets[sheetName]
       rows = XLSX.utils.sheet_to_json(sheet)
-      
+
       // Obtener nombres de columnas
       const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1')
       for (let C = range.s.c; C <= range.e.c; ++C) {
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     // Validar que se detectaron columnas mínimas
     if (!columnMapping.description || !columnMapping.amount) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'No se pudieron detectar columnas de descripción y monto. Por favor mapee manualmente.',
         columns,
         detected: columnMapping
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
       processed_rows: spendLines.length,
       column_mapping: columnMapping,
       columns,
-      message: rows.length > 5000 
+      message: rows.length > 5000
         ? `Se procesaron las primeras 5,000 líneas de ${rows.length} totales.`
         : `Se procesaron ${spendLines.length} líneas correctamente.`
     })
@@ -163,11 +163,11 @@ function detectColumns(columns: string[], sampleRow: any): Record<string, string
 
   columns.forEach(col => {
     const lowerCol = col.toLowerCase().trim()
-    
+
     // Detectar descripción
     if (!mapping.description && (
-      lowerCol.includes('descri') || 
-      lowerCol.includes('detalle') || 
+      lowerCol.includes('descri') ||
+      lowerCol.includes('detalle') ||
       lowerCol.includes('item') ||
       lowerCol.includes('producto') ||
       lowerCol.includes('servicio')
@@ -176,8 +176,8 @@ function detectColumns(columns: string[], sampleRow: any): Record<string, string
     }
     // Detectar proveedor
     else if (!mapping.supplier_name && (
-      lowerCol.includes('prove') || 
-      lowerCol.includes('supplier') || 
+      lowerCol.includes('prove') ||
+      lowerCol.includes('supplier') ||
       lowerCol.includes('vendor') ||
       lowerCol.includes('vendedor')
     )) {
@@ -185,9 +185,9 @@ function detectColumns(columns: string[], sampleRow: any): Record<string, string
     }
     // Detectar monto
     else if (!mapping.amount && (
-      lowerCol.includes('monto') || 
-      lowerCol.includes('amount') || 
-      lowerCol.includes('total') || 
+      lowerCol.includes('monto') ||
+      lowerCol.includes('amount') ||
+      lowerCol.includes('total') ||
       lowerCol.includes('precio') ||
       lowerCol.includes('valor') ||
       lowerCol.includes('importe')
@@ -196,16 +196,16 @@ function detectColumns(columns: string[], sampleRow: any): Record<string, string
     }
     // Detectar OC
     else if (!mapping.purchase_order && (
-      lowerCol.includes('oc') || 
-      lowerCol.includes('orden') || 
-      lowerCol.includes('po') || 
+      lowerCol.includes('oc') ||
+      lowerCol.includes('orden') ||
+      lowerCol.includes('po') ||
       lowerCol.includes('purchase')
     )) {
       mapping.purchase_order = col
     }
     // Detectar moneda
     else if (!mapping.currency && (
-      lowerCol.includes('moneda') || 
+      lowerCol.includes('moneda') ||
       lowerCol.includes('currency') ||
       lowerCol.includes('coin')
     )) {
@@ -213,8 +213,8 @@ function detectColumns(columns: string[], sampleRow: any): Record<string, string
     }
     // Detectar centro de costo
     else if (!mapping.cost_center && (
-      lowerCol.includes('centro') || 
-      lowerCol.includes('cost center') || 
+      lowerCol.includes('centro') ||
+      lowerCol.includes('cost center') ||
       lowerCol.includes('cc') ||
       lowerCol.includes('ceco')
     )) {
@@ -222,7 +222,7 @@ function detectColumns(columns: string[], sampleRow: any): Record<string, string
     }
     // Detectar fecha
     else if (!mapping.purchase_date && (
-      lowerCol.includes('fecha') || 
+      lowerCol.includes('fecha') ||
       lowerCol.includes('date') ||
       lowerCol.includes('dia')
     )) {
@@ -236,7 +236,7 @@ function detectColumns(columns: string[], sampleRow: any): Record<string, string
     const longestTextCol = columns[0] // Por defecto la primera
     mapping.description = longestTextCol
   }
-  
+
   if (!mapping.amount && columns.length > 1) {
     // Buscar la columna con números
     const numericCol = columns.find(col => {

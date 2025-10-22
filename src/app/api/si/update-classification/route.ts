@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
-    
+
     // 1. Autenticación
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
     const { line_id, category, subcategory } = await request.json()
 
     if (!line_id || !category) {
-      return NextResponse.json({ 
-        error: 'line_id y category son requeridos' 
+      return NextResponse.json({
+        error: 'line_id y category son requeridos'
       }, { status: 400 })
     }
 
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     // Regla basada en keywords (si encuentra keywords significativos)
     if (keywords.length > 0) {
       const keywordPattern = keywords[0].toLowerCase() // Usar el keyword más relevante
-      
+
       // Verificar si ya existe una regla similar
       const { data: existingRule } = await supabase
         .from('si_learning_rules')
