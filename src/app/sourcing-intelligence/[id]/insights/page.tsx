@@ -247,6 +247,26 @@ export default function InsightsPage() {
 
     yPos += boxHeight + 15
 
+    // Texto explicativo del análisis
+    doc.setFillColor(248, 250, 252)
+    doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 35, 2, 2, 'F')
+    
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...xpendDark)
+    doc.text('📊 Resumen del Análisis', margin + 5, yPos + 7)
+    
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(60, 60, 60)
+    
+    const analysisText = `Se ha realizado un análisis exhaustivo de ${items.length} categorías de gasto, representando un total de $${totalSpend.toLocaleString()} USD. El análisis revela que las 5 categorías principales concentran el ${topSpendPercentage.toFixed(1)}% del gasto total, lo que indica ${topSpendPercentage > 80 ? 'una alta concentración que puede representar riesgos de dependencia' : 'una distribución relativamente equilibrada'}. Se han identificado oportunidades de ahorro por $${plan.projected_savings_amount?.toLocaleString()} USD (${plan.projected_savings_percentage?.toFixed(1)}% del gasto total) mediante la implementación de estrategias de sourcing diferenciadas según la matriz de Kraljic.`
+    
+    const analysisLines = doc.splitTextToSize(analysisText, pageWidth - 2 * margin - 10)
+    doc.text(analysisLines, margin + 5, yPos + 14)
+
+    yPos += 45
+
     // Tabla de Oportunidades
     if (savingsOpportunities.length > 0) {
       doc.setFontSize(14)
@@ -339,6 +359,27 @@ export default function InsightsPage() {
       })
 
       yPos = (doc as any).lastAutoTable.finalY + 15
+      
+      // Texto explicativo de riesgos
+      if (yPos < pageHeight - 60) {
+        doc.setFillColor(254, 242, 242)
+        doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 25, 2, 2, 'F')
+        
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(...xpendRed)
+        doc.text('⚠️ Análisis de Riesgo:', margin + 5, yPos + 7)
+        
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(60, 60, 60)
+        
+        const riskText = `Se han detectado ${highConcentration.length} categorías con alta concentración de proveedores (>70% del gasto en un solo proveedor). Esta situación representa un riesgo significativo para la continuidad operacional. Se recomienda implementar estrategias de diversificación y dual sourcing para mitigar la dependencia de proveedores únicos.`
+        
+        const riskLines = doc.splitTextToSize(riskText, pageWidth - 2 * margin - 10)
+        doc.text(riskLines, margin + 5, yPos + 14)
+        
+        yPos += 30
+      }
     }
 
     // ===== PÁGINA 3: RECOMENDACIONES =====
@@ -360,6 +401,26 @@ export default function InsightsPage() {
     doc.line(margin, yPos + 2, 100, yPos + 2)
 
     yPos = 35
+
+    // Introducción a recomendaciones
+    doc.setFillColor(240, 249, 255)
+    doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 30, 2, 2, 'F')
+    
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...xpendDark)
+    doc.text('🎯 Estrategia de Sourcing Diferenciada', margin + 5, yPos + 7)
+    
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(60, 60, 60)
+    
+    const introText = `Basándose en la Matriz de Kraljic, se propone una estrategia diferenciada según el impacto en el negocio y el riesgo de suministro de cada categoría. Las recomendaciones se organizan en tres enfoques principales: maximizar ahorros en categorías de apalancamiento, asegurar continuidad en cuellos de botella, y desarrollar asociaciones estratégicas en categorías críticas.`
+    
+    const introLines = doc.splitTextToSize(introText, pageWidth - 2 * margin - 10)
+    doc.text(introLines, margin + 5, yPos + 14)
+
+    yPos = 75
 
     // Recomendaciones por cuadrante
     if (leverage.length > 0) {

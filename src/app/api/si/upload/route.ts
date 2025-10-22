@@ -266,7 +266,7 @@ function normalizeDate(dateValue: any): string | null {
     }
 
     const dateStr = String(dateValue).trim()
-    
+
     // Si está vacío
     if (!dateStr) return null
 
@@ -325,7 +325,7 @@ function normalizeDate(dateValue: any): string | null {
 
     // Formatear como YYYY-MM-DD
     const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    
+
     // Validar que la fecha sea válida
     const testDate = new Date(formattedDate)
     if (isNaN(testDate.getTime())) {
