@@ -95,68 +95,169 @@ export default function InsightsPage() {
   const leverage = items.filter(item => item.kraljic_quadrant === 'leverage')
   const bottleneck = items.filter(item => item.kraljic_quadrant === 'bottleneck')
 
-  // Función para exportar a PDF
+  // Función para exportar a PDF con diseño profesional Xpend
   const handleExportPDF = () => {
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
-    let yPos = 20
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 15
 
-    // Título
-    doc.setFontSize(20)
+    // Colores Xpend
+    const xpendTeal = [42, 212, 210]
+    const xpendGreen = [59, 231, 174]
+    const xpendDark = [45, 62, 61]
+    const xpendRed = [239, 68, 68]
+
+    // ===== PÁGINA 1: PORTADA =====
+    // Fondo degradado simulado con rectángulos
+    doc.setFillColor(45, 62, 61)
+    doc.rect(0, 0, pageWidth, pageHeight, 'F')
+
+    // Header con línea turquesa
+    doc.setFillColor(...xpendTeal)
+    doc.rect(0, 0, pageWidth, 8, 'F')
+
+    // Logo "XPEND" simulado
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(32)
     doc.setFont('helvetica', 'bold')
-    doc.text('INFORME PRELIMINAR DE SOURCING INTELLIGENCE', pageWidth / 2, yPos, { align: 'center' })
+    doc.text('XPEND', margin, 35)
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Sourcing Intelligence', margin, 42)
 
-    yPos += 10
+    // Título principal
+    doc.setFontSize(28)
+    doc.setFont('helvetica', 'bold')
+    doc.text('INFORME', pageWidth / 2, 80, { align: 'center' })
+    doc.text('PRELIMINAR', pageWidth / 2, 92, { align: 'center' })
+    
+    // Subtítulo
+    doc.setFontSize(16)
+    doc.setTextColor(...xpendGreen)
+    doc.text('Análisis de Gasto & Estrategia', pageWidth / 2, 105, { align: 'center' })
+
+    // Info del plan
+    doc.setTextColor(255, 255, 255)
     doc.setFontSize(12)
     doc.setFont('helvetica', 'normal')
-    doc.text(`Plan: ${plan.name}`, pageWidth / 2, yPos, { align: 'center' })
-
-    yPos += 6
+    doc.text(`Plan: ${plan.name}`, pageWidth / 2, 130, { align: 'center' })
     doc.setFontSize(10)
-    doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`, pageWidth / 2, yPos, { align: 'center' })
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`, pageWidth / 2, 138, { align: 'center' })
+    doc.text(`${items.length} Categorías Analizadas`, pageWidth / 2, 146, { align: 'center' })
 
-    // DISCLAIMER
-    yPos += 15
+    // Disclaimer en la portada
+    const disclaimerY = 170
     doc.setFillColor(255, 243, 205)
-    doc.rect(10, yPos - 5, pageWidth - 20, 25, 'F')
-    doc.setFontSize(9)
+    doc.roundedRect(margin, disclaimerY, pageWidth - 2 * margin, 40, 3, 3, 'F')
+    
+    doc.setTextColor(180, 83, 9)
+    doc.setFontSize(11)
     doc.setFont('helvetica', 'bold')
-    doc.text('⚠️ DISCLAIMER', 15, yPos)
-    yPos += 5
-    doc.setFont('helvetica', 'normal')
+    doc.text('⚠️  DISCLAIMER - GENERADO POR IA EXPERIMENTAL', pageWidth / 2, disclaimerY + 8, { align: 'center' })
+    
     doc.setFontSize(8)
-    const disclaimerText = 'Este informe ha sido generado por un sistema de IA experimental. La información y recomendaciones aquí presentadas deben ser validadas por profesionales de procurement antes de su implementación. Los análisis pueden contener errores o imprecisiones.'
-    const splitDisclaimer = doc.splitTextToSize(disclaimerText, pageWidth - 30)
-    doc.text(splitDisclaimer, 15, yPos)
-
-    // Resumen Ejecutivo
-    yPos += 25
-    doc.setFontSize(14)
-    doc.setFont('helvetica', 'bold')
-    doc.text('RESUMEN EJECUTIVO', 14, yPos)
-
-    yPos += 8
-    doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
-    doc.text(`Gasto Total Analizado: $${totalSpend.toLocaleString()} USD`, 14, yPos)
-    yPos += 6
-    doc.text(`Categorías: ${items.length} principales`, 14, yPos)
-    yPos += 6
-    doc.text(`Concentración: Top 5 representan ${topSpendPercentage.toFixed(1)}% del gasto`, 14, yPos)
-    yPos += 6
-    doc.text(`Ahorro Proyectado: $${plan.projected_savings_amount?.toLocaleString()} (${plan.projected_savings_percentage?.toFixed(1)}%)`, 14, yPos)
+    const disclaimerLines = doc.splitTextToSize(
+      'Este informe ha sido generado automáticamente mediante inteligencia artificial. La información y recomendaciones deben ser validadas por profesionales de procurement antes de su implementación. Los análisis pueden contener errores o imprecisiones.',
+      pageWidth - 2 * margin - 10
+    )
+    doc.text(disclaimerLines, pageWidth / 2, disclaimerY + 18, { align: 'center' })
 
-    // Oportunidades de Ahorro
+    // Footer portada
+    doc.setFontSize(8)
+    doc.setTextColor(150, 150, 150)
+    doc.text('Powered by Xpend™ - Strategic Sourcing Platform', pageWidth / 2, pageHeight - 10, { align: 'center' })
+
+    // ===== PÁGINA 2: RESUMEN EJECUTIVO =====
+    doc.addPage()
+    let yPos = margin
+
+    // Header de página
+    doc.setFillColor(...xpendTeal)
+    doc.rect(0, 0, pageWidth, 6, 'F')
+    
+    doc.setTextColor(...xpendDark)
+    doc.setFontSize(20)
+    doc.setFont('helvetica', 'bold')
+    yPos = 20
+    doc.text('RESUMEN EJECUTIVO', margin, yPos)
+    
+    // Línea decorativa
+    doc.setDrawColor(...xpendGreen)
+    doc.setLineWidth(0.5)
+    doc.line(margin, yPos + 2, 60, yPos + 2)
+
+    yPos = 35
+
+    // Métricas en cajas
+    const boxWidth = (pageWidth - 3 * margin) / 2
+    const boxHeight = 25
+
+    // Caja 1: Gasto Total
+    doc.setFillColor(240, 253, 253)
+    doc.roundedRect(margin, yPos, boxWidth, boxHeight, 2, 2, 'F')
+    doc.setFontSize(9)
+    doc.setTextColor(100, 100, 100)
+    doc.text('Gasto Total Analizado', margin + 5, yPos + 6)
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...xpendDark)
+    doc.text(`$${totalSpend.toLocaleString()} USD`, margin + 5, yPos + 16)
+
+    // Caja 2: Categorías
+    doc.setFillColor(240, 253, 253)
+    doc.roundedRect(margin + boxWidth + 5, yPos, boxWidth, boxHeight, 2, 2, 'F')
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(100, 100, 100)
+    doc.text('Categorías Principales', margin + boxWidth + 10, yPos + 6)
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...xpendDark)
+    doc.text(`${items.length}`, margin + boxWidth + 10, yPos + 16)
+
+    yPos += boxHeight + 10
+
+    // Caja 3: Concentración
+    doc.setFillColor(254, 243, 199)
+    doc.roundedRect(margin, yPos, boxWidth, boxHeight, 2, 2, 'F')
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(100, 100, 100)
+    doc.text('Concentración (Top 5)', margin + 5, yPos + 6)
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(180, 83, 9)
+    doc.text(`${topSpendPercentage.toFixed(1)}%`, margin + 5, yPos + 16)
+
+    // Caja 4: Ahorro Proyectado
+    doc.setFillColor(220, 252, 231)
+    doc.roundedRect(margin + boxWidth + 5, yPos, boxWidth, boxHeight, 2, 2, 'F')
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(100, 100, 100)
+    doc.text('Ahorro Proyectado', margin + boxWidth + 10, yPos + 6)
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(34, 197, 94)
+    doc.text(`${plan.projected_savings_percentage?.toFixed(1)}%`, margin + boxWidth + 10, yPos + 16)
+    doc.setFontSize(10)
+    doc.text(`($${plan.projected_savings_amount?.toLocaleString()})`, margin + boxWidth + 10, yPos + 21)
+
+    yPos += boxHeight + 15
+
+    // Tabla de Oportunidades
     if (savingsOpportunities.length > 0) {
-      yPos += 15
       doc.setFontSize(14)
       doc.setFont('helvetica', 'bold')
-      doc.text('PRINCIPALES OPORTUNIDADES DE AHORRO', 14, yPos)
-
+      doc.setTextColor(...xpendDark)
+      doc.text('💰 Principales Oportunidades de Ahorro', margin, yPos)
       yPos += 8
+
       autoTable(doc, {
         startY: yPos,
-        head: [['#', 'Categoría', 'Gasto', 'Ahorro %', 'Ahorro $']],
+        head: [['#', 'Categoría', 'Gasto Actual', 'Ahorro %', 'Ahorro USD']],
         body: savingsOpportunities.map((item, index) => [
           (index + 1).toString(),
           item.category,
@@ -164,19 +265,50 @@ export default function InsightsPage() {
           `${item.projected_savings_percentage?.toFixed(1)}%`,
           `$${item.projected_savings_amount?.toLocaleString()}`
         ]),
-        theme: 'grid',
-        headStyles: { fillColor: [42, 212, 210] }
+        theme: 'striped',
+        headStyles: { 
+          fillColor: xpendTeal,
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        bodyStyles: {
+          fontSize: 9,
+          textColor: xpendDark
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252]
+        },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 10 },
+          2: { halign: 'right' },
+          3: { halign: 'center', textColor: [34, 197, 94], fontStyle: 'bold' },
+          4: { halign: 'right', textColor: [34, 197, 94], fontStyle: 'bold' }
+        },
+        margin: { left: margin, right: margin }
       })
-      yPos = (doc as any).lastAutoTable.finalY + 10
+
+      yPos = (doc as any).lastAutoTable.finalY + 15
     }
 
-    // Alta Concentración
-    if (highConcentration.length > 0 && yPos < 250) {
+    // Nueva página si es necesario
+    if (yPos > pageHeight - 80) {
+      doc.addPage()
+      yPos = margin + 10
+      // Header
+      doc.setFillColor(...xpendTeal)
+      doc.rect(0, 0, pageWidth, 6, 'F')
+    }
+
+    // Tabla de Riesgos
+    if (highConcentration.length > 0) {
       doc.setFontSize(14)
       doc.setFont('helvetica', 'bold')
-      doc.text('ALTA CONCENTRACIÓN DE PROVEEDORES (RIESGO)', 14, yPos)
-
+      doc.setTextColor(...xpendDark)
+      doc.text('⚠️  Alta Concentración de Proveedores (RIESGO)', margin, yPos)
       yPos += 8
+
       autoTable(doc, {
         startY: yPos,
         head: [['Categoría', 'Concentración', 'Proveedor Principal']],
@@ -185,91 +317,178 @@ export default function InsightsPage() {
           `${item.supplier_concentration?.toFixed(0)}%`,
           item.main_supplier || 'N/A'
         ]),
-        theme: 'grid',
-        headStyles: { fillColor: [239, 68, 68] }
+        theme: 'striped',
+        headStyles: { 
+          fillColor: xpendRed,
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        bodyStyles: {
+          fontSize: 9,
+          textColor: xpendDark
+        },
+        alternateRowStyles: {
+          fillColor: [254, 242, 242]
+        },
+        columnStyles: {
+          1: { halign: 'center', textColor: xpendRed, fontStyle: 'bold' }
+        },
+        margin: { left: margin, right: margin }
       })
-      yPos = (doc as any).lastAutoTable.finalY + 10
+
+      yPos = (doc as any).lastAutoTable.finalY + 15
     }
 
-    // Nueva página para recomendaciones si es necesario
-    if (yPos > 220) {
-      doc.addPage()
-      yPos = 20
-    }
+    // ===== PÁGINA 3: RECOMENDACIONES =====
+    doc.addPage()
+    yPos = margin
 
-    // Recomendaciones Estratégicas
-    doc.setFontSize(14)
+    // Header
+    doc.setFillColor(...xpendTeal)
+    doc.rect(0, 0, pageWidth, 6, 'F')
+    
+    doc.setTextColor(...xpendDark)
+    doc.setFontSize(20)
     doc.setFont('helvetica', 'bold')
-    doc.text('RECOMENDACIONES ESTRATÉGICAS', 14, yPos)
+    yPos = 20
+    doc.text('RECOMENDACIONES ESTRATÉGICAS', margin, yPos)
+    
+    doc.setDrawColor(...xpendGreen)
+    doc.setLineWidth(0.5)
+    doc.line(margin, yPos + 2, 100, yPos + 2)
 
-    yPos += 8
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
+    yPos = 35
 
+    // Recomendaciones por cuadrante
     if (leverage.length > 0) {
+      doc.setFillColor(220, 252, 231)
+      doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 28, 2, 2, 'F')
+      
+      doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
-      doc.text(`Categorías de Apalancamiento (${leverage.length}):`, 14, yPos)
-      yPos += 5
-      doc.setFont('helvetica', 'normal')
-      doc.text('→ Mayor oportunidad de ahorro mediante licitaciones', 14, yPos)
-      yPos += 5
+      doc.setTextColor(22, 163, 74)
+      doc.text(`🟢 Categorías de Apalancamiento (${leverage.length})`, margin + 5, yPos + 7)
+      
       doc.setFontSize(9)
-      doc.text(leverage.map(i => i.category).join(', '), 14, yPos, { maxWidth: pageWidth - 28 })
-      yPos += 10
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(...xpendDark)
+      doc.text('→ Mayor oportunidad de ahorro mediante licitaciones competitivas', margin + 5, yPos + 14)
+      
+      doc.setFontSize(8)
+      doc.setTextColor(100, 100, 100)
+      const leverageText = doc.splitTextToSize(
+        `Categorías: ${leverage.map(i => i.category).join(', ')}`,
+        pageWidth - 2 * margin - 10
+      )
+      doc.text(leverageText, margin + 5, yPos + 20)
+      
+      yPos += 35
     }
 
     if (strategic.length > 0) {
-      doc.setFontSize(10)
+      doc.setFillColor(254, 242, 242)
+      doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 28, 2, 2, 'F')
+      
+      doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
-      doc.text(`Categorías Estratégicas (${strategic.length}):`, 14, yPos)
-      yPos += 5
+      doc.setTextColor(220, 38, 38)
+      doc.text(`🔴 Categorías Estratégicas (${strategic.length})`, margin + 5, yPos + 7)
+      
+      doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
-      doc.text('→ Requieren relaciones estratégicas a largo plazo', 14, yPos)
-      yPos += 10
+      doc.setTextColor(...xpendDark)
+      doc.text('→ Requieren relaciones estratégicas a largo plazo y monitoreo constante', margin + 5, yPos + 14)
+      
+      doc.setFontSize(8)
+      doc.setTextColor(100, 100, 100)
+      const strategicText = doc.splitTextToSize(
+        `Categorías: ${strategic.map(i => i.category).join(', ')}`,
+        pageWidth - 2 * margin - 10
+      )
+      doc.text(strategicText, margin + 5, yPos + 20)
+      
+      yPos += 35
     }
 
     if (bottleneck.length > 0) {
+      doc.setFillColor(254, 249, 195)
+      doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 28, 2, 2, 'F')
+      
+      doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
-      doc.text(`Cuellos de Botella (${bottleneck.length}):`, 14, yPos)
-      yPos += 5
+      doc.setTextColor(161, 98, 7)
+      doc.text(`🟡 Cuellos de Botella (${bottleneck.length})`, margin + 5, yPos + 7)
+      
+      doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
-      doc.text('→ Priorizar dual sourcing para reducir riesgo', 14, yPos)
-      yPos += 10
+      doc.setTextColor(...xpendDark)
+      doc.text('→ Priorizar dual sourcing y aseguramiento de suministro', margin + 5, yPos + 14)
+      
+      doc.setFontSize(8)
+      doc.setTextColor(100, 100, 100)
+      const bottleneckText = doc.splitTextToSize(
+        `Categorías: ${bottleneck.map(i => i.category).join(', ')}`,
+        pageWidth - 2 * margin - 10
+      )
+      doc.text(bottleneckText, margin + 5, yPos + 20)
+      
+      yPos += 35
     }
 
     // Plan de Acción
-    yPos += 5
-    doc.setFontSize(12)
+    yPos += 10
+    doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    doc.text('PLAN DE ACCIÓN RECOMENDADO', 14, yPos)
+    doc.setTextColor(...xpendDark)
+    doc.text('🎯 Plan de Acción Trimestral', margin, yPos)
+    
+    yPos += 10
 
-    yPos += 8
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    doc.text('Q1: Iniciar licitaciones en categorías de Apalancamiento', 14, yPos)
-    yPos += 5
-    doc.text('Q2-Q3: Desarrollar estrategias de dual sourcing para Cuellos de Botella', 14, yPos)
-    yPos += 5
-    doc.text('Q4: Establecer acuerdos marco con proveedores estratégicos', 14, yPos)
-    yPos += 5
-    doc.text('Continuo: Monitorear concentración de proveedores', 14, yPos)
+    const actionItems = [
+      { q: 'Q1', text: 'Iniciar licitaciones en categorías de Apalancamiento para capturar ahorros rápidos', color: [59, 231, 174] },
+      { q: 'Q2', text: 'Desarrollar estrategias de dual sourcing para Cuellos de Botella', color: [42, 212, 210] },
+      { q: 'Q3', text: 'Negociar acuerdos marco con proveedores estratégicos', color: [59, 231, 174] },
+      { q: 'Q4', text: 'Establecer KPIs de desempeño y monitoreo continuo', color: [42, 212, 210] }
+    ]
+
+    actionItems.forEach((action, index) => {
+      doc.setFillColor(...action.color)
+      doc.circle(margin + 3, yPos + 3, 3, 'F')
+      
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...xpendDark)
+      doc.text(action.q, margin + 10, yPos + 5)
+      
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      const actionText = doc.splitTextToSize(action.text, pageWidth - margin - 35)
+      doc.text(actionText, margin + 22, yPos + 5)
+      
+      yPos += 12
+    })
 
     // Footer en todas las páginas
     const pageCount = doc.getNumberOfPages()
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i)
-      doc.setFontSize(8)
-      doc.setTextColor(128)
-      doc.text(
-        `Xpend - Sourcing Intelligence | Página ${i} de ${pageCount} | Generado por IA`,
-        pageWidth / 2,
-        doc.internal.pageSize.getHeight() - 10,
-        { align: 'center' }
-      )
+      
+      // Línea footer
+      doc.setDrawColor(...xpendTeal)
+      doc.setLineWidth(0.3)
+      doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15)
+      
+      doc.setFontSize(7)
+      doc.setTextColor(120, 120, 120)
+      doc.text('Xpend™ - Sourcing Intelligence Platform', margin, pageHeight - 10)
+      doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin, pageHeight - 10, { align: 'right' })
+      doc.text('Generado por IA - Validar antes de implementar', pageWidth / 2, pageHeight - 10, { align: 'center' })
     }
 
-    // Guardar PDF
-    doc.save(`Informe-Sourcing-Intelligence-${new Date().toISOString().split('T')[0]}.pdf`)
+    // Guardar
+    doc.save(`Xpend-Informe-SI-${new Date().toISOString().split('T')[0]}.pdf`)
   }
 
   if (loading) {
