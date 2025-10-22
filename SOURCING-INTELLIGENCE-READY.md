@@ -2,8 +2,8 @@
 
 ## ✅ MÓDULO COMPLETADO AL 90%
 
-**Fecha:** 21 de Octubre 2025  
-**Commit:** d926bc2  
+**Fecha:** 21 de Octubre 2025
+**Commit:** d926bc2
 **Estado:** Ready for Testing
 
 ---
@@ -52,8 +52,8 @@ Ejecutar en Supabase SQL Editor:
 
 ```sql
 -- Ver tablas creadas
-SELECT table_name FROM information_schema.tables 
-WHERE table_name LIKE 'si_%' 
+SELECT table_name FROM information_schema.tables
+WHERE table_name LIKE 'si_%'
 ORDER BY table_name;
 
 -- Deberías ver:
@@ -151,7 +151,7 @@ Crea un Excel con estas columnas:
 ### **Clasificación Automática:**
 1. **Input:** Descripción + Proveedor + Monto
 2. **Modelo:** Groq (Llama 3.3 70B)
-3. **Output:** 
+3. **Output:**
    - Categoría principal
    - Subcategoría (opcional)
    - Nivel de confianza (0.0 a 1.0)
@@ -312,8 +312,8 @@ El módulo de **Sourcing Intelligence** está al **90% funcional** y listo para 
 
 ---
 
-**Desarrollado por:** Diego Jorreto + Cursor AI  
-**Fecha:** 21 de Octubre 2025  
-**Versión Xpend:** 2.1.0 (En Desarrollo)  
+**Desarrollado por:** Diego Jorreto + Cursor AI
+**Fecha:** 21 de Octubre 2025
+**Versión Xpend:** 2.1.0 (En Desarrollo)
 **Powered by:** Groq + Llama 3.3 70B
 

@@ -316,10 +316,10 @@ CREATE TRIGGER trigger_si_plan_items_updated_at
 -- VERIFICACIÓN RÁPIDA:
 -- Ejecutar estas queries para verificar que todo se creó correctamente:
 
--- SELECT table_name FROM information_schema.tables 
+-- SELECT table_name FROM information_schema.tables
 -- WHERE table_name LIKE 'si_%' ORDER BY table_name;
 
--- SELECT tablename, policyname FROM pg_policies 
+-- SELECT tablename, policyname FROM pg_policies
 -- WHERE tablename LIKE 'si_%' ORDER BY tablename, policyname;
 
 -- ============================================================================
@@ -334,8 +334,8 @@ CREATE TRIGGER trigger_si_plan_items_updated_at
 -- ============================================================================
 
 -- 🎉 ¡Listo! Ahora puedes usar Sourcing Intelligence en Xpend
--- 
--- Próximo paso: 
+--
+-- Próximo paso:
 -- - Ir a http://localhost:3000/sourcing-intelligence
 -- - Subir un archivo Excel de prueba
 -- - ¡Disfrutar del análisis automático con IA!
