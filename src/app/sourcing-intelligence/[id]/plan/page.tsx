@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { supabaseBrowser } from '@/lib/supabase'
-import { Target, TrendingUp, Users, DollarSign, ArrowRight, Download } from 'lucide-react'
+import { Target, TrendingUp, Users, DollarSign, ArrowRight } from 'lucide-react'
 import { SIProcurementPlan, SIPlanItem } from '@/types'
 
 export default function PlanPage() {
@@ -180,9 +180,9 @@ export default function PlanPage() {
           <div className="flex space-x-3">
             <Button
               onClick={() => router.push(`/sourcing-intelligence/${uploadId}/insights`)}
-              variant="outline"
+              className="bg-gradient-to-r from-[#2AD4D2] to-[#3BE7AE]"
             >
-              📊 Informe Preliminar
+              📊 Ver Informe Preliminar
             </Button>
             <Button
               onClick={() => router.push(`/sourcing-intelligence/${uploadId}/kraljic`)}
@@ -190,10 +190,6 @@ export default function PlanPage() {
             >
               Ver Matriz Kraljic
               <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-            <Button className="bg-gradient-to-r from-[#2AD4D2] to-[#3BE7AE]">
-              <Download className="h-4 w-4 mr-2" />
-              Exportar
             </Button>
           </div>
         </div>

@@ -7,15 +7,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { supabaseBrowser } from '@/lib/supabase'
-import { ArrowLeft, TrendingUp, AlertTriangle, Target, Users, FileText } from 'lucide-react'
+import { ArrowLeft, TrendingUp, AlertTriangle, Target, Users, FileText, Download, AlertCircle } from 'lucide-react'
 import { SIPlanItem } from '@/types'
+import jsPDF from 'jspdf'
+import 'jspdf-autotable'
+
+// Extender el tipo de jsPDF para incluir autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF
+  }
+}
 
 export default function InsightsPage() {
   const router = useRouter()
   const params = useParams()
   const supabase = supabaseBrowser()
   const uploadId = params.id as string
-  
+
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<any>(null)
   const [plan, setPlan] = useState<any>(null)
@@ -93,6 +102,183 @@ export default function InsightsPage() {
   const leverage = items.filter(item => item.kraljic_quadrant === 'leverage')
   const bottleneck = items.filter(item => item.kraljic_quadrant === 'bottleneck')
 
+  // Función para exportar a PDF
+  const handleExportPDF = () => {
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    let yPos = 20
+
+    // Título
+    doc.setFontSize(20)
+    doc.setFont('helvetica', 'bold')
+    doc.text('INFORME PRELIMINAR DE SOURCING INTELLIGENCE', pageWidth / 2, yPos, { align: 'center' })
+    
+    yPos += 10
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Plan: ${plan.name}`, pageWidth / 2, yPos, { align: 'center' })
+    
+    yPos += 6
+    doc.setFontSize(10)
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`, pageWidth / 2, yPos, { align: 'center' })
+
+    // DISCLAIMER
+    yPos += 15
+    doc.setFillColor(255, 243, 205)
+    doc.rect(10, yPos - 5, pageWidth - 20, 25, 'F')
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.text('⚠️ DISCLAIMER', 15, yPos)
+    yPos += 5
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    const disclaimerText = 'Este informe ha sido generado por un sistema de IA experimental. La información y recomendaciones aquí presentadas deben ser validadas por profesionales de procurement antes de su implementación. Los análisis pueden contener errores o imprecisiones.'
+    const splitDisclaimer = doc.splitTextToSize(disclaimerText, pageWidth - 30)
+    doc.text(splitDisclaimer, 15, yPos)
+
+    // Resumen Ejecutivo
+    yPos += 25
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('RESUMEN EJECUTIVO', 14, yPos)
+    
+    yPos += 8
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Gasto Total Analizado: $${totalSpend.toLocaleString()} USD`, 14, yPos)
+    yPos += 6
+    doc.text(`Categorías: ${items.length} principales`, 14, yPos)
+    yPos += 6
+    doc.text(`Concentración: Top 5 representan ${topSpendPercentage.toFixed(1)}% del gasto`, 14, yPos)
+    yPos += 6
+    doc.text(`Ahorro Proyectado: $${plan.projected_savings_amount?.toLocaleString()} (${plan.projected_savings_percentage?.toFixed(1)}%)`, 14, yPos)
+
+    // Oportunidades de Ahorro
+    if (savingsOpportunities.length > 0) {
+      yPos += 15
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text('PRINCIPALES OPORTUNIDADES DE AHORRO', 14, yPos)
+      
+      yPos += 8
+      doc.autoTable({
+        startY: yPos,
+        head: [['#', 'Categoría', 'Gasto', 'Ahorro %', 'Ahorro $']],
+        body: savingsOpportunities.map((item, index) => [
+          (index + 1).toString(),
+          item.category,
+          `$${item.total_spend.toLocaleString()}`,
+          `${item.projected_savings_percentage?.toFixed(1)}%`,
+          `$${item.projected_savings_amount?.toLocaleString()}`
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [42, 212, 210] }
+      })
+      yPos = (doc as any).lastAutoTable.finalY + 10
+    }
+
+    // Alta Concentración
+    if (highConcentration.length > 0 && yPos < 250) {
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text('ALTA CONCENTRACIÓN DE PROVEEDORES (RIESGO)', 14, yPos)
+      
+      yPos += 8
+      doc.autoTable({
+        startY: yPos,
+        head: [['Categoría', 'Concentración', 'Proveedor Principal']],
+        body: highConcentration.map(item => [
+          item.category,
+          `${item.supplier_concentration?.toFixed(0)}%`,
+          item.main_supplier || 'N/A'
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [239, 68, 68] }
+      })
+      yPos = (doc as any).lastAutoTable.finalY + 10
+    }
+
+    // Nueva página para recomendaciones si es necesario
+    if (yPos > 220) {
+      doc.addPage()
+      yPos = 20
+    }
+
+    // Recomendaciones Estratégicas
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('RECOMENDACIONES ESTRATÉGICAS', 14, yPos)
+    
+    yPos += 8
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+
+    if (leverage.length > 0) {
+      doc.setFont('helvetica', 'bold')
+      doc.text(`Categorías de Apalancamiento (${leverage.length}):`, 14, yPos)
+      yPos += 5
+      doc.setFont('helvetica', 'normal')
+      doc.text('→ Mayor oportunidad de ahorro mediante licitaciones', 14, yPos)
+      yPos += 5
+      doc.setFontSize(9)
+      doc.text(leverage.map(i => i.category).join(', '), 14, yPos, { maxWidth: pageWidth - 28 })
+      yPos += 10
+    }
+
+    if (strategic.length > 0) {
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.text(`Categorías Estratégicas (${strategic.length}):`, 14, yPos)
+      yPos += 5
+      doc.setFont('helvetica', 'normal')
+      doc.text('→ Requieren relaciones estratégicas a largo plazo', 14, yPos)
+      yPos += 10
+    }
+
+    if (bottleneck.length > 0) {
+      doc.setFont('helvetica', 'bold')
+      doc.text(`Cuellos de Botella (${bottleneck.length}):`, 14, yPos)
+      yPos += 5
+      doc.setFont('helvetica', 'normal')
+      doc.text('→ Priorizar dual sourcing para reducir riesgo', 14, yPos)
+      yPos += 10
+    }
+
+    // Plan de Acción
+    yPos += 5
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.text('PLAN DE ACCIÓN RECOMENDADO', 14, yPos)
+    
+    yPos += 8
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Q1: Iniciar licitaciones en categorías de Apalancamiento', 14, yPos)
+    yPos += 5
+    doc.text('Q2-Q3: Desarrollar estrategias de dual sourcing para Cuellos de Botella', 14, yPos)
+    yPos += 5
+    doc.text('Q4: Establecer acuerdos marco con proveedores estratégicos', 14, yPos)
+    yPos += 5
+    doc.text('Continuo: Monitorear concentración de proveedores', 14, yPos)
+
+    // Footer en todas las páginas
+    const pageCount = doc.getNumberOfPages()
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i)
+      doc.setFontSize(8)
+      doc.setTextColor(128)
+      doc.text(
+        `Xpend - Sourcing Intelligence | Página ${i} de ${pageCount} | Generado por IA`,
+        pageWidth / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: 'center' }
+      )
+    }
+
+    // Guardar PDF
+    doc.save(`Informe-Sourcing-Intelligence-${new Date().toISOString().split('T')[0]}.pdf`)
+  }
+
   if (loading) {
     return (
       <MainLayout user={user} companyName={company?.name}>
@@ -129,14 +315,42 @@ export default function InsightsPage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver al Plan
           </Button>
-          <h1 className="text-3xl font-bold flex items-center space-x-3">
-            <FileText className="h-8 w-8" style={{ color: '#2AD4D2' }} />
-            <span>Informe Preliminar</span>
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Análisis objetivo de la situación actual del gasto
-          </p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl font-bold flex items-center space-x-3">
+                <FileText className="h-8 w-8" style={{ color: '#2AD4D2' }} />
+                <span>Informe Preliminar</span>
+              </h1>
+              <p className="text-muted-foreground mt-2">
+                Análisis objetivo de la situación actual del gasto
+              </p>
+            </div>
+            <Button
+              onClick={handleExportPDF}
+              className="bg-gradient-to-r from-[#2AD4D2] to-[#3BE7AE]"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Descargar Informe PDF
+            </Button>
+          </div>
         </div>
+
+        {/* Disclaimer - Visible en la página */}
+        <Card className="bg-yellow-50 border-yellow-200">
+          <CardContent className="pt-6">
+            <div className="flex items-start space-x-3">
+              <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="font-bold text-yellow-900 mb-1">⚠️ Informe Generado por IA Experimental</h3>
+                <p className="text-sm text-yellow-800">
+                  Este informe ha sido generado automáticamente mediante inteligencia artificial. 
+                  La información y recomendaciones aquí presentadas deben ser <strong>validadas por profesionales de procurement</strong> antes de su implementación. 
+                  Los análisis pueden contener errores o imprecisiones. Use este documento como una guía inicial, no como una decisión final.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Resumen Ejecutivo */}
         <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200">
@@ -154,7 +368,7 @@ export default function InsightsPage() {
               <strong>Concentración de Gasto:</strong> Las 5 categorías principales representan el <strong>{topSpendPercentage.toFixed(1)}%</strong> del gasto total.
             </p>
             <p className="text-gray-800">
-              <strong>Ahorro Proyectado:</strong> ${plan.projected_savings_amount?.toLocaleString() || 0} USD 
+              <strong>Ahorro Proyectado:</strong> ${plan.projected_savings_amount?.toLocaleString() || 0} USD
               ({plan.projected_savings_percentage?.toFixed(1)}% del gasto total) mediante optimización estratégica.
             </p>
           </CardContent>

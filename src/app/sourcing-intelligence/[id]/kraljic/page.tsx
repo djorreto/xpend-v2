@@ -188,8 +188,8 @@ export default function KraljicPage() {
                   <Tooltip content={<CustomTooltip />} />
                   <Scatter data={chartData}>
                     {chartData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
+                      <Cell
+                        key={`cell-${index}`}
                         fill={getQuadrantColor(entry.quadrant!)}
                         r={entry.z / 10} // Dividir por 10 para ajustar el tamaño visual
                       />
@@ -198,11 +198,11 @@ export default function KraljicPage() {
                 </ScatterChart>
               </ResponsiveContainer>
             </div>
-            
+
             {/* Leyenda de tamaños */}
             <div className="mt-4 p-3 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-600">
-                <strong>💡 Nota:</strong> El tamaño de cada círculo representa el monto de gasto. 
+                <strong>💡 Nota:</strong> El tamaño de cada círculo representa el monto de gasto.
                 Círculos más grandes = mayor gasto en esa categoría.
               </p>
             </div>
