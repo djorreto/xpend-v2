@@ -18,12 +18,14 @@ import {
   TrendingUp,
   Truck,
   Target,
-  Shield
+  Shield,
+  Brain
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Sourcing Intelligence', href: '/sourcing-intelligence', icon: Brain },
   { name: 'Sourcing Plan', href: '/sourcing-plan', icon: Target },
   { name: 'Proyectos', href: '/projects', icon: FolderOpen },
   { name: 'Licitaciones', href: '/licitaciones', icon: Gavel },

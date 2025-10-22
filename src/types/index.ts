@@ -552,3 +552,251 @@ export interface DashboardWithPlan extends DashboardMetrics {
   }
 }
 
+// ===== TIPOS PARA SOURCING INTELLIGENCE =====
+
+export interface SIUpload {
+  id: string
+  company_id: string
+  user_id: string
+  file_name: string
+  file_size: number
+  file_type: string
+  total_rows: number
+  processed_rows: number
+  status: SIUploadStatus
+  column_mapping?: Record<string, string>
+  error_message?: string
+  created_at: string
+  updated_at: string
+}
+
+export type SIUploadStatus = 'uploaded' | 'processing' | 'classified' | 'reviewed' | 'completed' | 'error'
+
+export interface SISpendLine {
+  id: string
+  upload_id: string
+  company_id: string
+
+  // Datos originales
+  purchase_order?: string
+  line_number?: number
+  description: string
+  supplier_name?: string
+  supplier_code?: string
+  amount: number
+  currency: string
+  cost_center?: string
+  purchase_date?: string
+
+  // Clasificación IA
+  category?: string
+  subcategory?: string
+  ai_confidence?: number
+  ai_justification?: string
+  needs_review: boolean
+  reviewed_by?: string
+  reviewed_at?: string
+
+  // Metadatos
+  raw_data?: Record<string, any>
+  created_at: string
+  updated_at: string
+}
+
+export interface SICategory {
+  id: string
+  company_id: string
+  name: string
+  parent_category?: string
+  description?: string
+  keywords?: string[]
+  spend_total: number
+  supplier_count: number
+
+  // Parámetros Kraljic
+  impact_score?: number
+  risk_score?: number
+  kraljic_quadrant?: KraljicQuadrant
+
+  created_at: string
+  updated_at: string
+}
+
+export type KraljicQuadrant = 'non_critical' | 'leverage' | 'bottleneck' | 'strategic'
+
+export interface SILearningRule {
+  id: string
+  company_id: string
+  rule_type: LearningRuleType
+  pattern: string
+  category: string
+  subcategory?: string
+  confidence_boost: number
+  source?: string
+  usage_count: number
+  success_rate: number
+  created_by?: string
+  created_at: string
+  updated_at: string
+}
+
+export type LearningRuleType = 'keyword' | 'supplier' | 'correction' | 'few_shot'
+
+export interface SIProcurementPlan {
+  id: string
+  upload_id: string
+  company_id: string
+  name: string
+  plan_year: number
+  status: ProcurementPlanStatus
+  total_spend: number
+  category_count: number
+  supplier_count: number
+  projected_savings_amount?: number
+  projected_savings_percentage?: number
+  created_by?: string
+  created_at: string
+  updated_at: string
+  items?: SIPlanItem[]
+}
+
+export type ProcurementPlanStatus = 'draft' | 'proposed' | 'approved' | 'in_progress' | 'completed'
+
+export interface SIPlanItem {
+  id: string
+  plan_id: string
+  company_id: string
+  category: string
+
+  // Análisis de gasto
+  total_spend: number
+  supplier_count: number
+  main_supplier?: string
+  supplier_concentration?: number
+
+  // Estrategia sugerida
+  strategy: SourcingStrategy
+  recommended_quarter?: Quarter
+  projected_savings_percentage?: number
+  projected_savings_amount?: number
+  ai_reasoning?: string
+
+  // Kraljic
+  impact_score?: number
+  risk_score?: number
+  kraljic_quadrant?: KraljicQuadrant
+
+  // Estado
+  status: PlanItemStatus
+  priority: 1 | 2 | 3
+
+  created_at: string
+  updated_at: string
+}
+
+export type SourcingStrategy =
+  | 'licitar'
+  | 'consolidar'
+  | 'negociar_marco'
+  | 'dual_sourcing'
+  | 'monitorear'
+  | 'optimizar'
+  | 'sustituir'
+
+export type PlanItemStatus = 'pending' | 'approved' | 'in_progress' | 'completed'
+
+// Tipos para mapeo de columnas
+export interface ColumnMapping {
+  purchase_order?: string
+  description: string
+  supplier_name?: string
+  supplier_code?: string
+  amount: string
+  currency?: string
+  cost_center?: string
+  purchase_date?: string
+}
+
+export interface ExcelColumn {
+  name: string
+  index: number
+  sample_values: string[]
+}
+
+// Tipos para clasificación IA
+export interface ClassificationRequest {
+  description: string
+  supplier_name?: string
+  amount?: number
+  existing_rules?: SILearningRule[]
+}
+
+export interface ClassificationResponse {
+  category: string
+  subcategory?: string
+  confidence: number
+  justification: string
+  suggested_strategy?: SourcingStrategy
+}
+
+// Tipos para generación de plan
+export interface PlanGenerationRequest {
+  upload_id: string
+  plan_name: string
+  plan_year: number
+  category_analysis: CategoryAnalysis[]
+}
+
+export interface CategoryAnalysis {
+  category: string
+  total_spend: number
+  supplier_count: number
+  main_supplier?: string
+  supplier_concentration: number
+  line_count: number
+}
+
+// Tipos para matriz de Kraljic
+export interface KraljicPosition {
+  category: string
+  impact_score: number
+  risk_score: number
+  quadrant: KraljicQuadrant
+  total_spend: number
+  supplier_count: number
+}
+
+export interface KraljicMatrix {
+  positions: KraljicPosition[]
+  thresholds: {
+    impact_high: number
+    risk_high: number
+  }
+}
+
+// Tipos para estadísticas de SI
+export interface SIStats {
+  total_uploads: number
+  total_spend_analyzed: number
+  total_categories_identified: number
+  total_learning_rules: number
+  avg_classification_confidence: number
+  categories_by_spend: Array<{
+    category: string
+    spend: number
+    percentage: number
+    line_count: number
+  }>
+  supplier_concentration: Array<{
+    supplier: string
+    spend: number
+    percentage: number
+    category_count: number
+  }>
+  kraljic_distribution: Array<{
+    quadrant: KraljicQuadrant
+    category_count: number
+    total_spend: number
+  }>
+}
+
