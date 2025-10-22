@@ -194,6 +194,55 @@ export default function ClassifyPage() {
           </div>
         </div>
 
+        {/* Instructions Banner */}
+        {pendingCount > 0 && (
+          <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200">
+            <CardContent className="pt-6">
+              <div className="flex items-start space-x-4">
+                <div className="p-3 bg-blue-100 rounded-lg">
+                  <Brain className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-blue-900 mb-2">
+                    🤖 Listo para clasificar con IA
+                  </h3>
+                  <p className="text-blue-800 mb-3">
+                    Tus {pendingCount} líneas están marcadas como "Requiere Revisión" porque aún no han sido clasificadas. 
+                    La IA las analizará y asignará categorías automáticamente.
+                  </p>
+                  <div className="bg-white/50 rounded-lg p-3 mb-3">
+                    <p className="text-sm font-medium text-blue-900 mb-2">📋 ¿Qué hará la IA?</p>
+                    <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                      <li>Analizar la descripción y el proveedor de cada línea</li>
+                      <li>Asignar una categoría de gasto (ej: Servicios de TI, Suministros, etc.)</li>
+                      <li>Calcular un nivel de confianza (alta, media o baja)</li>
+                      <li>Proporcionar una justificación de la clasificación</li>
+                    </ul>
+                  </div>
+                  <Button
+                    onClick={handleClassifyBatch}
+                    disabled={classifying}
+                    size="lg"
+                    className="bg-gradient-to-r from-[#2AD4D2] to-[#3BE7AE] hover:opacity-90"
+                  >
+                    {classifying ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                        Clasificando... Esto puede tomar 10-30 segundos
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-5 w-5 mr-2" />
+                        Comenzar Clasificación Automática
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
