@@ -15,7 +15,7 @@ export default function PlanPage() {
   const params = useParams()
   const supabase = supabaseBrowser()
   const uploadId = params.id as string
-  
+
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<any>(null)
   const [plan, setPlan] = useState<SIProcurementPlan | null>(null)
