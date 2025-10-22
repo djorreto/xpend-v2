@@ -207,7 +207,7 @@ export default function ClassifyPage() {
                     🤖 Listo para clasificar con IA
                   </h3>
                   <p className="text-blue-800 mb-3">
-                    Tus {pendingCount} líneas están marcadas como "Requiere Revisión" porque aún no han sido clasificadas. 
+                    Tus {pendingCount} líneas están marcadas como "Requiere Revisión" porque aún no han sido clasificadas.
                     La IA las analizará y asignará categorías automáticamente.
                   </p>
                   <div className="bg-white/50 rounded-lg p-3 mb-3">
@@ -312,30 +312,63 @@ export default function ClassifyPage() {
           <CardContent>
             <div className="space-y-4">
               {filteredLines.slice(0, 50).map((line) => (
-                <div key={line.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <span className="text-sm text-muted-foreground">#{line.line_number}</span>
-                        {line.category && (
-                          <Badge variant="outline">{line.category}</Badge>
-                        )}
-                        {line.ai_confidence && getConfidenceBadge(line.ai_confidence)}
+                <div key={line.id} className={`border rounded-lg p-5 hover:bg-gray-50 transition-colors ${
+                  line.needs_review ? 'border-yellow-300 bg-yellow-50/30' : 'border-green-300 bg-green-50/30'
+                }`}>
+                  <div className="space-y-3">
+                    {/* Header con número y badges */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3 flex-wrap gap-2">
+                        <span className="font-bold text-gray-700">#{line.line_number}</span>
                         {line.needs_review && (
-                          <Badge variant="outline" className="bg-yellow-50">Requiere Revisión</Badge>
+                          <Badge className="bg-yellow-500 text-white">⚠️ Requiere Revisión</Badge>
+                        )}
+                        {!line.needs_review && line.category && (
+                          <>
+                            <Badge className="bg-blue-600 text-white">
+                              📂 {line.category}
+                            </Badge>
+                            {line.ai_confidence && getConfidenceBadge(line.ai_confidence)}
+                          </>
                         )}
                       </div>
-                      <p className="font-medium mb-1">{line.description}</p>
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                        {line.supplier_name && <span>Proveedor: {line.supplier_name}</span>}
-                        <span>Monto: ${line.amount.toLocaleString()} {line.currency}</span>
-                      </div>
-                      {line.ai_justification && (
-                        <p className="text-sm text-muted-foreground mt-2 italic">
-                          {line.ai_justification}
-                        </p>
-                      )}
                     </div>
+
+                    {/* Descripción */}
+                    <div>
+                      <p className="text-lg font-semibold text-gray-900">{line.description}</p>
+                    </div>
+
+                    {/* Detalles */}
+                    <div className="flex items-center space-x-6 text-sm">
+                      {line.supplier_name && (
+                        <span className="text-gray-600">
+                          <strong>Proveedor:</strong> {line.supplier_name}
+                        </span>
+                      )}
+                      <span className="text-gray-600">
+                        <strong>Monto:</strong> ${line.amount.toLocaleString()} {line.currency}
+                      </span>
+                    </div>
+
+                    {/* Justificación de IA (si existe) */}
+                    {line.ai_justification && (
+                      <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-xs font-semibold text-blue-900 mb-1">💬 Justificación de la IA:</p>
+                        <p className="text-sm text-blue-800 italic">
+                          "{line.ai_justification}"
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Mensaje si no está clasificada */}
+                    {line.needs_review && !line.category && (
+                      <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-800">
+                          ⏳ Esta línea aún no ha sido clasificada. Usa el botón <strong>"Clasificar Automáticamente"</strong> arriba para que la IA la analice.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
