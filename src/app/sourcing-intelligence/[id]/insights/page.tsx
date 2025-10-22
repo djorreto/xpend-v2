@@ -131,7 +131,7 @@ export default function InsightsPage() {
     doc.setFont('helvetica', 'bold')
     doc.text('INFORME', pageWidth / 2, 80, { align: 'center' })
     doc.text('PRELIMINAR', pageWidth / 2, 92, { align: 'center' })
-    
+
     // Subtítulo
     doc.setFontSize(16)
     doc.setTextColor(...xpendGreen)
@@ -150,12 +150,12 @@ export default function InsightsPage() {
     const disclaimerY = 170
     doc.setFillColor(255, 243, 205)
     doc.roundedRect(margin, disclaimerY, pageWidth - 2 * margin, 40, 3, 3, 'F')
-    
+
     doc.setTextColor(180, 83, 9)
     doc.setFontSize(11)
     doc.setFont('helvetica', 'bold')
     doc.text('⚠️  DISCLAIMER - GENERADO POR IA EXPERIMENTAL', pageWidth / 2, disclaimerY + 8, { align: 'center' })
-    
+
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
     const disclaimerLines = doc.splitTextToSize(
@@ -176,13 +176,13 @@ export default function InsightsPage() {
     // Header de página
     doc.setFillColor(...xpendTeal)
     doc.rect(0, 0, pageWidth, 6, 'F')
-    
+
     doc.setTextColor(...xpendDark)
     doc.setFontSize(20)
     doc.setFont('helvetica', 'bold')
     yPos = 20
     doc.text('RESUMEN EJECUTIVO', margin, yPos)
-    
+
     // Línea decorativa
     doc.setDrawColor(...xpendGreen)
     doc.setLineWidth(0.5)
@@ -266,7 +266,7 @@ export default function InsightsPage() {
           `$${item.projected_savings_amount?.toLocaleString()}`
         ]),
         theme: 'striped',
-        headStyles: { 
+        headStyles: {
           fillColor: xpendTeal,
           textColor: [255, 255, 255],
           fontSize: 10,
@@ -318,7 +318,7 @@ export default function InsightsPage() {
           item.main_supplier || 'N/A'
         ]),
         theme: 'striped',
-        headStyles: { 
+        headStyles: {
           fillColor: xpendRed,
           textColor: [255, 255, 255],
           fontSize: 10,
@@ -348,13 +348,13 @@ export default function InsightsPage() {
     // Header
     doc.setFillColor(...xpendTeal)
     doc.rect(0, 0, pageWidth, 6, 'F')
-    
+
     doc.setTextColor(...xpendDark)
     doc.setFontSize(20)
     doc.setFont('helvetica', 'bold')
     yPos = 20
     doc.text('RECOMENDACIONES ESTRATÉGICAS', margin, yPos)
-    
+
     doc.setDrawColor(...xpendGreen)
     doc.setLineWidth(0.5)
     doc.line(margin, yPos + 2, 100, yPos + 2)
@@ -365,17 +365,17 @@ export default function InsightsPage() {
     if (leverage.length > 0) {
       doc.setFillColor(220, 252, 231)
       doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 28, 2, 2, 'F')
-      
+
       doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(22, 163, 74)
       doc.text(`🟢 Categorías de Apalancamiento (${leverage.length})`, margin + 5, yPos + 7)
-      
+
       doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(...xpendDark)
       doc.text('→ Mayor oportunidad de ahorro mediante licitaciones competitivas', margin + 5, yPos + 14)
-      
+
       doc.setFontSize(8)
       doc.setTextColor(100, 100, 100)
       const leverageText = doc.splitTextToSize(
@@ -383,24 +383,24 @@ export default function InsightsPage() {
         pageWidth - 2 * margin - 10
       )
       doc.text(leverageText, margin + 5, yPos + 20)
-      
+
       yPos += 35
     }
 
     if (strategic.length > 0) {
       doc.setFillColor(254, 242, 242)
       doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 28, 2, 2, 'F')
-      
+
       doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(220, 38, 38)
       doc.text(`🔴 Categorías Estratégicas (${strategic.length})`, margin + 5, yPos + 7)
-      
+
       doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(...xpendDark)
       doc.text('→ Requieren relaciones estratégicas a largo plazo y monitoreo constante', margin + 5, yPos + 14)
-      
+
       doc.setFontSize(8)
       doc.setTextColor(100, 100, 100)
       const strategicText = doc.splitTextToSize(
@@ -408,24 +408,24 @@ export default function InsightsPage() {
         pageWidth - 2 * margin - 10
       )
       doc.text(strategicText, margin + 5, yPos + 20)
-      
+
       yPos += 35
     }
 
     if (bottleneck.length > 0) {
       doc.setFillColor(254, 249, 195)
       doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 28, 2, 2, 'F')
-      
+
       doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(161, 98, 7)
       doc.text(`🟡 Cuellos de Botella (${bottleneck.length})`, margin + 5, yPos + 7)
-      
+
       doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(...xpendDark)
       doc.text('→ Priorizar dual sourcing y aseguramiento de suministro', margin + 5, yPos + 14)
-      
+
       doc.setFontSize(8)
       doc.setTextColor(100, 100, 100)
       const bottleneckText = doc.splitTextToSize(
@@ -433,7 +433,7 @@ export default function InsightsPage() {
         pageWidth - 2 * margin - 10
       )
       doc.text(bottleneckText, margin + 5, yPos + 20)
-      
+
       yPos += 35
     }
 
@@ -443,7 +443,7 @@ export default function InsightsPage() {
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...xpendDark)
     doc.text('🎯 Plan de Acción Trimestral', margin, yPos)
-    
+
     yPos += 10
 
     const actionItems = [
@@ -456,17 +456,17 @@ export default function InsightsPage() {
     actionItems.forEach((action, index) => {
       doc.setFillColor(...action.color)
       doc.circle(margin + 3, yPos + 3, 3, 'F')
-      
+
       doc.setFontSize(10)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(...xpendDark)
       doc.text(action.q, margin + 10, yPos + 5)
-      
+
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(9)
       const actionText = doc.splitTextToSize(action.text, pageWidth - margin - 35)
       doc.text(actionText, margin + 22, yPos + 5)
-      
+
       yPos += 12
     })
 
@@ -474,12 +474,12 @@ export default function InsightsPage() {
     const pageCount = doc.getNumberOfPages()
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i)
-      
+
       // Línea footer
       doc.setDrawColor(...xpendTeal)
       doc.setLineWidth(0.3)
       doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15)
-      
+
       doc.setFontSize(7)
       doc.setTextColor(120, 120, 120)
       doc.text('Xpend™ - Sourcing Intelligence Platform', margin, pageHeight - 10)

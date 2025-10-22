@@ -111,6 +111,12 @@ export async function POST(request: NextRequest) {
       const amountStr = String(row[columnMapping.amount] || '0').replace(/[^0-9.-]/g, '')
       const amount = parseFloat(amountStr) || 0
 
+      // Normalizar fecha
+      let purchaseDate = null
+      if (columnMapping.purchase_date && row[columnMapping.purchase_date]) {
+        purchaseDate = normalizeDate(row[columnMapping.purchase_date])
+      }
+
       return {
         upload_id: upload.id,
         company_id: profile.company_id,
@@ -121,7 +127,7 @@ export async function POST(request: NextRequest) {
         purchase_order: row[columnMapping.purchase_order] || null,
         line_number: index + 1,
         cost_center: row[columnMapping.cost_center] || null,
-        purchase_date: row[columnMapping.purchase_date] || null,
+        purchase_date: purchaseDate,
         needs_review: true,
         raw_data: row
       }
@@ -247,5 +253,89 @@ function detectColumns(columns: string[], sampleRow: any): Record<string, string
   }
 
   return mapping
+}
+
+// Función para normalizar fechas de diferentes formatos
+function normalizeDate(dateValue: any): string | null {
+  if (!dateValue) return null
+
+  try {
+    // Si ya es un objeto Date
+    if (dateValue instanceof Date) {
+      return dateValue.toISOString().split('T')[0]
+    }
+
+    const dateStr = String(dateValue).trim()
+    
+    // Si está vacío
+    if (!dateStr) return null
+
+    // Si ya está en formato ISO (YYYY-MM-DD)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr
+    }
+
+    // Intentar parsear diferentes formatos comunes
+    let day: number, month: number, year: number
+
+    // Formato: DD-MM-YY o DD/MM/YY
+    if (/^\d{1,2}[-/]\d{1,2}[-/]\d{2}$/.test(dateStr)) {
+      const parts = dateStr.split(/[-/]/)
+      day = parseInt(parts[0])
+      month = parseInt(parts[1])
+      year = parseInt(parts[2])
+      // Convertir año de 2 dígitos a 4 dígitos
+      year = year < 50 ? 2000 + year : 1900 + year
+    }
+    // Formato: DD-MM-YYYY o DD/MM/YYYY
+    else if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(dateStr)) {
+      const parts = dateStr.split(/[-/]/)
+      day = parseInt(parts[0])
+      month = parseInt(parts[1])
+      year = parseInt(parts[2])
+    }
+    // Formato: YYYY-MM-DD o YYYY/MM/DD
+    else if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(dateStr)) {
+      const parts = dateStr.split(/[-/]/)
+      year = parseInt(parts[0])
+      month = parseInt(parts[1])
+      day = parseInt(parts[2])
+    }
+    // Formato numérico de Excel (días desde 1900-01-01)
+    else if (/^\d{5}$/.test(dateStr)) {
+      const excelDate = parseInt(dateStr)
+      const date = new Date((excelDate - 25569) * 86400 * 1000)
+      return date.toISOString().split('T')[0]
+    }
+    // Intentar parsear con Date (último recurso)
+    else {
+      const parsed = new Date(dateStr)
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toISOString().split('T')[0]
+      }
+      return null
+    }
+
+    // Validar fecha
+    if (isNaN(day) || isNaN(month) || isNaN(year) ||
+        day < 1 || day > 31 || month < 1 || month > 12 ||
+        year < 1900 || year > 2100) {
+      return null
+    }
+
+    // Formatear como YYYY-MM-DD
+    const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    
+    // Validar que la fecha sea válida
+    const testDate = new Date(formattedDate)
+    if (isNaN(testDate.getTime())) {
+      return null
+    }
+
+    return formattedDate
+  } catch (error) {
+    console.error('Error normalizing date:', dateValue, error)
+    return null
+  }
 }
 
