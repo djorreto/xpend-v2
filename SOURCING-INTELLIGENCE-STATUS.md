@@ -1,7 +1,7 @@
 # 🧠 SOURCING INTELLIGENCE - Estado de Implementación
 
-**Fecha:** 21 de Octubre de 2025  
-**Versión:** 2.1.0 (En Desarrollo)  
+**Fecha:** 21 de Octubre de 2025
+**Versión:** 2.1.0 (En Desarrollo)
 **Commit:** 79233d3
 
 ---
@@ -199,7 +199,7 @@ npm list xlsx papaparse recharts @dnd-kit/core
    ```sql
    -- Verificar que se creó el upload
    SELECT * FROM si_uploads ORDER BY created_at DESC LIMIT 1;
-   
+
    -- Ver las líneas insertadas
    SELECT * FROM si_spend_lines WHERE upload_id = '<tu_upload_id>' LIMIT 10;
    ```
@@ -301,7 +301,7 @@ El módulo de **Sourcing Intelligence** ya está 75% funcional a nivel de backen
 
 ---
 
-**Última actualización:** 21 de Octubre de 2025  
-**Versión Xpend:** 2.1.0 (En Desarrollo)  
+**Última actualización:** 21 de Octubre de 2025
+**Versión Xpend:** 2.1.0 (En Desarrollo)
 **Desarrollado por:** Diego Jorreto + Cursor AI
 

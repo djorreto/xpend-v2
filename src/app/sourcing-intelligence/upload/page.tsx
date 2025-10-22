@@ -13,7 +13,7 @@ export default function UploadPage() {
   const router = useRouter()
   const supabase = supabaseBrowser()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
+
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<any>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -75,9 +75,9 @@ export default function UploadPage() {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'text/csv'
     ]
-    if (!validTypes.includes(selectedFile.type) && 
-        !selectedFile.name.endsWith('.xlsx') && 
-        !selectedFile.name.endsWith('.xls') && 
+    if (!validTypes.includes(selectedFile.type) &&
+        !selectedFile.name.endsWith('.xlsx') &&
+        !selectedFile.name.endsWith('.xls') &&
         !selectedFile.name.endsWith('.csv')) {
       setError('Formato no válido. Use Excel (.xlsx, .xls) o CSV.')
       return

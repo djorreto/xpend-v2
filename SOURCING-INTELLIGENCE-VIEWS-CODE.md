@@ -1,17 +1,17 @@
 # 🎨 SOURCING INTELLIGENCE - Código de Vistas Restantes
 
-**Estado:** Fase 1 Completada ✅  
+**Estado:** Fase 1 Completada ✅
 **Pendiente:** Vistas de Upload, Clasificación, Plan, Kraljic y Learning Rules
 
 ---
 
 ## 📋 LO QUE YA ESTÁ HECHO
 
-✅ Base de datos SQL (6 tablas + RLS)  
-✅ Tipos TypeScript completos  
-✅ 5 API routes funcionales  
-✅ Sidebar actualizado con módulo SI  
-✅ Página principal con lista de uploads  
+✅ Base de datos SQL (6 tablas + RLS)
+✅ Tipos TypeScript completos
+✅ 5 API routes funcionales
+✅ Sidebar actualizado con módulo SI
+✅ Página principal con lista de uploads
 ✅ Dependencias instaladas (xlsx, papaparse, recharts, @dnd-kit)
 
 ---
@@ -136,8 +136,8 @@ interface FileUploadZoneProps {
   maxSize?: number
 }
 
-export function FileUploadZone({ 
-  onFileSelect, 
+export function FileUploadZone({
+  onFileSelect,
   accept = {
     'application/vnd.ms-excel': ['.xls'],
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
