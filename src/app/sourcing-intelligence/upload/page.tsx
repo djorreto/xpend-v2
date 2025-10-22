@@ -279,10 +279,19 @@ export default function UploadPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                 <p className="text-sm text-blue-900">
-                  <strong>Detectadas automáticamente:</strong> {uploadResult?.processed_rows} líneas de {uploadResult?.total_rows}
+                  <strong>✅ Detectadas automáticamente:</strong> {uploadResult?.processed_rows} líneas de {uploadResult?.total_rows}
                 </p>
+                <div className="text-sm text-blue-800 space-y-1">
+                  <p><strong>📋 Instrucciones:</strong></p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>Los campos con <strong>*</strong> son obligatorios (Descripción y Monto)</li>
+                    <li>Verifica que cada campo esté mapeado a la columna correcta de tu Excel</li>
+                    <li>Si algo está mal, usa el dropdown para cambiar la columna</li>
+                    <li>Los campos opcionales puedes dejarlos en "Sin mapear"</li>
+                  </ul>
+                </div>
               </div>
 
               <div className="space-y-4">
