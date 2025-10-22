@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { supabaseBrowser } from '@/lib/supabase'
 import { ArrowLeft, Download } from 'lucide-react'
 import { SIPlanItem } from '@/types'
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Label } from 'recharts'
+import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Label } from 'recharts'
 
 export default function KraljicPage() {
   const router = useRouter()
@@ -185,25 +185,27 @@ export default function KraljicPage() {
                   >
                     <Label value="← Impacto en el Negocio" angle={-90} position="insideLeft" />
                   </YAxis>
+                  <ZAxis 
+                    type="number" 
+                    dataKey="z" 
+                    range={[100, 2000]} 
+                    name="Gasto"
+                  />
                   <Tooltip content={<CustomTooltip />} />
-                  <Scatter data={chartData}>
+                  <Scatter data={chartData} fill="#8884d8">
                     {chartData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={getQuadrantColor(entry.quadrant!)}
-                        r={entry.z / 10} // Dividir por 10 para ajustar el tamaño visual
-                      />
+                      <Cell key={`cell-${index}`} fill={getQuadrantColor(entry.quadrant!)} />
                     ))}
                   </Scatter>
                 </ScatterChart>
               </ResponsiveContainer>
             </div>
-
+            
             {/* Leyenda de tamaños */}
             <div className="mt-4 p-3 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-600">
-                <strong>💡 Nota:</strong> El tamaño de cada círculo representa el monto de gasto.
-                Círculos más grandes = mayor gasto en esa categoría.
+                <strong>💡 Nota:</strong> El tamaño de cada círculo es proporcional al % de gasto. 
+                Círculos más grandes = mayor porcentaje del gasto total en esa categoría.
               </p>
             </div>
           </CardContent>

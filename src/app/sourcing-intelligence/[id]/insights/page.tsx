@@ -112,12 +112,12 @@ export default function InsightsPage() {
     doc.setFontSize(20)
     doc.setFont('helvetica', 'bold')
     doc.text('INFORME PRELIMINAR DE SOURCING INTELLIGENCE', pageWidth / 2, yPos, { align: 'center' })
-    
+
     yPos += 10
     doc.setFontSize(12)
     doc.setFont('helvetica', 'normal')
     doc.text(`Plan: ${plan.name}`, pageWidth / 2, yPos, { align: 'center' })
-    
+
     yPos += 6
     doc.setFontSize(10)
     doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`, pageWidth / 2, yPos, { align: 'center' })
@@ -141,7 +141,7 @@ export default function InsightsPage() {
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
     doc.text('RESUMEN EJECUTIVO', 14, yPos)
-    
+
     yPos += 8
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
@@ -159,7 +159,7 @@ export default function InsightsPage() {
       doc.setFontSize(14)
       doc.setFont('helvetica', 'bold')
       doc.text('PRINCIPALES OPORTUNIDADES DE AHORRO', 14, yPos)
-      
+
       yPos += 8
       doc.autoTable({
         startY: yPos,
@@ -182,7 +182,7 @@ export default function InsightsPage() {
       doc.setFontSize(14)
       doc.setFont('helvetica', 'bold')
       doc.text('ALTA CONCENTRACIÓN DE PROVEEDORES (RIESGO)', 14, yPos)
-      
+
       yPos += 8
       doc.autoTable({
         startY: yPos,
@@ -208,7 +208,7 @@ export default function InsightsPage() {
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
     doc.text('RECOMENDACIONES ESTRATÉGICAS', 14, yPos)
-    
+
     yPos += 8
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
@@ -249,7 +249,7 @@ export default function InsightsPage() {
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.text('PLAN DE ACCIÓN RECOMENDADO', 14, yPos)
-    
+
     yPos += 8
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
@@ -343,8 +343,8 @@ export default function InsightsPage() {
               <div>
                 <h3 className="font-bold text-yellow-900 mb-1">⚠️ Informe Generado por IA Experimental</h3>
                 <p className="text-sm text-yellow-800">
-                  Este informe ha sido generado automáticamente mediante inteligencia artificial. 
-                  La información y recomendaciones aquí presentadas deben ser <strong>validadas por profesionales de procurement</strong> antes de su implementación. 
+                  Este informe ha sido generado automáticamente mediante inteligencia artificial.
+                  La información y recomendaciones aquí presentadas deben ser <strong>validadas por profesionales de procurement</strong> antes de su implementación.
                   Los análisis pueden contener errores o imprecisiones. Use este documento como una guía inicial, no como una decisión final.
                 </p>
               </div>
