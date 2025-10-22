@@ -30,27 +30,35 @@ export function VersionProvider({ children }: VersionProviderProps) {
 
   const checkUserRole = async () => {
     try {
+      // First, load version from localStorage immediately (for faster UI)
+      const savedVersion = localStorage.getItem('xpend-version') as AppVersion
+      if (savedVersion && (savedVersion === 'functional' || savedVersion === 'mockup')) {
+        setVersion(savedVersion)
+      }
+
+      // Then check if user is demo (this may override the saved version)
       const supabase = supabaseBrowser()
-      const { data: { session } } = await supabase.auth.getSession()
-      
+
+      // Wait a bit for session to hydrate if needed
+      let { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
+        await new Promise(r => setTimeout(r, 150))
+        ;({ data: { session } } = await supabase.auth.getSession())
+      }
+
       if (session?.user) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', session.user.id)
           .single()
-        
+
         if (profile?.role === 'demo') {
           setIsDemo(true)
           setVersion('mockup') // Force mockup mode for demo users
+          localStorage.setItem('xpend-version', 'mockup') // Save it
           return
         }
-      }
-      
-      // If not demo user, load version from localStorage
-      const savedVersion = localStorage.getItem('xpend-version') as AppVersion
-      if (savedVersion && (savedVersion === 'functional' || savedVersion === 'mockup')) {
-        setVersion(savedVersion)
       }
     } catch (error) {
       console.error('Error checking user role:', error)
@@ -60,6 +68,7 @@ export function VersionProvider({ children }: VersionProviderProps) {
   // Save version to localStorage when it changes (but only if not demo user)
   useEffect(() => {
     if (!isDemo) {
+      console.log('🔄 Version changed to:', version)
       localStorage.setItem('xpend-version', version)
     }
   }, [version, isDemo])

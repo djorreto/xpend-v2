@@ -34,7 +34,7 @@ export default function AuthPage() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
             <Building2 className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold">Spendora</h1>
+            <h1 className="text-2xl font-bold">Xpend</h1>
           </div>
           <p className="text-muted-foreground">
             Plataforma de Strategic Sourcing
@@ -48,8 +48,8 @@ export default function AuthPage() {
               {isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}
             </CardTitle>
             <CardDescription>
-              {isLogin 
-                ? 'Ingresa a tu cuenta para continuar' 
+              {isLogin
+                ? 'Ingresa a tu cuenta para continuar'
                 : 'Crea una nueva cuenta para comenzar'
               }
             </CardDescription>
@@ -181,7 +181,7 @@ export default function AuthPage() {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-muted-foreground">
-          <p>© 2024 Spendora. Todos los derechos reservados.</p>
+          <p>© 2025 Xpend™. Todos los derechos reservados.</p>
         </div>
       </div>
     </div>

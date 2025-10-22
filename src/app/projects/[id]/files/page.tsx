@@ -5,11 +5,11 @@ import { useRouter, useParams } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { 
-  ArrowLeft, 
-  Upload, 
-  Download, 
-  Trash2, 
+import {
+  ArrowLeft,
+  Upload,
+  Download,
+  Trash2,
   FileText,
   Loader2
 } from 'lucide-react'
@@ -257,7 +257,7 @@ export default function ProjectFilesPage() {
 
   if (loading) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+      <MainLayout user={user} companyName={company?.name}>
         <LoadingSpinner />
       </MainLayout>
     )
@@ -265,8 +265,8 @@ export default function ProjectFilesPage() {
 
   if (error || !project) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Spendora'}>
-        <ErrorMessage 
+      <MainLayout user={user} companyName={company?.name}>
+        <ErrorMessage
           title="Error al cargar archivos"
           message={error || 'Proyecto no encontrado'}
           onRetry={loadData}
@@ -276,7 +276,7 @@ export default function ProjectFilesPage() {
   }
 
   return (
-    <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+    <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -342,16 +342,16 @@ export default function ProjectFilesPage() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => handleDownload(file)}
                       >
                         <Download className="mr-2 h-4 w-4" />
                         Descargar
                       </Button>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => handleDeleteFile(file.id, file.file_path)}
                       >

@@ -6,9 +6,9 @@ import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { 
-  ArrowLeft, 
-  Send, 
+import {
+  ArrowLeft,
+  Send,
   MessageSquare,
   User,
   Loader2
@@ -206,7 +206,7 @@ export default function ProjectCommentsPage() {
 
   if (loading) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+      <MainLayout user={user} companyName={company?.name}>
         <LoadingSpinner />
       </MainLayout>
     )
@@ -214,8 +214,8 @@ export default function ProjectCommentsPage() {
 
   if (error || !project) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Spendora'}>
-        <ErrorMessage 
+      <MainLayout user={user} companyName={company?.name}>
+        <ErrorMessage
           title="Error al cargar comentarios"
           message={error || 'Proyecto no encontrado'}
           onRetry={loadData}
@@ -225,7 +225,7 @@ export default function ProjectCommentsPage() {
   }
 
   return (
-    <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+    <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center space-x-4">
@@ -259,7 +259,7 @@ export default function ProjectCommentsPage() {
                 disabled={sending}
               />
               <div className="flex justify-end">
-                <Button 
+                <Button
                   onClick={handleSendComment}
                   disabled={!newComment.trim() || sending}
                 >

@@ -6,10 +6,10 @@ import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  ArrowLeft, 
-  Edit, 
-  Trash2, 
+import {
+  ArrowLeft,
+  Edit,
+  Trash2,
   Calendar,
   DollarSign,
   User,
@@ -91,13 +91,13 @@ export default function LicitacionDetailPage() {
       setError(null)
 
       // Check if we're in mockup mode or if Supabase is not configured
-      const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && 
+      const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL &&
                                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
       if (isMockup || !isSupabaseConfigured) {
         // Use mock data
         const mockLicitacion = mockLicitacionesData.find(l => l.id === licitacionId)
-        
+
         if (!mockLicitacion) {
           throw new Error('Licitación no encontrada')
         }
@@ -105,12 +105,12 @@ export default function LicitacionDetailPage() {
         // Set mock user and company data
         setUser({
           name: 'Usuario Demo',
-          email: 'demo@spendplan.cl',
+          email: 'demo@xpend.cl',
           role: 'admin'
         })
 
         setCompany({
-          name: 'SpendPlan.cl',
+          name: 'Xpend',
           id: 'company-1'
         })
 
@@ -273,7 +273,7 @@ export default function LicitacionDetailPage() {
 
   if (loading) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'SpendPlan.cl'}>
+      <MainLayout user={user} companyName={company?.name}>
         <LoadingSpinner />
       </MainLayout>
     )
@@ -281,7 +281,7 @@ export default function LicitacionDetailPage() {
 
   if (error) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'SpendPlan.cl'}>
+      <MainLayout user={user} companyName={company?.name}>
         <ErrorMessage
           title="Error al cargar la licitación"
           message={error}
@@ -293,7 +293,7 @@ export default function LicitacionDetailPage() {
 
   if (!licitacion) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'SpendPlan.cl'}>
+      <MainLayout user={user} companyName={company?.name}>
         <ErrorMessage
           title="Licitación no encontrada"
           message="La licitación que buscas no existe o no tienes permisos para verla."
@@ -303,7 +303,7 @@ export default function LicitacionDetailPage() {
   }
 
   return (
-    <MainLayout user={user} companyName={company?.name || 'SpendPlan.cl'}>
+    <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -431,7 +431,7 @@ export default function LicitacionDetailPage() {
             <TabsTrigger value="team">Equipo</TabsTrigger>
             <TabsTrigger value="documents">Documentos</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="details">
             <Card>
               <CardHeader>

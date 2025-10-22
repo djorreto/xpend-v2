@@ -311,7 +311,7 @@ export default function NewSupplierPage() {
   }
 
   return (
-    <MainLayout user={user} companyName={company?.name || 'Xpend'}>
+    <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

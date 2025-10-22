@@ -351,7 +351,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+      <MainLayout user={user} companyName={company?.name}>
         <LoadingSpinner />
       </MainLayout>
     )
@@ -359,7 +359,7 @@ export default function SettingsPage() {
 
   if (error) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+      <MainLayout user={user} companyName={company?.name}>
         <ErrorMessage
           title="Error al cargar configuración"
           message={error}
@@ -370,7 +370,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+    <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6">
         {/* Header */}
         <div>
@@ -751,8 +751,8 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Permissions Matrix - Solo visible para admins */}
-        {user?.role === 'admin' && (
+        {/* Permissions Matrix - Solo visible para admins y super_admins */}
+        {(user?.role === 'admin' || user?.role === 'super_admin') && (
           <PermissionsMatrix companyId={company?.id} />
         )}
       </div>

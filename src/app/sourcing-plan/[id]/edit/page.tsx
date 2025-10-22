@@ -270,7 +270,7 @@ export default function EditSourcingPlanPage() {
 
   if (loading) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Xpend'}>
+      <MainLayout user={user} companyName={company?.name}>
         <LoadingSpinner />
       </MainLayout>
     )
@@ -278,7 +278,7 @@ export default function EditSourcingPlanPage() {
 
   if (error) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Xpend'}>
+      <MainLayout user={user} companyName={company?.name}>
         <ErrorMessage
           title="Error al cargar iniciativa"
           message={error}
@@ -289,7 +289,7 @@ export default function EditSourcingPlanPage() {
   }
 
   return (
-    <MainLayout user={user} companyName={company?.name || 'Xpend'}>
+    <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6 max-w-4xl">
         {/* Header */}
         <div className="flex items-center gap-4">

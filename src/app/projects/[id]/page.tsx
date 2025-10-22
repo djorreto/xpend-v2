@@ -5,11 +5,11 @@ import { useRouter, useParams } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { 
-  ArrowLeft, 
-  Edit, 
-  Trash2, 
-  FileText, 
+import {
+  ArrowLeft,
+  Edit,
+  Trash2,
+  FileText,
   MessageSquare,
   Calendar,
   DollarSign,
@@ -214,7 +214,7 @@ export default function ProjectDetailPage() {
 
   if (loading) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+      <MainLayout user={user} companyName={company?.name}>
         <LoadingSpinner />
       </MainLayout>
     )
@@ -222,8 +222,8 @@ export default function ProjectDetailPage() {
 
   if (error || !project) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Spendora'}>
-        <ErrorMessage 
+      <MainLayout user={user} companyName={company?.name}>
+        <ErrorMessage
           title="Error al cargar proyecto"
           message={error || 'Proyecto no encontrado'}
           onRetry={loadProjectData}
@@ -233,7 +233,7 @@ export default function ProjectDetailPage() {
   }
 
   return (
-    <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+    <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

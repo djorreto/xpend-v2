@@ -16,7 +16,13 @@ import {
   Globe,
   ChevronDown,
   Menu,
-  X
+  X,
+  Briefcase,
+  Package,
+  Receipt,
+  ClipboardList,
+  Calendar,
+  DollarSign
 } from 'lucide-react'
 import { Logo } from '@/components/ui/logo'
 import { supabaseBrowser } from '@/lib/supabase'
@@ -59,16 +65,14 @@ export default function HomePage() {
 
             {/* Desktop Navigation - Elegante */}
             <nav className="hidden md:flex items-center space-x-8">
-              <div className="relative group">
-                <button
-                  className="text-white/90 flex items-center space-x-1 font-medium transition-all duration-300"
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
-                >
-                  <span>Soluciones</span>
-                  <ChevronDown className="h-4 w-4" />
-                </button>
-              </div>
+              <a
+                href="#gestion"
+                className="text-white/90 font-medium transition-all duration-300"
+                onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
+              >
+                Gestión Integral
+              </a>
               <a
                 href="/proveedores"
                 className="text-white/90 font-medium transition-all duration-300"
@@ -168,7 +172,7 @@ export default function HomePage() {
         {isMenuOpen && (
           <div className="md:hidden bg-blue-900 border-t border-blue-800">
             <div className="px-2 pt-2 pb-3 space-y-1">
-              <a href="#soluciones" className="block px-3 py-2 text-white hover:text-blue-200">Soluciones</a>
+              <a href="#gestion" className="block px-3 py-2 text-white hover:text-blue-200">Gestión Integral</a>
               <a href="/proveedores" className="block px-3 py-2 text-white hover:text-blue-200">Proveedores</a>
               <a href="/nosotros" className="block px-3 py-2 text-white hover:text-blue-200">Nosotros</a>
               <a href="/blog" className="block px-3 py-2 text-white hover:text-blue-200">Blog</a>
@@ -340,71 +344,225 @@ export default function HomePage() {
         background: 'linear-gradient(to bottom, #1a2625 0%, #f9fafb 100%)'
       }}></div>
 
-      {/* Services Section - Elegante */}
-      <section id="soluciones" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white">
+      {/* Gestión Integral Section */}
+      <section id="gestion" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-20">
             <h2 className="text-5xl font-bold mb-6" style={{ color: '#2D3E3D', letterSpacing: '-0.02em' }}>
-              CONOCE NUESTROS SERVICIOS
+              GESTIÓN INTEGRAL DE STRATEGIC SOURCING
             </h2>
-            <div className="w-24 h-1.5 mx-auto rounded-full" style={{ background: 'linear-gradient(90deg, #3BE7AE 0%, #2AD4D2 100%)' }}></div>
+            <div className="w-24 h-1.5 mx-auto mb-6 rounded-full" style={{ background: 'linear-gradient(90deg, #3BE7AE 0%, #2AD4D2 100%)' }}></div>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Todo lo que necesitas para coordinar y optimizar tu estrategia de compras, en una sola plataforma
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            {/* Left Content */}
-            <div>
-              <h3 className="text-4xl font-bold mb-6" style={{ color: '#2D3E3D' }}>
-                Xpend Strategic Sourcing
-              </h3>
-              <h4 className="text-2xl font-semibold mb-8" style={{ color: '#2AD4D2' }}>
-                Tu centro de coordinación para Strategic Sourcing
-              </h4>
-              <p className="text-lg text-gray-700 mb-10 leading-relaxed">
-                Coordina y optimiza cada etapa de tu proceso de Strategic Sourcing, desde el análisis de categorías hasta la gestión de proyectos, con visibilidad total del negocio y análisis impulsado por IA.
-              </p>
+          {/* Grid de Módulos */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+            {/* Sourcing Plan */}
+            <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 group">
+              <CardContent className="p-8">
+                <div className="p-4 rounded-xl mb-6 inline-block" style={{ backgroundColor: 'rgba(42, 212, 210, 0.15)' }}>
+                  <Target className="h-8 w-8" style={{ color: '#2AD4D2' }} />
+                </div>
+                <h3 className="text-2xl font-bold mb-4" style={{ color: '#2D3E3D' }}>Sourcing Plan</h3>
+                <p className="text-gray-600 mb-4">
+                  Planifica y da seguimiento a tus iniciativas de sourcing por año y trimestre. Proyecta ahorros y mide resultados reales.
+                </p>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Plan anual y trimestral
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Proyección vs. real de ahorros
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Iniciativas spot
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
 
-              <div className="space-y-6">
-                <div className="flex items-start group">
-                  <div className="p-2 rounded-lg mr-4 transition-all duration-300" style={{ backgroundColor: 'rgba(59, 231, 174, 0.15)' }}>
-                    <CheckCircle className="h-6 w-6" style={{ color: '#3BE7AE' }} />
-                  </div>
-                  <div>
-                    <h5 className="font-bold text-lg mb-2" style={{ color: '#2D3E3D' }}>Análisis de Categorías</h5>
-                    <p className="text-gray-600">Clasificación inteligente y análisis de gastos por categoría con insights de ahorro.</p>
-                  </div>
+            {/* Licitaciones */}
+            <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 group">
+              <CardContent className="p-8">
+                <div className="p-4 rounded-xl mb-6 inline-block" style={{ backgroundColor: 'rgba(59, 231, 174, 0.15)' }}>
+                  <Receipt className="h-8 w-8" style={{ color: '#3BE7AE' }} />
                 </div>
-                <div className="flex items-start group">
-                  <div className="p-2 rounded-lg mr-4 transition-all duration-300" style={{ backgroundColor: 'rgba(42, 212, 210, 0.15)' }}>
-                    <CheckCircle className="h-6 w-6" style={{ color: '#2AD4D2' }} />
-                  </div>
-                  <div>
-                    <h5 className="font-bold text-lg mb-2" style={{ color: '#2D3E3D' }}>Plan de Compras</h5>
-                    <p className="text-gray-600">Planificación estratégica y seguimiento de proyectos de sourcing con hitos y dependencias.</p>
-                  </div>
+                <h3 className="text-2xl font-bold mb-4" style={{ color: '#2D3E3D' }}>Licitaciones</h3>
+                <p className="text-gray-600 mb-4">
+                  Gestiona RFP, RFQ y RFI de forma centralizada. Controla fechas límite, evaluación de propuestas y adjudicaciones.
+                </p>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Gestión de RFP/RFQ/RFI
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Evaluación de propuestas
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Tracking de deadlines
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            {/* Proyectos */}
+            <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 group">
+              <CardContent className="p-8">
+                <div className="p-4 rounded-xl mb-6 inline-block" style={{ backgroundColor: 'rgba(42, 212, 210, 0.15)' }}>
+                  <Briefcase className="h-8 w-8" style={{ color: '#2AD4D2' }} />
                 </div>
-                <div className="flex items-start group">
-                  <div className="p-2 rounded-lg mr-4 transition-all duration-300" style={{ backgroundColor: 'rgba(59, 231, 174, 0.15)' }}>
-                    <CheckCircle className="h-6 w-6" style={{ color: '#3BE7AE' }} />
-                  </div>
-                  <div>
-                    <h5 className="font-bold text-lg mb-2" style={{ color: '#2D3E3D' }}>Gestión de Proyectos</h5>
-                    <p className="text-gray-600">Coordinación de equipos y seguimiento de iniciativas de Strategic Sourcing.</p>
-                  </div>
+                <h3 className="text-2xl font-bold mb-4" style={{ color: '#2D3E3D' }}>Proyectos</h3>
+                <p className="text-gray-600 mb-4">
+                  Coordina iniciativas de sourcing con tu equipo. Gestiona archivos, comentarios, hitos y departamentos involucrados.
+                </p>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Gestión de archivos
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Colaboración en tiempo real
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Hitos y seguimiento
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            {/* Proveedores */}
+            <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 group">
+              <CardContent className="p-8">
+                <div className="p-4 rounded-xl mb-6 inline-block" style={{ backgroundColor: 'rgba(59, 231, 174, 0.15)' }}>
+                  <Package className="h-8 w-8" style={{ color: '#3BE7AE' }} />
                 </div>
-                <div className="flex items-start group">
-                  <div className="p-2 rounded-lg mr-4 transition-all duration-300" style={{ backgroundColor: 'rgba(42, 212, 210, 0.15)' }}>
-                    <CheckCircle className="h-6 w-6" style={{ color: '#2AD4D2' }} />
-                  </div>
-                  <div>
-                    <h5 className="font-bold text-lg mb-2" style={{ color: '#2D3E3D' }}>Integración con Herramientas</h5>
-                    <p className="text-gray-600">Conecta con plataformas de licitaciones RFP/RFQ y herramientas de sourcing existentes.</p>
-                  </div>
+                <h3 className="text-2xl font-bold mb-4" style={{ color: '#2D3E3D' }}>Proveedores</h3>
+                <p className="text-gray-600 mb-4">
+                  Centraliza información de proveedores, evaluaciones, documentación y performance histórico.
+                </p>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Base de datos centralizada
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Evaluación de desempeño
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Documentación compliance
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            {/* Spend Analysis */}
+            <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 group">
+              <CardContent className="p-8">
+                <div className="p-4 rounded-xl mb-6 inline-block" style={{ backgroundColor: 'rgba(42, 212, 210, 0.15)' }}>
+                  <DollarSign className="h-8 w-8" style={{ color: '#2AD4D2' }} />
                 </div>
+                <h3 className="text-2xl font-bold mb-4" style={{ color: '#2D3E3D' }}>Spend Analysis</h3>
+                <p className="text-gray-600 mb-4">
+                  Analiza patrones de gasto por categoría, proveedor y departamento. Identifica oportunidades de ahorro.
+                </p>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Análisis por categoría
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Insights de ahorro
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Visualización avanzada
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            {/* Reportes */}
+            <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 group">
+              <CardContent className="p-8">
+                <div className="p-4 rounded-xl mb-6 inline-block" style={{ backgroundColor: 'rgba(59, 231, 174, 0.15)' }}>
+                  <BarChart3 className="h-8 w-8" style={{ color: '#3BE7AE' }} />
+                </div>
+                <h3 className="text-2xl font-bold mb-4" style={{ color: '#2D3E3D' }}>Reportes</h3>
+                <p className="text-gray-600 mb-4">
+                  Reportes ejecutivos y operacionales con métricas clave de sourcing, ahorros y compliance.
+                </p>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    KPIs personalizables
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Exportación Excel/PDF
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
+                    Dashboards en tiempo real
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Banner IA - Juan Xpendo */}
+          <div className="mt-16 p-10 rounded-2xl shadow-2xl" style={{ background: 'linear-gradient(135deg, #2D3E3D 0%, #1a2625 100%)' }}>
+            <div className="flex flex-col md:flex-row items-center justify-between">
+              <div className="md:w-2/3 mb-6 md:mb-0">
+                <div className="flex items-center mb-4">
+                  <Zap className="h-10 w-10 mr-3" style={{ color: '#C6FF00' }} />
+                  <h3 className="text-3xl font-bold text-white">Juan Xpendo - Asistente de IA</h3>
+                </div>
+                <p className="text-xl text-white/85 mb-4">
+                  Tu experto personal en Strategic Sourcing con IA, disponible 24/7
+                </p>
+                <ul className="space-y-2 text-white/80">
+                  <li className="flex items-center">
+                    <CheckCircle className="h-5 w-5 mr-2" style={{ color: '#3BE7AE' }} />
+                    Asesoría en estrategia de categorías y líneas base
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-5 w-5 mr-2" style={{ color: '#3BE7AE' }} />
+                    Análisis de especificaciones técnicas (Word, TXT)
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-5 w-5 mr-2" style={{ color: '#3BE7AE' }} />
+                    Recomendaciones de negociación y TCO
+                  </li>
+                </ul>
               </div>
+              <div className="md:w-1/3 text-center md:text-right">
+                <div className="inline-block p-6 rounded-full mb-4" style={{ backgroundColor: 'rgba(198, 255, 0, 0.15)' }}>
+                  <Target className="h-16 w-16" style={{ color: '#C6FF00' }} />
+                </div>
+                <p className="text-sm text-white/60 font-medium">Powered by Groq + Llama 3.3</p>
+              </div>
+            </div>
+          </div>
 
+          {/* CTA Button */}
+          <div className="text-center mt-16">
+            <a href={isAuthenticated ? "/dashboard" : "/login"}>
               <Button
-                onClick={handleDemo}
-                className="mt-10 px-8 py-4 rounded-xl font-bold text-lg shadow-xl transition-all duration-300"
+                size="lg"
+                className="px-10 py-5 rounded-xl font-bold text-lg shadow-xl transition-all duration-300"
                 style={{ backgroundColor: '#3BE7AE', color: '#2D3E3D' }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#2AD4D2'
@@ -417,102 +575,10 @@ export default function HomePage() {
                   e.currentTarget.style.boxShadow = ''
                 }}
               >
-                Ver más de Xpend Strategic Sourcing
-                <ArrowRight className="ml-2 h-5 w-5" />
+                {isAuthenticated ? "Ir a Dashboard" : "Comenzar Ahora"}
+                <ArrowRight className="ml-2 h-6 w-6" />
               </Button>
-            </div>
-
-            {/* Right Content - Demo Table */}
-            <div className="bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
-              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <div className="flex items-center">
-                  <Logo size="sm" />
-                </div>
-                <Menu className="h-5 w-5 text-gray-400" />
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Análisis de Categorías
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tecnología
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Servicios
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Suministros
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Marketing
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    <tr>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        Gasto Total
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$850K</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$620K</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$480K</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$320K</td>
-                    </tr>
-                    <tr>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        Ahorro Potencial
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">$75K</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">$45K</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">$25K</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">$15K</td>
-                    </tr>
-                    <tr>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        Proveedores
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">12</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">8</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">15</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">6</td>
-                    </tr>
-                    <tr>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        Proyectos Activos
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                          <span className="text-sm text-gray-900">3</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                          <span className="text-sm text-gray-900">2</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
-                          <span className="text-sm text-gray-900">1</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
-                          <span className="text-sm text-gray-900">0</span>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            </a>
           </div>
         </div>
       </section>

@@ -5,9 +5,9 @@ import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { 
-  FileText, 
-  Download, 
+import {
+  FileText,
+  Download,
   Calendar,
   Filter,
   BarChart3,
@@ -178,9 +178,9 @@ export default function ReportsPage() {
           created_at: new Date().toISOString(),
           status: 'completed'
         }
-        
+
         setReports(prev => [newReport, ...prev])
-        
+
         addToast({
           type: 'success',
           title: 'Reporte generado',
@@ -217,7 +217,7 @@ export default function ReportsPage() {
         const csvContent = `Tipo,Descripción,Fecha Generado
 ${report.type},${report.description},${new Date(report.created_at).toLocaleDateString('es-ES')}
 `
-        
+
         const blob = new Blob([csvContent], { type: 'text/csv' })
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
@@ -251,7 +251,7 @@ ${report.type},${report.description},${new Date(report.created_at).toLocaleDateS
 
   if (loading) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+      <MainLayout user={user} companyName={company?.name}>
         <LoadingSpinner />
       </MainLayout>
     )
@@ -259,7 +259,7 @@ ${report.type},${report.description},${new Date(report.created_at).toLocaleDateS
 
   if (error) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+      <MainLayout user={user} companyName={company?.name}>
         <ErrorMessage
           title="Error al cargar reportes"
           message={error}
@@ -270,7 +270,7 @@ ${report.type},${report.description},${new Date(report.created_at).toLocaleDateS
   }
 
   return (
-    <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+    <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

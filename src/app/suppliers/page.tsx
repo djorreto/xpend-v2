@@ -343,7 +343,7 @@ export default function SuppliersPage() {
 
   if (loading) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Xpend'}>
+      <MainLayout user={user} companyName={company?.name}>
         <LoadingSpinner />
       </MainLayout>
     )
@@ -351,7 +351,7 @@ export default function SuppliersPage() {
 
   if (error) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Xpend'}>
+      <MainLayout user={user} companyName={company?.name}>
         <ErrorMessage
           title="Error al cargar proveedores"
           message={error}
@@ -362,7 +362,7 @@ export default function SuppliersPage() {
   }
 
   return (
-    <MainLayout user={user} companyName={company?.name || 'SpendPlan.cl'}>
+    <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

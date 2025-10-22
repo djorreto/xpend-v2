@@ -14,7 +14,6 @@ import {
   Mail,
   Shield,
   Edit,
-  Trash2,
   UserPlus
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
@@ -136,33 +135,6 @@ export default function UsersPage() {
     }
   }
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este usuario?')) {
-      return
-    }
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId)
-
-      if (error) throw error
-
-      setUsers(prev => prev.filter(u => u.id !== userId))
-      addToast({
-        type: 'success',
-        title: 'Usuario eliminado',
-        message: 'El usuario ha sido eliminado correctamente'
-      })
-    } catch (err) {
-      addToast({
-        type: 'error',
-        title: 'Error',
-        message: 'No se pudo eliminar el usuario'
-      })
-    }
-  }
 
   const handleEditUser = (user: UserProfile) => {
     setSelectedUser(user)
@@ -184,7 +156,7 @@ export default function UsersPage() {
 
   if (loading) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+      <MainLayout user={user} companyName={company?.name}>
         <LoadingSpinner />
       </MainLayout>
     )
@@ -192,7 +164,7 @@ export default function UsersPage() {
 
   if (error) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+      <MainLayout user={user} companyName={company?.name}>
         <ErrorMessage
           title="Error al cargar usuarios"
           message={error}
@@ -203,8 +175,8 @@ export default function UsersPage() {
   }
 
   return (
-    <MainLayout user={user} companyName={company?.name || 'Spendora'}>
-      <div className="space-y-6">
+    <MainLayout user={user} companyName={company?.name}>
+      <div className="space-y-6" suppressHydrationWarning>
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -245,14 +217,14 @@ export default function UsersPage() {
         {/* Users Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredUsers.map((userProfile) => (
-            <Card key={userProfile.id} className="hover:shadow-md transition-shadow">
+            <Card key={userProfile.id} className="hover:shadow-md transition-shadow" suppressHydrationWarning>
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
-                    <CardTitle className="text-lg">
+                    <CardTitle className="text-lg" suppressHydrationWarning>
                       {userProfile.full_name || 'Sin nombre'}
                     </CardTitle>
-                    <CardDescription className="flex items-center space-x-1">
+                    <CardDescription className="flex items-center space-x-1" suppressHydrationWarning>
                       <Mail className="h-3 w-3" />
                       <span>{userProfile.email}</span>
                     </CardDescription>
@@ -264,7 +236,7 @@ export default function UsersPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Role */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between" suppressHydrationWarning>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${roleColors[userProfile.role as keyof typeof roleColors]}`}>
                     {roleLabels[userProfile.role as keyof typeof roleLabels]}
                   </span>
@@ -274,7 +246,7 @@ export default function UsersPage() {
                 </div>
 
                 {/* Company */}
-                <div className="flex items-center space-x-2 text-sm">
+                <div className="flex items-center space-x-2 text-sm" suppressHydrationWarning>
                   <Shield className="h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">
                     {userProfile.companies?.name || 'Sin empresa'}
@@ -291,13 +263,6 @@ export default function UsersPage() {
                   >
                     <Edit className="h-4 w-4" />
                     Editar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteUser(userProfile.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>

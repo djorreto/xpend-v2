@@ -5,9 +5,9 @@ import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { 
-  Upload, 
-  Download, 
+import {
+  Upload,
+  Download,
   TrendingUp,
   DollarSign,
   PieChart,
@@ -74,7 +74,7 @@ export default function SpendPage() {
 
       // Si Supabase no está configurado, usar modo mockup
       const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      
+
       if (isMockup || !isSupabaseConfigured) {
         // Use mock data
         setUser({
@@ -87,14 +87,14 @@ export default function SpendPage() {
           name: 'Perico los Palotes S.A.',
           industry: 'Tecnología'
         })
-        
+
         const spendDataArray = mockSpendData
         setSpendData(spendDataArray)
-        
+
         // Calculate totals
         const total = spendDataArray.reduce((sum, item) => sum + item.amount, 0)
         setTotalSpend(total)
-        
+
         // Calculate monthly spend (current month)
         const currentMonth = new Date().getMonth()
         const currentYear = new Date().getFullYear()
@@ -105,7 +105,7 @@ export default function SpendPage() {
           })
           .reduce((sum, item) => sum + item.amount, 0)
         setMonthlySpend(monthly)
-        
+
         // Calculate spend by category
         const categoryMap = new Map<string, { total: number; count: number }>()
         spendDataArray.forEach(item => {
@@ -115,16 +115,16 @@ export default function SpendPage() {
             count: existing.count + 1
           })
         })
-        
+
         const categoryData: SpendCategory[] = Array.from(categoryMap.entries()).map(([category, data]) => ({
           category,
           total: data.total,
           percentage: (data.total / total) * 100,
           count: data.count
         })).sort((a, b) => b.total - a.total)
-        
+
         setSpendByCategory(categoryData)
-        
+
         // Calculate spend by vendor
         const vendorMap = new Map<string, { total: number; count: number }>()
         spendDataArray.forEach(item => {
@@ -134,14 +134,14 @@ export default function SpendPage() {
             count: existing.count + 1
           })
         })
-        
+
         const vendorData: SpendVendor[] = Array.from(vendorMap.entries()).map(([vendor, data]) => ({
           vendor,
           total: data.total,
           percentage: (data.total / total) * 100,
           count: data.count
         })).sort((a, b) => b.total - a.total)
-        
+
         setSpendByVendor(vendorData)
         setLoading(false)
         return
@@ -281,7 +281,7 @@ export default function SpendPage() {
 
   if (loading) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+      <MainLayout user={user} companyName={company?.name}>
         <LoadingSpinner />
       </MainLayout>
     )
@@ -289,7 +289,7 @@ export default function SpendPage() {
 
   if (error) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+      <MainLayout user={user} companyName={company?.name}>
         <ErrorMessage
           title="Error al cargar datos de spend"
           message={error}
@@ -300,7 +300,7 @@ export default function SpendPage() {
   }
 
   return (
-    <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+    <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

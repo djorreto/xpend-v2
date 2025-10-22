@@ -66,9 +66,9 @@ export default function LoginPage() {
 
     try {
       console.log('Creando usuario de prueba...');
-      
+
       const { data, error } = await supabase.auth.signUp({
-        email: 'test@spendora.com',
+        email: 'test@xpend.cl',
         password: 'test123456',
         options: {
           data: {
@@ -83,9 +83,9 @@ export default function LoginPage() {
         setError(`Error: ${error.message}`);
       } else {
         console.log('Usuario creado exitosamente:', data);
-        setEmail('test@spendora.com');
+        setEmail('test@xpend.cl');
         setPassword('test123456');
-        setError('Usuario de prueba creado. Puedes hacer login con test@spendora.com / test123456');
+        setError('Usuario de prueba creado. Puedes hacer login con test@xpend.cl / test123456');
       }
     } catch (err) {
       console.error('Error:', err);
@@ -102,7 +102,7 @@ export default function LoginPage() {
         <div className="flex justify-center">
           <Logo size="xl" variant="default" />
         </div>
-        
+
         <form onSubmit={onSubmit} className="space-y-4">
           <h1 className="text-2xl font-semibold text-center">Iniciar sesión</h1>
 

@@ -80,7 +80,7 @@ export default function SignupPage() {
       if (authError) {
         // If user creation fails, delete the company
         await supabase.from('companies').delete().eq('id', companyData.id)
-        
+
         addToast({
           type: 'error',
           title: 'Error de registro',
@@ -263,7 +263,7 @@ export default function SignupPage() {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-muted-foreground">
-          <p>© 2024 Spendora. Todos los derechos reservados.</p>
+          <p>© 2025 Xpend™. Todos los derechos reservados.</p>
         </div>
       </div>
     </div>

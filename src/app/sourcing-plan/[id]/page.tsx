@@ -153,7 +153,7 @@ export default function SourcingPlanDetailPage() {
 
   if (loading) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Xpend'}>
+      <MainLayout user={user} companyName={company?.name}>
         <LoadingSpinner />
       </MainLayout>
     )
@@ -161,7 +161,7 @@ export default function SourcingPlanDetailPage() {
 
   if (error || !plan) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Xpend'}>
+      <MainLayout user={user} companyName={company?.name}>
         <ErrorMessage
           title="Error al cargar iniciativa"
           message={error || 'Iniciativa no encontrada'}
@@ -177,7 +177,7 @@ export default function SourcingPlanDetailPage() {
     : null
 
   return (
-    <MainLayout user={user} companyName={company?.name || 'Xpend'}>
+    <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6 max-w-6xl">
         {/* Header */}
         <div className="flex items-start justify-between">

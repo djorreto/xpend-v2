@@ -11,10 +11,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { useVersion } from '@/contexts/version-context'
+import { useToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
 
 export function VersionSelector() {
   const { version, setVersion, isFunctional, isMockup, isDemo } = useVersion()
+  const { addToast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
 
   // Hide version selector for demo users
@@ -48,16 +50,16 @@ export function VersionSelector() {
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="h-8 px-3 text-xs font-medium"
         >
           {currentVersion && (
             <>
               <currentVersion.icon className="h-3 w-3 mr-2" />
               <span className="hidden sm:inline">{currentVersion.name}</span>
-              <Badge 
-                variant="outline" 
+              <Badge
+                variant="outline"
                 className={cn(
                   'ml-2 text-[10px] px-1.5 py-0.5',
                   currentVersion.color
@@ -75,12 +77,27 @@ export function VersionSelector() {
         {versions.map((versionOption) => {
           const Icon = versionOption.icon
           const isSelected = versionOption.id === version
-          
+
           return (
             <DropdownMenuItem
               key={versionOption.id}
               onClick={() => {
-                setVersion(versionOption.id)
+                if (!isSelected) {
+                  console.log('🔄 Switching to version:', versionOption.id)
+
+                  // Save to localStorage FIRST
+                  localStorage.setItem('xpend-version', versionOption.id)
+
+                  // Then update state
+                  setVersion(versionOption.id)
+
+                  // Show toast notification
+                  addToast({
+                    type: 'success',
+                    title: `Cambiado a ${versionOption.name}`,
+                    message: 'El cambio se aplicó correctamente'
+                  })
+                }
                 setIsOpen(false)
               }}
               className={cn(
@@ -88,20 +105,20 @@ export function VersionSelector() {
                 isSelected && 'bg-accent'
               )}
             >
-              <div 
+              <div
                 className="p-2 rounded-lg"
                 style={versionOption.bgColor ? { backgroundColor: versionOption.bgColor } : undefined}
               >
                 <Icon className="h-4 w-4" style={versionOption.bgColor ? { color: '#2D3E3D' } : undefined} />
               </div>
-              
+
               <div className="flex-1">
                 <div className="flex items-center space-x-2">
                   <span className="font-medium text-sm">
                     {versionOption.name}
                   </span>
-                  <Badge 
-                    variant="outline" 
+                  <Badge
+                    variant="outline"
                     className={cn(
                       'text-[10px] px-1.5 py-0.5',
                       versionOption.color
@@ -115,7 +132,7 @@ export function VersionSelector() {
                   {versionOption.description}
                 </p>
               </div>
-              
+
               {isSelected && (
                 <div className="w-2 h-2 rounded-full bg-primary" />
               )}

@@ -37,7 +37,7 @@ export default function EditLicitacionPage() {
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Form data
   const [formData, setFormData] = useState({
     name: '',
@@ -271,7 +271,7 @@ export default function EditLicitacionPage() {
     setSaving(true)
     try {
       let tenderDocData = formData.existing_tender_document
-      
+
       // Upload new tender document if changed
       if (formData.tender_file) {
         tenderDocData = await uploadTenderDocument(formData.tender_file, licitacionId)
@@ -357,7 +357,7 @@ export default function EditLicitacionPage() {
 
   if (loading) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Xpend'}>
+      <MainLayout user={user} companyName={company?.name}>
         <LoadingSpinner />
       </MainLayout>
     )
@@ -365,7 +365,7 @@ export default function EditLicitacionPage() {
 
   if (error) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Xpend'}>
+      <MainLayout user={user} companyName={company?.name}>
         <ErrorMessage
           title="Error de carga"
           message={error}
@@ -376,7 +376,7 @@ export default function EditLicitacionPage() {
   }
 
   return (
-    <MainLayout user={user} companyName={company?.name || 'Spendora'}>
+    <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">

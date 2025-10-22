@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Sidebar } from './sidebar'
 import { Topbar } from './topbar'
 import { ChangePasswordModal } from '@/components/forms/change-password-modal'
+import { JuanXpendoChat } from '@/components/ui/juan-xpendo-chat'
 import { supabaseBrowser } from '@/lib/supabase'
 
 interface MainLayoutProps {
@@ -17,10 +18,10 @@ interface MainLayoutProps {
   companyName?: string
 }
 
-export function MainLayout({ 
-  children, 
-  user, 
-  companyName = 'Xpend'
+export function MainLayout({
+  children,
+  user,
+  companyName
 }: MainLayoutProps) {
   const [mustChangePassword, setMustChangePassword] = useState(false)
   const [checkingPassword, setCheckingPassword] = useState(true)
@@ -33,14 +34,14 @@ export function MainLayout({
     try {
       const supabase = supabaseBrowser()
       const { data: { session } } = await supabase.auth.getSession()
-      
+
       if (session?.user) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('must_change_password')
           .eq('id', session.user.id)
           .single()
-        
+
         if (profile?.must_change_password) {
           setMustChangePassword(true)
         }
@@ -56,12 +57,12 @@ export function MainLayout({
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
       <Sidebar companyName={companyName} userRole={user?.role} />
-      
+
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Topbar */}
         <Topbar user={user} />
-        
+
         {/* Page content */}
         <main className="flex-1 overflow-auto p-6">
           {children}
@@ -76,6 +77,9 @@ export function MainLayout({
           isFirstLogin={true}
         />
       )}
+
+      {/* Juan Xpendo - AI Assistant (always visible) */}
+      <JuanXpendoChat />
     </div>
   )
 }

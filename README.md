@@ -1,6 +1,6 @@
 # Xpend V2 - Strategic Sourcing Platform
 
-**Versión:** 2.0.0  
+**Versión:** 2.0.0
 **Website:** [xpend.cl](https://xpend.cl)
 
 Una plataforma colaborativa de próxima generación para planificación de Strategic Sourcing y gestión de Spend, construida con Next.js 14, TypeScript, TailwindCSS y Supabase.
@@ -24,9 +24,22 @@ Disponibles en `/public`:
 
 ## ✨ Características Principales
 
+### 🤖 **NUEVO: Juan Xpendo - Asistente de IA** ⭐
+- **Experto en Strategic Sourcing** con IA (Groq + Llama 3.1 70B)
+- Chat flotante siempre disponible
+- Análisis de documentos técnicos (Word, TXT)
+- Asesoría en tiempo real sobre:
+  - Estrategia de categorías
+  - Cálculo de líneas base
+  - Especificaciones técnicas
+  - Negociación con proveedores
+  - RFP/RFQ/RFI
+  - Total Cost of Ownership (TCO)
+- **📖 Setup:** Ver `JUAN-XPENDO-QUICK-START.md`
+
 ### 🔐 Multi-tenant & Autenticación
 - Soporte para múltiples empresas aisladas
-- Roles: Admin, Manager, Analyst, Viewer
+- Roles: Admin, Manager, Analyst, Viewer, Super Admin, Demo
 - Row Level Security (RLS) en todas las tablas
 - Autenticación con Supabase Auth
 
@@ -305,7 +318,7 @@ Ahorro = Baseline - Monto Adjudicado
 
 Compatible con:
 - Netlify
-- Railway  
+- Railway
 - DigitalOcean App Platform
 - Cualquier plataforma con soporte Next.js
 

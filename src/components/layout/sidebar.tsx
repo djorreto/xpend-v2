@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -39,15 +39,49 @@ interface SidebarProps {
   userRole?: string
 }
 
-export function Sidebar({ companyName = 'Xpend', userRole }: SidebarProps) {
+export function Sidebar({ companyName, userRole }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const [cachedRole, setCachedRole] = useState<string | undefined>(() => {
+    // Initialize from sessionStorage to prevent flickering
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('xpend-user-role') || undefined
+    }
+    return undefined
+  })
+  const [cachedCompanyName, setCachedCompanyName] = useState<string | undefined>(() => {
+    // Initialize from sessionStorage to prevent flickering
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('xpend-company-name') || undefined
+    }
+    return undefined
+  })
   const pathname = usePathname()
 
+  // Update cached role in state and sessionStorage when userRole changes
+  useEffect(() => {
+    if (userRole) {
+      setCachedRole(userRole)
+      sessionStorage.setItem('xpend-user-role', userRole)
+    }
+  }, [userRole])
+
+  // Update cached company name in state and sessionStorage when companyName changes
+  useEffect(() => {
+    if (companyName) {
+      setCachedCompanyName(companyName)
+      sessionStorage.setItem('xpend-company-name', companyName)
+    }
+  }, [companyName])
+
+  // Use cached values to prevent flickering
+  const effectiveRole = userRole || cachedRole
+  const effectiveCompanyName = companyName || cachedCompanyName
+
   // Filter navigation based on user role
-  const filteredNavigation = userRole === 'super_admin'
+  const filteredNavigation = effectiveRole === 'super_admin'
     ? [
-        { name: 'Super Admin', href: '/super-admin', icon: Shield },
-        ...navigation
+        ...navigation,
+        { name: 'Super Admin', href: '/super-admin', icon: Shield }
       ]
     : navigation
 
@@ -61,6 +95,7 @@ export function Sidebar({ companyName = 'Xpend', userRole }: SidebarProps) {
         background: 'linear-gradient(to bottom, #2D3E3D, #263331)',
         borderRightColor: 'rgba(42, 212, 210, 0.2)'
       }}
+      suppressHydrationWarning
     >
       {/* Header */}
       <div
@@ -69,17 +104,28 @@ export function Sidebar({ companyName = 'Xpend', userRole }: SidebarProps) {
           backgroundColor: 'rgba(45, 62, 61, 0.9)',
           borderBottomColor: 'rgba(42, 212, 210, 0.3)'
         }}
+        suppressHydrationWarning
       >
         {!collapsed && (
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 min-w-0">
             <div
-              className="p-2 rounded-lg shadow-sm"
+              className="p-2 rounded-lg shadow-sm flex-shrink-0"
               style={{ backgroundColor: '#2AD4D2' }}
             >
               <Building2 className="h-6 w-6" style={{ color: '#2D3E3D' }} />
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">{companyName}</h1>
+            <div className="min-w-0 flex-1 overflow-hidden" suppressHydrationWarning>
+              {effectiveCompanyName ? (
+                <h1
+                  className="text-sm font-bold text-white leading-tight line-clamp-2"
+                  title={effectiveCompanyName}
+                  suppressHydrationWarning
+                >
+                  {effectiveCompanyName}
+                </h1>
+              ) : (
+                <div className="h-5 w-32 bg-white/10 rounded animate-pulse" suppressHydrationWarning />
+              )}
             </div>
           </div>
         )}

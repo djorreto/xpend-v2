@@ -7,13 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  ArrowLeft, 
-  Edit, 
-  Trash2, 
-  Building2, 
-  Phone, 
-  Mail, 
+import {
+  ArrowLeft,
+  Edit,
+  Trash2,
+  Building2,
+  Phone,
+  Mail,
   Globe,
   FileText,
   Calendar,
@@ -34,18 +34,18 @@ import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
-import { 
-  mockSuppliersData, 
+import {
+  mockSuppliersData,
   mockAdministrativeEvaluationsData,
   mockTechnicalEvaluationsData,
-  mockLicitacionSuppliersData 
+  mockLicitacionSuppliersData
 } from '@/lib/mock-data'
-import type { 
-  Supplier, 
-  AdministrativeEvaluation, 
+import type {
+  Supplier,
+  AdministrativeEvaluation,
   TechnicalEvaluation,
   LicitacionSupplier,
-  EvaluationTrafficLight 
+  EvaluationTrafficLight
 } from '@/types'
 
 const serviceTypeLabels: Record<string, string> = {
@@ -175,7 +175,7 @@ export default function SupplierDetailPage() {
 
       // Functional mode: load from Supabase
       const supabase = supabaseBrowser()
-      
+
       const { data: supplierData, error: supplierError } = await supabase
         .from('suppliers')
         .select('*')
@@ -238,7 +238,7 @@ export default function SupplierDetailPage() {
 
     const today = new Date()
     const validUntil = new Date(administrativeEvaluation.valid_until)
-    
+
     if (validUntil < today) {
       return {
         status: 'expired',
@@ -323,7 +323,7 @@ export default function SupplierDetailPage() {
 
   if (loading) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Xpend'}>
+      <MainLayout user={user} companyName={company?.name}>
         <LoadingSpinner />
       </MainLayout>
     )
@@ -331,7 +331,7 @@ export default function SupplierDetailPage() {
 
   if (error || !supplier) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'Xpend'}>
+      <MainLayout user={user} companyName={company?.name}>
         <ErrorMessage
           title="Error al cargar proveedor"
           message={error || 'Proveedor no encontrado'}
@@ -344,7 +344,7 @@ export default function SupplierDetailPage() {
   const trafficLight = getEvaluationTrafficLight()
 
   return (
-    <MainLayout user={user} companyName={company?.name || 'SpendPlan.cl'}>
+    <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -637,8 +637,8 @@ export default function SupplierDetailPage() {
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium">Licitación {ls.licitacion_id}</span>
                           <Badge variant={ls.status === 'awarded' ? 'default' : 'secondary'}>
-                            {ls.status === 'awarded' ? 'Adjudicado' : 
-                             ls.status === 'evaluated' ? 'Evaluado' : 
+                            {ls.status === 'awarded' ? 'Adjudicado' :
+                             ls.status === 'evaluated' ? 'Evaluado' :
                              ls.status === 'rejected' ? 'Rechazado' : 'Registrado'}
                           </Badge>
                         </div>

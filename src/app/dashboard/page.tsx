@@ -173,6 +173,14 @@ export default function DashboardPage() {
         role: profile.role
       })
 
+      // ✅ Si es usuario demo sin empresa, usar datos mock directamente
+      if (profile.role === 'demo' && !profile.company_id) {
+        setMetrics(mockMetrics)
+        setCompany({ name: 'Empresa Demo' } as any)
+        setLoading(false)
+        return
+      }
+
       if (profile.company_id) {
         const { data: companyData, error: companyError } = await supabase
           .from('companies')
@@ -330,7 +338,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'SpendPlan.cl'}>
+      <MainLayout user={user} companyName={company?.name}>
         <LoadingSpinner />
       </MainLayout>
     )
@@ -338,7 +346,7 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'SpendPlan.cl'}>
+      <MainLayout user={user} companyName={company?.name}>
         <ErrorMessage
           title="Error al cargar el dashboard"
           message={error}
@@ -350,7 +358,7 @@ export default function DashboardPage() {
 
   if (!metrics) {
     return (
-      <MainLayout user={user} companyName={company?.name || 'SpendPlan.cl'}>
+      <MainLayout user={user} companyName={company?.name}>
         <ErrorMessage
           title="Sin datos"
           message="No se encontraron datos para mostrar"
@@ -360,8 +368,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <MainLayout user={user} companyName={company?.name || 'SpendPlan.cl'}>
-      <div className="space-y-6">
+    <MainLayout user={user} companyName={company?.name}>
+      <div className="space-y-6" suppressHydrationWarning>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
@@ -382,7 +390,7 @@ export default function DashboardPage() {
                 <FolderOpen className="h-4 w-4" style={{ color: '#2D3E3D' }} />
               </div>
             </CardHeader>
-            <CardContent className="pt-4">
+            <CardContent className="pt-4" suppressHydrationWarning>
               <div className="text-2xl font-bold" style={{ color: '#2AD4D2' }}>{metrics.activeProjects}</div>
               <p className="text-xs text-slate-500">
                 de {metrics.totalProjects} proyectos totales
@@ -401,7 +409,7 @@ export default function DashboardPage() {
                 <Gavel className="h-4 w-4" style={{ color: '#2D3E3D' }} />
               </div>
             </CardHeader>
-            <CardContent className="pt-4">
+            <CardContent className="pt-4" suppressHydrationWarning>
               <div className="text-2xl font-bold" style={{ color: '#3BE7AE' }}>{metrics.activeLicitaciones}</div>
               <p className="text-xs text-slate-500">
                 de {metrics.totalLicitaciones} licitaciones totales
@@ -420,7 +428,7 @@ export default function DashboardPage() {
                 <DollarSign className="h-4 w-4 text-white" />
               </div>
             </CardHeader>
-            <CardContent className="pt-4">
+            <CardContent className="pt-4" suppressHydrationWarning>
               <div className="text-2xl font-bold" style={{ color: '#2D3E3D' }}>{formatCurrency(metrics.totalSpend)}</div>
               <p className="text-xs text-slate-500">
                 {formatCurrency(metrics.monthlySpend)} este mes
@@ -439,7 +447,7 @@ export default function DashboardPage() {
                 <TrendingUp className="h-4 w-4 text-white" />
               </div>
             </CardHeader>
-            <CardContent className="pt-4">
+            <CardContent className="pt-4" suppressHydrationWarning>
               <div className="text-2xl font-bold" style={{ color: '#2D3E3D' }}>
                 {metrics.totalProjects > 0 ? Math.round((metrics.activeProjects / metrics.totalProjects) * 100) : 0}%
               </div>
