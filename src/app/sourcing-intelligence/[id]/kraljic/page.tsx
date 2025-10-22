@@ -185,10 +185,10 @@ export default function KraljicPage() {
                   >
                     <Label value="← Impacto en el Negocio" angle={-90} position="insideLeft" />
                   </YAxis>
-                  <ZAxis 
-                    type="number" 
-                    dataKey="z" 
-                    range={[100, 2000]} 
+                  <ZAxis
+                    type="number"
+                    dataKey="z"
+                    range={[100, 2000]}
                     name="Gasto"
                   />
                   <Tooltip content={<CustomTooltip />} />
@@ -200,11 +200,11 @@ export default function KraljicPage() {
                 </ScatterChart>
               </ResponsiveContainer>
             </div>
-            
+
             {/* Leyenda de tamaños */}
             <div className="mt-4 p-3 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-600">
-                <strong>💡 Nota:</strong> El tamaño de cada círculo es proporcional al % de gasto. 
+                <strong>💡 Nota:</strong> El tamaño de cada círculo es proporcional al % de gasto.
                 Círculos más grandes = mayor porcentaje del gasto total en esa categoría.
               </p>
             </div>

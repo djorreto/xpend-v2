@@ -10,14 +10,7 @@ import { supabaseBrowser } from '@/lib/supabase'
 import { ArrowLeft, TrendingUp, AlertTriangle, Target, Users, FileText, Download, AlertCircle } from 'lucide-react'
 import { SIPlanItem } from '@/types'
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
-
-// Extender el tipo de jsPDF para incluir autoTable
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF
-  }
-}
+import autoTable from 'jspdf-autotable'
 
 export default function InsightsPage() {
   const router = useRouter()
@@ -161,7 +154,7 @@ export default function InsightsPage() {
       doc.text('PRINCIPALES OPORTUNIDADES DE AHORRO', 14, yPos)
 
       yPos += 8
-      doc.autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['#', 'Categoría', 'Gasto', 'Ahorro %', 'Ahorro $']],
         body: savingsOpportunities.map((item, index) => [
@@ -184,7 +177,7 @@ export default function InsightsPage() {
       doc.text('ALTA CONCENTRACIÓN DE PROVEEDORES (RIESGO)', 14, yPos)
 
       yPos += 8
-      doc.autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['Categoría', 'Concentración', 'Proveedor Principal']],
         body: highConcentration.map(item => [
