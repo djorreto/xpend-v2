@@ -29,12 +29,7 @@ export default function NosotrosPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <a href="/">
-              <div>
-                <Logo size="lg" variant="white" />
-                <p className="text-xs text-white/60 mt-1 ml-1" style={{ letterSpacing: '0.05em' }}>
-                  Del gasto al valor.
-                </p>
-              </div>
+              <Logo size="lg" variant="white" showSlogan={true} />
             </a>
             <div className="flex items-center space-x-4">
               <a href="/">

@@ -60,12 +60,7 @@ export default function HomePage() {
           <div className="flex justify-between items-center h-20">
             {/* Logo - Más prominente */}
             <div className="flex items-center">
-              <div>
-                <Logo size="lg" variant="white" />
-                <p className="text-xs text-white/60 mt-1 ml-1" style={{ letterSpacing: '0.05em' }}>
-                  Del gasto al valor.
-                </p>
-              </div>
+              <Logo size="lg" variant="white" showSlogan={true} />
             </div>
 
             {/* Desktop Navigation - Elegante */}

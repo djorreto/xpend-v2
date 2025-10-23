@@ -5,9 +5,10 @@ interface LogoProps {
   className?: string
   size?: 'sm' | 'md' | 'lg' | 'xl'
   variant?: 'default' | 'white' | 'dark'
+  showSlogan?: boolean
 }
 
-export function Logo({ className, size = 'md', variant = 'default' }: LogoProps) {
+export function Logo({ className, size = 'md', variant = 'default', showSlogan = false }: LogoProps) {
   const heightClasses = {
     sm: 24,
     md: 32,
@@ -22,10 +23,25 @@ export function Logo({ className, size = 'md', variant = 'default' }: LogoProps)
     xl: 256
   }
 
+  // Tamaños de slogan proporcionales al logo
+  const sloganSizes = {
+    sm: 'text-[8px]',
+    md: 'text-[10px]',
+    lg: 'text-sm',
+    xl: 'text-base'
+  }
+
   const logoSrc = '/xpend-logo.png'
 
+  // Colores del slogan según variante
+  const sloganColors = {
+    default: '#C6FF00', // Lima/amarillo vibrante
+    white: '#C6FF00',   // Lima/amarillo vibrante
+    dark: '#C6FF00'     // Lima/amarillo vibrante
+  }
+
   return (
-    <div className={cn('flex items-center', className)}>
+    <div className={cn('flex flex-col', className)}>
       <Image
         src={logoSrc}
         alt="Xpend"
@@ -37,6 +53,21 @@ export function Logo({ className, size = 'md', variant = 'default' }: LogoProps)
           filter: 'brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%)'
         } : undefined}
       />
+      {showSlogan && (
+        <p 
+          className={cn(
+            'font-medium tracking-wide mt-1',
+            sloganSizes[size]
+          )}
+          style={{ 
+            color: sloganColors[variant],
+            letterSpacing: '0.1em',
+            fontFamily: 'inherit'
+          }}
+        >
+          Del gasto al valor.
+        </p>
+      )}
     </div>
   )
 }
