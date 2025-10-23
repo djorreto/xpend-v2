@@ -3,9 +3,9 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Logo } from '@/components/ui/logo'
-import { 
-  Target, 
-  Eye, 
+import {
+  Target,
+  Eye,
   Heart,
   Zap,
   Users,
@@ -21,20 +21,25 @@ export default function NosotrosPage() {
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #1a2625 0%, #2D3E3D 50%, #1a2625 100%)' }}>
       {/* Header Simple */}
-      <header className="relative z-50 backdrop-blur-md" style={{ 
-        backgroundColor: 'rgba(45, 62, 61, 0.98)', 
+      <header className="relative z-50 backdrop-blur-md" style={{
+        backgroundColor: 'rgba(45, 62, 61, 0.98)',
         borderBottom: '2px solid',
         borderImage: 'linear-gradient(90deg, transparent 0%, #3BE7AE 50%, transparent 100%) 1'
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <a href="/">
-              <Logo size="lg" variant="white" />
+              <div>
+                <Logo size="lg" variant="white" />
+                <p className="text-xs text-white/60 mt-1 ml-1" style={{ letterSpacing: '0.05em' }}>
+                  Del gasto al valor.
+                </p>
+              </div>
             </a>
             <div className="flex items-center space-x-4">
               <a href="/">
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   className="text-white/90 font-medium transition-all duration-300"
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = 'rgba(59, 231, 174, 0.15)'
@@ -48,11 +53,11 @@ export default function NosotrosPage() {
                   Volver al Inicio
                 </Button>
               </a>
-              <Button 
+              <Button
                 onClick={handleDemo}
                 className="px-6 py-2.5 rounded-lg font-semibold shadow-lg transition-all duration-300"
-                style={{ 
-                  backgroundColor: '#3BE7AE', 
+                style={{
+                  backgroundColor: '#3BE7AE',
                   color: '#2D3E3D',
                   border: '1px solid rgba(59, 231, 174, 0.3)'
                 }}
@@ -78,7 +83,7 @@ export default function NosotrosPage() {
       <section className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-8" style={{ letterSpacing: '-0.02em' }}>
-            Sobre <span style={{ 
+            Sobre <span style={{
               background: 'linear-gradient(135deg, #3BE7AE 0%, #2AD4D2 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -92,7 +97,7 @@ export default function NosotrosPage() {
       </section>
 
       {/* Separator */}
-      <div className="h-20" style={{ 
+      <div className="h-20" style={{
         background: 'linear-gradient(to bottom, #1a2625 0%, #f9fafb 100%)'
       }}></div>
 
@@ -216,7 +221,7 @@ export default function NosotrosPage() {
           </div>
 
           {/* Nuestro Compromiso */}
-          <div className="bg-gradient-to-r rounded-2xl p-12 shadow-2xl text-center" style={{ 
+          <div className="bg-gradient-to-r rounded-2xl p-12 shadow-2xl text-center" style={{
             background: 'linear-gradient(135deg, rgba(42, 212, 210, 0.1) 0%, rgba(59, 231, 174, 0.1) 100%)'
           }}>
             <h2 className="text-3xl font-bold mb-6" style={{ color: '#2D3E3D' }}>
@@ -250,12 +255,12 @@ export default function NosotrosPage() {
             <h3 className="text-3xl font-bold mb-6" style={{ color: '#2D3E3D' }}>
               ¿Listo para transformar tu Strategic Sourcing?
             </h3>
-            <Button 
+            <Button
               onClick={handleDemo}
               size="lg"
               className="px-10 py-6 text-lg font-bold rounded-xl shadow-2xl transition-all duration-300"
-              style={{ 
-                backgroundColor: '#C6FF00', 
+              style={{
+                backgroundColor: '#C6FF00',
                 color: '#2D3E3D',
                 letterSpacing: '0.05em'
               }}

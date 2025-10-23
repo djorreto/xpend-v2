@@ -60,7 +60,12 @@ export default function HomePage() {
           <div className="flex justify-between items-center h-20">
             {/* Logo - Más prominente */}
             <div className="flex items-center">
-              <Logo size="lg" variant="white" />
+              <div>
+                <Logo size="lg" variant="white" />
+                <p className="text-xs text-white/60 mt-1 ml-1" style={{ letterSpacing: '0.05em' }}>
+                  Del gasto al valor.
+                </p>
+              </div>
             </div>
 
             {/* Desktop Navigation - Elegante */}
@@ -211,7 +216,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             {/* Left Content */}
             <div className="text-white">
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-8" style={{ letterSpacing: '-0.02em' }}>
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-4" style={{ letterSpacing: '-0.02em' }}>
                 Coordina y optimiza tu
                 <span style={{
                   background: 'linear-gradient(135deg, #3BE7AE 0%, #2AD4D2 100%)',
@@ -220,6 +225,9 @@ export default function HomePage() {
                   backgroundClip: 'text'
                 }}> Strategic Sourcing</span> con IA
               </h1>
+              <p className="text-2xl mb-8 italic font-medium" style={{ color: '#3BE7AE', letterSpacing: '0.05em' }}>
+                Del gasto al valor.
+              </p>
               <p className="text-xl mb-10 leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
                 Libera a tu área de Strategic Sourcing de tareas operativas, desde el análisis de categorías hasta la gestión de proyectos, conectándola con el negocio para tomar decisiones más estratégicas.
               </p>
