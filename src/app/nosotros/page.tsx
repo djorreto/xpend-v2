@@ -104,9 +104,15 @@ export default function NosotrosPage() {
             <h2 className="text-4xl font-bold mb-8 text-center" style={{ color: '#2D3E3D' }}>
               Nuestra Historia
             </h2>
-            <div className="max-w-4xl mx-auto">
-              <p className="text-xl text-gray-700 mb-6 leading-relaxed">
-                Xpend fue creada por un matrimonio de ingenieros chilenos con más de 8 años de experiencia en procurement y minería, habiendo trabajado en consultoría, energía solar y banca. Su trayectoria les permitió liderar proyectos de optimización de gasto, transformación digital de abastecimiento y desarrollo de herramientas tecnológicas para mejorar la trazabilidad, eficiencia y transparencia en la gestión de proveedores. Combinando visión técnica, financiera y estratégica, decidieron crear una plataforma que profesionalice el área de compras en empresas de alto crecimiento, integrando tecnología, datos y buenas prácticas de sourcing. Detrás de Xpend hay personas con trayectoria real en el rubro y una pasión genuina por transformar la forma en que las empresas compran, liberando a los equipos de tareas operativas para que se enfoquen en decisiones que realmente generan valor.
+            <div className="max-w-4xl mx-auto space-y-6">
+              <p className="text-xl text-gray-700 leading-relaxed">
+                Detrás de Xpend hay dos ingenieros con trayectoria en procurement, minería y energía solar que vivieron de cerca los desafíos de las áreas de abastecimiento: procesos lentos, falta de trazabilidad y escasa integración tecnológica.
+              </p>
+              <p className="text-xl text-gray-700 leading-relaxed">
+                Después de liderar proyectos de optimización de gasto y transformación digital en distintas industrias, entendimos que las empresas necesitan herramientas que combinen tecnología, gestión y estrategia para tomar mejores decisiones de compra.
+              </p>
+              <p className="text-xl text-gray-700 leading-relaxed">
+                Así nació Xpend: una plataforma creada por profesionales que conocen el rubro desde dentro, con la misión de hacer que las compras sean más estratégicas, colaborativas y transparentes, liberando a los equipos de tareas operativas para que puedan enfocarse en generar verdadero valor.
               </p>
             </div>
           </div>
@@ -274,7 +280,7 @@ export default function NosotrosPage() {
       {/* Footer */}
       <footer className="py-12 px-4 sm:px-6 lg:px-8 text-center" style={{ backgroundColor: '#1a2625' }}>
         <p className="text-gray-400 text-sm font-medium">
-          © 2025 <span style={{ color: '#3BE7AE', fontWeight: 'bold' }}>xpend.cl</span> - Todos los derechos reservados.
+          © 2025 <span style={{ color: '#3BE7AE', fontWeight: 'bold' }}>Xpend™</span> - Marca en trámite INAPI.
         </p>
       </footer>
     </div>
