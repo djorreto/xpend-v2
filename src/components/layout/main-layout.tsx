@@ -78,7 +78,7 @@ export function MainLayout({
         />
       )}
 
-      {/* Juan Xpendo - AI Assistant (always visible) */}
+      {/* ANA - AI Assistant (always visible) */}
       <JuanXpendoChat />
     </div>
   )

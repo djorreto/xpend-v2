@@ -22,7 +22,7 @@ export function JuanXpendoChat() {
       id: '0',
       role: 'assistant',
       content:
-        '¡Hola! Soy Juan Xpendo, tu asistente experto en Strategic Sourcing. 🎯\n\nPuedo ayudarte con:\n- Estrategia de categorías\n- Análisis de líneas base\n- Especificaciones técnicas\n- Evaluación de proveedores\n- Y mucho más...\n\n¿En qué puedo ayudarte hoy?',
+        'Hola! Soy ANA (Asistente de Negociaciones y Abastecimiento) 👋\n\nTe ayudo con sourcing de forma rápida y práctica:\n\n• Estrategia de categorías\n• Negociación con proveedores\n• RFP, RFQ, RFI\n• Análisis de costos\n\n¿En qué te puedo ayudar?',
       timestamp: new Date(),
     },
   ])
@@ -75,7 +75,7 @@ export function JuanXpendoChat() {
       // Construir historial de conversación
       const conversationHistory = messages
         .slice(-5) // Últimos 5 mensajes para contexto
-        .map((m) => `${m.role === 'user' ? 'Usuario' : 'Juan Xpendo'}: ${m.content}`)
+        .map((m) => `${m.role === 'user' ? 'Usuario' : 'ANA'}: ${m.content}`)
         .join('\n')
 
       const response = await fetch('/api/chat', {
@@ -209,7 +209,7 @@ export function JuanXpendoChat() {
         <button
           onClick={() => setIsOpen(true)}
           className="fixed bottom-6 right-6 z-50 group"
-          aria-label="Abrir chat de Juan Xpendo"
+          aria-label="Abrir chat de ANA"
         >
           <div
             className="relative w-16 h-16 rounded-full shadow-2xl transition-all duration-300 group-hover:scale-110"
@@ -251,8 +251,8 @@ export function JuanXpendoChat() {
                 <Sparkles className="w-5 h-5" style={{ color: '#2D3E3D' }} />
               </div>
               <div>
-                <CardTitle className="text-base font-bold text-white">Juan Xpendo</CardTitle>
-                <p className="text-xs text-gray-300">Experto en Strategic Sourcing</p>
+                <CardTitle className="text-base font-bold text-white">ANA</CardTitle>
+                <p className="text-xs text-gray-300">Asistente de Negociaciones y Abastecimiento</p>
               </div>
             </div>
             <Button

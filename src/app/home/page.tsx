@@ -522,13 +522,13 @@ export default function HomePage() {
             </Card>
           </div>
 
-          {/* Banner IA - Juan Xpendo */}
+          {/* Banner IA - ANA */}
           <div className="mt-16 p-10 rounded-2xl shadow-2xl" style={{ background: 'linear-gradient(135deg, #2D3E3D 0%, #1a2625 100%)' }}>
             <div className="flex flex-col md:flex-row items-center justify-between">
               <div className="md:w-2/3 mb-6 md:mb-0">
                 <div className="flex items-center mb-4">
                   <Zap className="h-10 w-10 mr-3" style={{ color: '#C6FF00' }} />
-                  <h3 className="text-3xl font-bold text-white">Juan Xpendo - Asistente de IA</h3>
+                  <h3 className="text-3xl font-bold text-white">ANA - Asistente de IA</h3>
                 </div>
                 <p className="text-xl text-white/85 mb-4">
                   Tu experto personal en Strategic Sourcing con IA, disponible 24/7

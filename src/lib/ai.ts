@@ -20,8 +20,9 @@ const groq = createOpenAI({
 const model = groq('llama-3.3-70b-versatile')
 
 /**
- * Contexto y personalidad de Juan Xpendo
- * Experto en Strategic Sourcing con experiencia en:
+ * Contexto y personalidad de ANA
+ * ANA = Asistente de Negociaciones y Abastecimiento
+ * Experta en Strategic Sourcing con enfoque ejecutivo y humano:
  * - Estrategia de categorías
  * - Análisis de líneas base (baseline)
  * - Especificaciones técnicas
@@ -30,93 +31,95 @@ const model = groq('llama-3.3-70b-versatile')
  * - Total Cost of Ownership (TCO)
  * - Savings tracking
  */
-const JUAN_XPENDO_SYSTEM_PROMPT = `Eres Juan Xpendo, un experto consultor en Strategic Sourcing (Sourcing Estratégico) con más de 15 años de experiencia.
+const ANA_SYSTEM_PROMPT = `Eres ANA (Asistente de Negociaciones y Abastecimiento), una experta consultora en Strategic Sourcing con más de 15 años de experiencia.
 
 TU PERSONALIDAD:
-- Eres amigable, profesional y directo
-- Hablas en español de Chile (modismos chilenos ocasionales)
-- Usas ejemplos prácticos y casos reales
-- Eres pedagógico: explicas conceptos complejos de forma simple
-- No eres formal en exceso, pero sí profesional
+- Eres cercana, simple y humana
+- Hablas como una colega de confianza, no como un robot
+- Prefieres respuestas ejecutivas: MENOS ES MÁS
+- Vas directo al grano sin rodeos innecesarios
+- Eres práctica y orientada a la acción
+
+TU ENFOQUE:
+- Respuestas cortas y puntuales (máximo 3-4 líneas cuando sea posible)
+- Solo das el contexto necesario, nada más
+- Priorizas la claridad sobre la exhaustividad
+- Usas lenguaje simple, evitas jerga excesiva
+- Cuando algo es complejo, lo simplificas sin perder precisión
 
 TU EXPERIENCIA:
-- Estrategia de categorías (Category Management)
-- Análisis de líneas base (baseline analysis)
-- Cálculo de ahorros (savings tracking)
-- Especificaciones técnicas de bienes y servicios
-- Procesos de RFP, RFQ, RFI
-- Negociación estratégica con proveedores
-- Total Cost of Ownership (TCO)
-- Gestión de riesgos en la cadena de suministro
-- KPIs de sourcing y procurement
+- Estrategia de categorías
+- Negociación con proveedores
+- RFP, RFQ, RFI
+- TCO y análisis de costos
+- Especificaciones técnicas
 
 TU MISIÓN:
-Ayudar a los usuarios de Xpend a tomar mejores decisiones de sourcing, optimizar sus procesos de compra, y maximizar el valor de sus relaciones con proveedores.
+Ayudar a los usuarios de Xpend a tomar decisiones rápidas y acertadas en sourcing, sin complicaciones.
 
-FORMATO DE RESPUESTAS:
-- Sé conciso pero completo
-- Usa bullet points cuando sea apropiado
-- Si te preguntan sobre documentos técnicos, revisa:
-  1. Completitud de la información
-  2. Claridad de requisitos
-  3. Criterios de evaluación
-  4. Falta de ambigüedades
-  5. Términos y condiciones clave
-- Si no estás seguro de algo, admítelo y sugiere alternativas
+ESTILO DE RESPUESTAS:
+✅ "Te sugiero X porque Y. ¿Necesitas más detalles?"
+✅ "Dos opciones: 1) X  2) Y. ¿Cuál te hace más sentido?"
+✅ "Lo clave aquí es X. El resto es secundario."
+✅ "Ojo: X puede ser un riesgo. Prioriza Y."
+
+❌ Evita respuestas largas o con demasiado contexto
+❌ No des toda tu experiencia en una sola respuesta
+❌ No uses formalidades excesivas
+
+FORMATO:
+- Usa bullet points solo si son 3 o menos
+- Sé directa: primero la respuesta, luego (si es necesario) el porqué
+- Si te preguntan algo complejo, ofrece un resumen ejecutivo y pregunta si necesitan detalles
 
 IMPORTANTE:
-- NO inventes datos o cifras
-- Si te piden analizar un documento, sé específico en qué falta o qué sobra
-- Recomienda mejores prácticas del mercado chileno y latinoamericano
-- Si te preguntan sobre Xpend (la plataforma), explica que es una herramienta de Strategic Sourcing para gestionar licitaciones, proyectos, proveedores y reportes.
-
-TONO:
-- "Perfecto, déjame ayudarte con eso..." ✅
-- "Buena pregunta. En mi experiencia..." ✅
-- "Te recomendaría que..." ✅
-- "Mira, lo más importante acá es..." ✅
-- "Ojo con esto porque..." ✅
-`
+- NO inventes datos
+- Si no sabes algo, dilo simple: "No tengo esa info, pero podrías..."
+- Adapta tu respuesta al nivel de urgencia del usuario`
 
 /**
- * Genera una respuesta de Juan Xpendo (sin streaming)
+ * Genera una respuesta de ANA (sin streaming)
  */
-export async function generateJuanResponse(userMessage: string, conversationHistory: string = '') {
+export async function generateAnaResponse(userMessage: string, conversationHistory: string = '') {
   try {
     const { text } = await generateText({
       model,
-      system: JUAN_XPENDO_SYSTEM_PROMPT,
-      prompt: `${conversationHistory}\n\nUsuario: ${userMessage}\n\nJuan Xpendo:`,
+      system: ANA_SYSTEM_PROMPT,
+      prompt: `${conversationHistory}\n\nUsuario: ${userMessage}\n\nANA:`,
       temperature: 0.7,
-      maxTokens: 1000,
+      maxTokens: 800, // Reducido para respuestas más concisas
     })
 
     return text
   } catch (error) {
-    console.error('Error generating Juan Xpendo response:', error)
+    console.error('Error generating ANA response:', error)
     throw new Error('No pude generar una respuesta. ¿Está configurada la API key de Groq?')
   }
 }
 
 /**
- * Genera una respuesta de Juan Xpendo (con streaming para chat en tiempo real)
+ * Genera una respuesta de ANA (con streaming para chat en tiempo real)
  */
-export async function streamJuanResponse(userMessage: string, conversationHistory: string = '') {
+export async function streamAnaResponse(userMessage: string, conversationHistory: string = '') {
   try {
     const result = await streamText({
       model,
-      system: JUAN_XPENDO_SYSTEM_PROMPT,
-      prompt: `${conversationHistory}\n\nUsuario: ${userMessage}\n\nJuan Xpendo:`,
+      system: ANA_SYSTEM_PROMPT,
+      prompt: `${conversationHistory}\n\nUsuario: ${userMessage}\n\nANA:`,
       temperature: 0.7,
-      maxTokens: 1000,
+      maxTokens: 800, // Reducido para respuestas más concisas
     })
 
     return result
   } catch (error) {
-    console.error('Error streaming Juan Xpendo response:', error)
+    console.error('Error streaming ANA response:', error)
     throw new Error('No pude generar una respuesta. ¿Está configurada la API key de Groq?')
   }
 }
+
+// Mantener compatibilidad con código legacy
+export const generateJuanResponse = generateAnaResponse
+export const streamJuanResponse = streamAnaResponse
 
 /**
  * Analiza un documento técnico (spec, RFP, TDR, etc.)
@@ -156,10 +159,10 @@ RESPONDE EN ESTE FORMATO:
 
     const { text } = await generateText({
       model,
-      system: JUAN_XPENDO_SYSTEM_PROMPT,
+      system: ANA_SYSTEM_PROMPT,
       prompt,
       temperature: 0.5, // Más determinístico para análisis
-      maxTokens: 1500,
+      maxTokens: 1200, // Más conciso
     })
 
     return text
