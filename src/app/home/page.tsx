@@ -842,7 +842,7 @@ export default function HomePage() {
           </div>
           <div className="border-t pt-10 flex flex-col md:flex-row justify-between items-center" style={{ borderTopColor: 'rgba(59, 231, 174, 0.2)' }}>
             <p className="text-gray-400 text-sm font-medium">
-              © 2025 <span style={{ color: '#3BE7AE', fontWeight: 'bold' }}>xpend.cl</span> - Todos los derechos reservados.
+              © 2025 <span style={{ color: '#3BE7AE', fontWeight: 'bold' }}>Xpend™</span> - Marca en trámite INAPI.
             </p>
             <div className="flex space-x-8 mt-4 md:mt-0">
               <a
