@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Logo } from '@/components/ui/logo'
@@ -10,17 +11,33 @@ import {
   Zap,
   Users,
   TrendingUp,
-  ArrowRight
+  ArrowRight,
+  Menu,
+  X
 } from 'lucide-react'
+import { supabaseBrowser } from '@/lib/supabase'
 
 export default function NosotrosPage() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  useEffect(() => {
+    checkAuth()
+  }, [])
+
+  const checkAuth = async () => {
+    const supabase = supabaseBrowser()
+    const { data: { session } } = await supabase.auth.getSession()
+    setIsAuthenticated(!!session)
+  }
+
   const handleDemo = () => {
     console.log('Agendar demo')
   }
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #1a2625 0%, #2D3E3D 50%, #1a2625 100%)' }}>
-      {/* Header Simple */}
+      {/* Header - Elegante con border bottom destacado */}
       <header className="relative z-50 backdrop-blur-md" style={{
         backgroundColor: 'rgba(45, 62, 61, 0.98)',
         borderBottom: '2px solid',
@@ -28,50 +45,151 @@ export default function NosotrosPage() {
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-            <a href="/">
+            {/* Logo - Más prominente */}
+            <a href="/" className="flex items-center cursor-pointer">
               <Logo size="lg" variant="white" showSlogan={true} />
             </a>
-            <div className="flex items-center space-x-4">
-              <a href="/">
+
+            {/* Desktop Navigation - Elegante */}
+            <nav className="hidden md:flex items-center space-x-8">
+              <a
+                href="/#gestion"
+                className="text-white/90 font-medium transition-all duration-300"
+                onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
+              >
+                Gestión Integral
+              </a>
+              <a
+                href="/proveedores"
+                className="text-white/90 font-medium transition-all duration-300"
+                onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
+              >
+                Proveedores
+              </a>
+              <a
+                href="/nosotros"
+                className="text-white/90 font-medium transition-all duration-300"
+                onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
+              >
+                Nosotros
+              </a>
+              <a
+                href="/blog"
+                className="text-white/90 font-medium transition-all duration-300"
+                onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
+              >
+                Blog
+              </a>
+              <a
+                href="/faq"
+                className="text-white/90 font-medium transition-all duration-300"
+                onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
+              >
+                FAQ
+              </a>
+            </nav>
+
+            {/* Action Buttons - Elegante */}
+            <div className="hidden md:flex items-center space-x-4">
+              {isAuthenticated && (
                 <Button
                   variant="ghost"
                   className="text-white/90 font-medium transition-all duration-300"
+                  onClick={async () => {
+                    const supabase = supabaseBrowser()
+                    await supabase.auth.signOut()
+                    setIsAuthenticated(false)
+                  }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(59, 231, 174, 0.15)'
-                    e.currentTarget.style.color = '#3BE7AE'
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+                    e.currentTarget.style.color = '#ffffff'
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = 'transparent'
                     e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'
                   }}
                 >
-                  Volver al Inicio
+                  Cerrar Sesión
+                </Button>
+              )}
+              <a href={isAuthenticated ? "/dashboard" : "/login"}>
+                <Button
+                  className="px-6 py-2.5 rounded-lg font-semibold shadow-lg transition-all duration-300"
+                  style={{
+                    backgroundColor: '#3BE7AE',
+                    color: '#2D3E3D',
+                    border: '1px solid rgba(59, 231, 174, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#2AD4D2'
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                    e.currentTarget.style.boxShadow = '0 10px 20px rgba(59, 231, 174, 0.3)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#3BE7AE'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = ''
+                  }}
+                >
+                  {isAuthenticated ? "Ir a Xpend" : "Login"}
                 </Button>
               </a>
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="md:hidden">
               <Button
-                onClick={handleDemo}
-                className="px-6 py-2.5 rounded-lg font-semibold shadow-lg transition-all duration-300"
-                style={{
-                  backgroundColor: '#3BE7AE',
-                  color: '#2D3E3D',
-                  border: '1px solid rgba(59, 231, 174, 0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#2AD4D2'
-                  e.currentTarget.style.transform = 'translateY(-1px)'
-                  e.currentTarget.style.boxShadow = '0 10px 20px rgba(59, 231, 174, 0.3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#3BE7AE'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = ''
-                }}
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="text-white"
               >
-                Agendar Demo
+                {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </Button>
             </div>
           </div>
         </div>
+
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <div className="md:hidden bg-blue-900 border-t border-blue-800">
+            <div className="px-2 pt-2 pb-3 space-y-1">
+              <a href="/#gestion" className="block px-3 py-2 text-white hover:text-blue-200">Gestión Integral</a>
+              <a href="/proveedores" className="block px-3 py-2 text-white hover:text-blue-200">Proveedores</a>
+              <a href="/nosotros" className="block px-3 py-2 text-white hover:text-blue-200">Nosotros</a>
+              <a href="/blog" className="block px-3 py-2 text-white hover:text-blue-200">Blog</a>
+              <a href="/faq" className="block px-3 py-2 text-white hover:text-blue-200">FAQ</a>
+              <div className="px-3 py-2 space-y-2">
+                {isAuthenticated && (
+                  <Button
+                    variant="ghost"
+                    className="w-full text-white hover:text-blue-200 hover:bg-blue-800"
+                    onClick={async () => {
+                      const supabase = supabaseBrowser()
+                      await supabase.auth.signOut()
+                      setIsAuthenticated(false)
+                    }}
+                  >
+                    Cerrar Sesión
+                  </Button>
+                )}
+                <a href={isAuthenticated ? "/dashboard" : "/login"} className="block">
+                  <Button
+                    className="w-full"
+                    style={{ backgroundColor: '#3BE7AE', color: '#2D3E3D' }}
+                  >
+                    {isAuthenticated ? "Ir a Xpend" : "Login"}
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}

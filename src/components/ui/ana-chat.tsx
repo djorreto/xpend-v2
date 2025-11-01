@@ -15,7 +15,7 @@ interface Message {
   timestamp: Date
 }
 
-export function JuanXpendoChat() {
+export function AnaChat() {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -172,7 +172,7 @@ export function JuanXpendoChat() {
         timestamp: new Date(),
       }
 
-      // Agregar respuesta de Juan
+      // Agregar respuesta de ANA
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -310,7 +310,7 @@ export function JuanXpendoChat() {
               <div className="flex justify-start">
                 <div className="bg-gray-100 rounded-lg p-3 flex items-center space-x-2">
                   <Loader2 className="w-4 h-4 animate-spin text-teal-500" />
-                  <span className="text-sm text-gray-600">Juan está escribiendo...</span>
+                  <span className="text-sm text-gray-600">ANA está escribiendo...</span>
                 </div>
               </div>
             )}

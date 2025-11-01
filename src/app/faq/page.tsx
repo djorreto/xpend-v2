@@ -1,18 +1,33 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Logo } from '@/components/ui/logo'
-import { 
+import {
   ChevronDown,
   ChevronUp,
   MessageCircle,
-  ArrowRight
+  ArrowRight,
+  Menu,
+  X
 } from 'lucide-react'
+import { supabaseBrowser } from '@/lib/supabase'
 
 export default function FAQPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(0)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  useEffect(() => {
+    checkAuth()
+  }, [])
+
+  const checkAuth = async () => {
+    const supabase = supabaseBrowser()
+    const { data: { session } } = await supabase.auth.getSession()
+    setIsAuthenticated(!!session)
+  }
 
   const handleDemo = () => {
     console.log('Agendar demo')
@@ -24,87 +39,104 @@ export default function FAQPage() {
       questions: [
         {
           q: '¿Qué es Xpend?',
-          a: 'Xpend es una plataforma de coordinación para Strategic Sourcing que combina automatización inteligente con IA, gestión colaborativa y visibilidad total del proceso. Liberamos a los equipos de compras de tareas operativas para que se enfoquen en decisiones estratégicas que generen valor real.'
-        },
-        {
-          q: '¿Cómo se diferencia Xpend de otras plataformas de sourcing?',
-          a: 'Xpend no es solo un digitalizador de procesos, es un inteligentizador. Nuestra IA analiza patrones, sugiere optimizaciones y automatiza tareas repetitivas. Además, estamos diseñados específicamente para el mercado latinoamericano, con integración a sistemas locales de licitaciones y adaptación a normativas regionales.'
+          a: 'Xpend es una plataforma web de gestión para Strategic Sourcing que te ayuda a coordinar licitaciones, gestionar proveedores, planificar compras y generar reportes ejecutivos. Incluye ANA, tu asistente de IA especializado en procurement.'
         },
         {
           q: '¿Para qué tipo de empresas está diseñado Xpend?',
-          a: 'Xpend está diseñado para empresas medianas y grandes de cualquier industria que cuenten con un área de Strategic Sourcing o Compras. Es especialmente útil para organizaciones que gestionan múltiples proveedores, licitaciones complejas y buscan centralizar y optimizar sus procesos de sourcing.'
+          a: 'Xpend está diseñado para empresas que necesitan optimizar su proceso de compras estratégicas. Es ideal para áreas de Procurement, Strategic Sourcing y Abastecimiento que gestionan múltiples licitaciones y proveedores.'
+        },
+        {
+          q: '¿Necesito instalar algo en mi computador?',
+          a: 'No, Xpend es 100% web. Solo necesitas un navegador moderno (Chrome, Firefox, Safari o Edge) y conexión a internet. Puedes acceder desde cualquier dispositivo.'
         }
       ]
     },
     {
-      category: 'Funcionalidades',
+      category: 'Módulos Disponibles',
       questions: [
         {
-          q: '¿Qué módulos incluye la plataforma?',
-          a: 'Xpend incluye módulos de: Gestión de Licitaciones (con tracking completo desde origen hasta ahorro final), Gestión de Proveedores (con evaluaciones administrativas y técnicas), Análisis de Categorías de Gasto, Plan de Compras Estratégico, Gestión de Proyectos de Sourcing, y Reportes Ejecutivos con dashboards en tiempo real.'
+          q: '¿Qué módulos están actualmente disponibles en Xpend?',
+          a: 'Actualmente Xpend cuenta con: Gestión de Licitaciones (RFP/RFQ/RFI), Gestión de Proveedores, Proyectos de Sourcing, Sourcing Plan (planificación anual y trimestral), Spend Analysis, Reportes Ejecutivos, y ANA Chat (asistente de IA para sourcing).'
         },
         {
-          q: '¿Cómo funciona el sistema de evaluación de proveedores?',
-          a: 'Contamos con un sistema dual: Evaluación Administrativa (válida por 12 meses) que incluye documentación base, análisis financiero y experiencia; y Evaluación Técnica (por licitación) que evalúa prevención de riesgos y propuesta técnica. El sistema calcula automáticamente scores ponderados y muestra estados con semáforo visual (verde/amarillo/rojo).'
+          q: '¿Cómo funciona la Gestión de Licitaciones?',
+          a: 'Puedes crear licitaciones tipo RFP, RFQ o RFI con toda la información: título, descripción, fechas límite, baseline, departamento responsable y archivos adjuntos. El sistema te permite hacer seguimiento del estado (Borrador, Publicada, En Evaluación, Adjudicada, Cerrada) y calcular ahorros comparando baseline vs. monto adjudicado.'
         },
         {
-          q: '¿Puedo integrar Xpend con mis sistemas actuales?',
-          a: 'Sí, Xpend ofrece APIs robustas para integración con ERPs, plataformas de licitaciones públicas y privadas, sistemas contables y herramientas de BI. También ofrecemos integración con Microsoft 365 y Google Workspace para gestión de documentos.'
+          q: '¿Qué es el Sourcing Plan?',
+          a: 'Es un módulo de planificación donde defines tus iniciativas de sourcing por trimestre y año, proyectas ahorros esperados y haces seguimiento del avance real. Te ayuda a mantener visibilidad de tus objetivos anuales de ahorro.'
         },
         {
-          q: '¿Cómo se calculan los ahorros?',
-          a: 'Los ahorros se calculan automáticamente comparando la baseline (línea base de gasto) con el valor adjudicado final. Puedes definir la fuente de baseline (presupuesto, mercado, último año) y el sistema actualiza el porcentaje y monto ahorrado en tiempo real. Todos los datos quedan trazados para auditorías.'
+          q: '¿Cómo funciona la gestión de Proveedores?',
+          a: 'Puedes registrar proveedores con su información completa (RUT, razón social, contacto, tipo de servicio) y hacer seguimiento de evaluaciones administrativas y técnicas. El sistema usa un semáforo visual (verde/amarillo/rojo) para ver rápidamente el estado de cada proveedor.'
+        },
+        {
+          q: '¿Qué es ANA Chat?',
+          a: 'ANA (Asistente de Negociaciones y Abastecimiento) es tu asistente de IA experto en Strategic Sourcing. Puedes consultarle sobre estrategia de categorías, negociación con proveedores, RFP/RFQ/RFI, análisis de costos y más. Está disponible 24/7 desde un botón flotante en la plataforma.'
         }
       ]
     },
     {
-      category: 'Implementación',
+      category: 'Usuarios y Permisos',
       questions: [
         {
-          q: '¿Cuánto tiempo toma implementar Xpend?',
-          a: 'La implementación típica toma entre 2 a 4 semanas, dependiendo del tamaño de la organización y la complejidad de las integraciones. Incluye: configuración inicial, migración de datos históricos, capacitación de usuarios y puesta en marcha asistida.'
+          q: '¿Puedo tener múltiples usuarios en mi cuenta?',
+          a: 'Sí, Xpend soporta múltiples usuarios con diferentes roles y permisos. El Super Admin puede invitar usuarios y asignarles permisos específicos para ver, crear, editar o eliminar información en cada módulo.'
         },
         {
-          q: '¿Necesito conocimientos técnicos para usar Xpend?',
-          a: 'No. Xpend está diseñado para ser intuitivo y fácil de usar por cualquier profesional de compras o sourcing. Ofrecemos capacitación completa y documentación detallada. Nuestro equipo de soporte también está disponible 24/7 para ayudar.'
+          q: '¿Qué roles de usuario existen?',
+          a: 'Actualmente existen: Super Admin (acceso total), Admin (acceso completo excepto gestión de usuarios y configuración avanzada), y Viewer (solo lectura). Los permisos se pueden personalizar por módulo.'
         },
         {
-          q: '¿Ofrecen capacitación para mi equipo?',
-          a: 'Sí, incluimos capacitación completa como parte del proceso de implementación. Ofrecemos sesiones en vivo, videos tutoriales, documentación interactiva y soporte continuo. También organizamos webinars mensuales sobre mejores prácticas.'
+          q: '¿Puedo cambiar mi contraseña?',
+          a: 'Sí, puedes cambiar tu contraseña desde el módulo de Settings en cualquier momento. Los nuevos usuarios invitados deben cambiar su contraseña en el primer inicio de sesión por seguridad.'
         }
       ]
     },
     {
-      category: 'Seguridad y Cumplimiento',
+      category: 'Reportes y Análisis',
       questions: [
         {
-          q: '¿Dónde se almacenan mis datos?',
-          a: 'Todos los datos se almacenan en servidores ubicados en Chile, cumpliendo con la legislación local de protección de datos. Utilizamos AWS con redundancia geográfica para garantizar disponibilidad y recuperación ante desastres.'
+          q: '¿Qué tipo de reportes puedo generar?',
+          a: 'Puedes generar reportes ejecutivos de licitaciones, proveedores, spend analysis, y savings tracking. Los reportes se pueden exportar en formato Excel o PDF. También hay dashboards visuales con gráficos en tiempo real.'
         },
         {
-          q: '¿Qué medidas de seguridad implementa Xpend?',
-          a: 'Implementamos encriptación end-to-end, autenticación multifactor, control de acceso basado en roles (RBAC), auditoría completa de acciones, backups diarios automáticos, y cumplimos con estándares de seguridad ISO 27001 (certificación en proceso). Contamos con 99.9% de uptime garantizado.'
-        },
-        {
-          q: '¿Cumplen con las normativas de protección de datos?',
-          a: 'Sí, cumplimos con la Ley N° 19.628 de Protección de Datos Personales de Chile y estamos preparados para cumplir con regulaciones internacionales como GDPR. Ofrecemos DPA (Data Processing Agreements) personalizados para nuestros clientes.'
+          q: '¿Puedo hacer análisis de gasto por categoría?',
+          a: 'Sí, el módulo de Spend Analysis te permite visualizar tu gasto por categoría, proveedor y departamento. Puedes identificar oportunidades de ahorro y ver tendencias de gasto en el tiempo.'
         }
       ]
     },
     {
-      category: 'Precios y Soporte',
+      category: 'Datos y Seguridad',
       questions: [
         {
-          q: '¿Cómo funciona el modelo de precios?',
-          a: 'Ofrecemos planes flexibles basados en el número de usuarios y módulos activos. Contamos con planes mensuales y anuales (con descuento). También ofrecemos pricing personalizado para grandes empresas. Todos los planes incluyen soporte 24/7 y actualizaciones gratuitas.'
+          q: '¿Dónde se guardan mis datos?',
+          a: 'Todos los datos se almacenan en Supabase, una plataforma de base de datos segura con servidores en la nube. Los datos están encriptados y protegidos con autenticación y control de acceso estricto.'
         },
         {
-          q: '¿Ofrecen período de prueba?',
-          a: 'Sí, ofrecemos una demo personalizada donde mostramos la plataforma con datos de ejemplo relevantes para tu industria. Para clientes calificados, ofrecemos un piloto de 30 días con implementación asistida.'
+          q: '¿Mi información está segura?',
+          a: 'Sí, implementamos autenticación robusta, encriptación de datos, control de acceso por roles, y políticas de seguridad estrictas. Solo los usuarios autorizados de tu empresa pueden acceder a tu información.'
         },
         {
-          q: '¿Qué tipo de soporte ofrecen?',
-          a: 'Ofrecemos soporte técnico 24/7 por email, chat en vivo y teléfono. Contamos con un equipo especializado en Strategic Sourcing que puede asesorarte no solo en aspectos técnicos, sino también en mejores prácticas de la industria. Todos los planes incluyen un Customer Success Manager dedicado.'
+          q: '¿Puedo subir archivos a la plataforma?',
+          a: 'Sí, puedes adjuntar archivos a licitaciones y proyectos. Los archivos se almacenan de forma segura en el storage de la plataforma y solo son accesibles para usuarios autorizados.'
+        }
+      ]
+    },
+    {
+      category: 'Soporte y Ayuda',
+      questions: [
+        {
+          q: '¿Cómo puedo obtener ayuda si tengo dudas?',
+          a: 'Puedes usar ANA Chat dentro de la plataforma para consultas sobre sourcing. Para soporte técnico, contáctanos por email. Estamos trabajando en expandir nuestros canales de soporte.'
+        },
+        {
+          q: '¿La plataforma está en desarrollo activo?',
+          a: 'Sí, Xpend está en constante evolución. Agregamos nuevas funcionalidades regularmente basándonos en feedback de usuarios y necesidades del mercado de Strategic Sourcing.'
+        },
+        {
+          q: '¿Puedo solicitar nuevas funcionalidades?',
+          a: 'Por supuesto! Valoramos el feedback de nuestros usuarios. Puedes enviarnos sugerencias de nuevas funcionalidades que te gustaría ver en la plataforma y las evaluaremos para próximas versiones.'
         }
       ]
     }
@@ -118,65 +150,166 @@ export default function FAQPage() {
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #1a2625 0%, #2D3E3D 50%, #1a2625 100%)' }}>
-      {/* Header Simple */}
-      <header className="relative z-50 backdrop-blur-md" style={{ 
-        backgroundColor: 'rgba(45, 62, 61, 0.98)', 
+      {/* Header - Elegante con border bottom destacado */}
+      <header className="relative z-50 backdrop-blur-md" style={{
+        backgroundColor: 'rgba(45, 62, 61, 0.98)',
         borderBottom: '2px solid',
         borderImage: 'linear-gradient(90deg, transparent 0%, #3BE7AE 50%, transparent 100%) 1'
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-            <a href="/">
-              <Logo size="lg" variant="white" />
+            {/* Logo - Más prominente */}
+            <a href="/" className="flex items-center cursor-pointer">
+              <Logo size="lg" variant="white" showSlogan={true} />
             </a>
-            <div className="flex items-center space-x-4">
-              <a href="/">
-                <Button 
-                  variant="ghost" 
+
+            {/* Desktop Navigation - Elegante */}
+            <nav className="hidden md:flex items-center space-x-8">
+              <a
+                href="/#gestion"
+                className="text-white/90 font-medium transition-all duration-300"
+                onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
+              >
+                Gestión Integral
+              </a>
+              <a
+                href="/proveedores"
+                className="text-white/90 font-medium transition-all duration-300"
+                onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
+              >
+                Proveedores
+              </a>
+              <a
+                href="/nosotros"
+                className="text-white/90 font-medium transition-all duration-300"
+                onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
+              >
+                Nosotros
+              </a>
+              <a
+                href="/blog"
+                className="text-white/90 font-medium transition-all duration-300"
+                onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
+              >
+                Blog
+              </a>
+              <a
+                href="/faq"
+                className="text-white/90 font-medium transition-all duration-300"
+                onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
+              >
+                FAQ
+              </a>
+            </nav>
+
+            {/* Action Buttons - Elegante */}
+            <div className="hidden md:flex items-center space-x-4">
+              {isAuthenticated && (
+                <Button
+                  variant="ghost"
                   className="text-white/90 font-medium transition-all duration-300"
+                  onClick={async () => {
+                    const supabase = supabaseBrowser()
+                    await supabase.auth.signOut()
+                    setIsAuthenticated(false)
+                  }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(59, 231, 174, 0.15)'
-                    e.currentTarget.style.color = '#3BE7AE'
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+                    e.currentTarget.style.color = '#ffffff'
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = 'transparent'
                     e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'
                   }}
                 >
-                  Volver al Inicio
+                  Cerrar Sesión
+                </Button>
+              )}
+              <a href={isAuthenticated ? "/dashboard" : "/login"}>
+                <Button
+                  className="px-6 py-2.5 rounded-lg font-semibold shadow-lg transition-all duration-300"
+                  style={{
+                    backgroundColor: '#3BE7AE',
+                    color: '#2D3E3D',
+                    border: '1px solid rgba(59, 231, 174, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#2AD4D2'
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                    e.currentTarget.style.boxShadow = '0 10px 20px rgba(59, 231, 174, 0.3)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#3BE7AE'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = ''
+                  }}
+                >
+                  {isAuthenticated ? "Ir a Xpend" : "Login"}
                 </Button>
               </a>
-              <Button 
-                onClick={handleDemo}
-                className="px-6 py-2.5 rounded-lg font-semibold shadow-lg transition-all duration-300"
-                style={{ 
-                  backgroundColor: '#3BE7AE', 
-                  color: '#2D3E3D',
-                  border: '1px solid rgba(59, 231, 174, 0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#2AD4D2'
-                  e.currentTarget.style.transform = 'translateY(-1px)'
-                  e.currentTarget.style.boxShadow = '0 10px 20px rgba(59, 231, 174, 0.3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#3BE7AE'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = ''
-                }}
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="md:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="text-white"
               >
-                Agendar Demo
+                {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </Button>
             </div>
           </div>
         </div>
+
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <div className="md:hidden bg-blue-900 border-t border-blue-800">
+            <div className="px-2 pt-2 pb-3 space-y-1">
+              <a href="/#gestion" className="block px-3 py-2 text-white hover:text-blue-200">Gestión Integral</a>
+              <a href="/proveedores" className="block px-3 py-2 text-white hover:text-blue-200">Proveedores</a>
+              <a href="/nosotros" className="block px-3 py-2 text-white hover:text-blue-200">Nosotros</a>
+              <a href="/blog" className="block px-3 py-2 text-white hover:text-blue-200">Blog</a>
+              <a href="/faq" className="block px-3 py-2 text-white hover:text-blue-200">FAQ</a>
+              <div className="px-3 py-2 space-y-2">
+                {isAuthenticated && (
+                  <Button
+                    variant="ghost"
+                    className="w-full text-white hover:text-blue-200 hover:bg-blue-800"
+                    onClick={async () => {
+                      const supabase = supabaseBrowser()
+                      await supabase.auth.signOut()
+                      setIsAuthenticated(false)
+                    }}
+                  >
+                    Cerrar Sesión
+                  </Button>
+                )}
+                <a href={isAuthenticated ? "/dashboard" : "/login"} className="block">
+                  <Button
+                    className="w-full"
+                    style={{ backgroundColor: '#3BE7AE', color: '#2D3E3D' }}
+                  >
+                    {isAuthenticated ? "Ir a Xpend" : "Login"}
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}
       <section className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-8" style={{ letterSpacing: '-0.02em' }}>
-            Preguntas <span style={{ 
+            Preguntas <span style={{
               background: 'linear-gradient(135deg, #3BE7AE 0%, #2AD4D2 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -190,7 +323,7 @@ export default function FAQPage() {
       </section>
 
       {/* Separator */}
-      <div className="h-20" style={{ 
+      <div className="h-20" style={{
         background: 'linear-gradient(to bottom, #1a2625 0%, #f9fafb 100%)'
       }}></div>
 
@@ -206,11 +339,11 @@ export default function FAQPage() {
                 {category.questions.map((faq) => {
                   const currentIndex = questionIndex++
                   const isOpen = openIndex === currentIndex
-                  
+
                   return (
-                    <Card 
+                    <Card
                       key={currentIndex}
-                      className="backdrop-blur-md border-0 shadow-lg transition-all duration-300 hover:shadow-xl cursor-pointer" 
+                      className="backdrop-blur-md border-0 shadow-lg transition-all duration-300 hover:shadow-xl cursor-pointer"
                       style={{ backgroundColor: 'rgba(255, 255, 255, 0.98)' }}
                       onClick={() => toggleQuestion(currentIndex)}
                     >
@@ -241,7 +374,7 @@ export default function FAQPage() {
           ))}
 
           {/* Contact CTA */}
-          <div className="mt-16 bg-gradient-to-r rounded-2xl p-12 shadow-2xl text-center" style={{ 
+          <div className="mt-16 bg-gradient-to-r rounded-2xl p-12 shadow-2xl text-center" style={{
             background: 'linear-gradient(135deg, rgba(42, 212, 210, 0.1) 0%, rgba(59, 231, 174, 0.1) 100%)'
           }}>
             <div className="inline-flex p-4 rounded-xl mb-6" style={{ backgroundColor: 'rgba(59, 231, 174, 0.15)' }}>
@@ -254,7 +387,7 @@ export default function FAQPage() {
               Nuestro equipo está aquí para ayudarte. Contáctanos y resolveremos todas tus dudas.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
+              <Button
                 onClick={handleDemo}
                 className="px-8 py-4 rounded-xl font-bold shadow-lg transition-all duration-300"
                 style={{ backgroundColor: '#3BE7AE', color: '#2D3E3D' }}
@@ -270,11 +403,11 @@ export default function FAQPage() {
                 Agendar Demo
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button 
+              <Button
                 variant="outline"
                 className="px-8 py-4 rounded-xl font-bold transition-all duration-300"
-                style={{ 
-                  borderColor: '#2AD4D2', 
+                style={{
+                  borderColor: '#2AD4D2',
                   color: '#2AD4D2',
                   borderWidth: '2px'
                 }}

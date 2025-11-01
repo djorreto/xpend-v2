@@ -19,7 +19,8 @@ import {
   Truck,
   Target,
   Shield,
-  Brain
+  Brain,
+  FileEdit
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -27,6 +28,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Sourcing Intelligence', href: '/sourcing-intelligence', icon: Brain },
   { name: 'Sourcing Plan', href: '/sourcing-plan', icon: Target },
+  { name: 'RFx Maker', href: '/rfx-maker', icon: FileEdit },
   { name: 'Proyectos', href: '/projects', icon: FolderOpen },
   { name: 'Licitaciones', href: '/licitaciones', icon: Gavel },
   { name: 'Proveedores', href: '/suppliers', icon: Truck },

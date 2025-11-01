@@ -59,9 +59,9 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo - Más prominente */}
-            <div className="flex items-center">
+            <a href="/" className="flex items-center cursor-pointer">
               <Logo size="lg" variant="white" showSlogan={true} />
-            </div>
+            </a>
 
             {/* Desktop Navigation - Elegante */}
             <nav className="hidden md:flex items-center space-x-8">
@@ -220,9 +220,6 @@ export default function HomePage() {
                   backgroundClip: 'text'
                 }}> Strategic Sourcing</span> con IA
               </h1>
-              <p className="text-2xl mb-8 italic font-medium" style={{ color: '#3BE7AE', letterSpacing: '0.05em' }}>
-                Del gasto al valor.
-              </p>
               <p className="text-xl mb-10 leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
                 Libera a tu área de Strategic Sourcing de tareas operativas, desde el análisis de categorías hasta la gestión de proyectos, conectándola con el negocio para tomar decisiones más estratégicas.
               </p>
@@ -622,6 +619,191 @@ export default function HomePage() {
               </div>
               <h3 className="text-2xl font-bold mb-4" style={{ color: '#2D3E3D' }}>Integración Total</h3>
               <p className="text-gray-600 leading-relaxed">Se integra con tus herramientas existentes de sourcing y licitaciones.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Partners Section - Elegante */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6" style={{ color: '#2D3E3D', letterSpacing: '-0.02em' }}>
+              Nuestros <span style={{
+                background: 'linear-gradient(135deg, #3BE7AE 0%, #2AD4D2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>Partners</span> Estratégicos
+            </h2>
+            <div className="w-24 h-1.5 mx-auto mb-6 rounded-full" style={{ background: 'linear-gradient(90deg, #3BE7AE 0%, #2AD4D2 100%)' }}></div>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Colaboramos con empresas líderes para ofrecer la mejor experiencia en Strategic Sourcing
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {/* Partner Slot 1 */}
+            <Card className="backdrop-blur-md border-2 shadow-2xl transition-all duration-300 hover:shadow-3xl hover:scale-105 group cursor-pointer"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                borderColor: 'rgba(59, 231, 174, 0.3)'
+              }}
+            >
+              <CardContent className="p-12">
+                <div className="flex flex-col items-center text-center space-y-6">
+                  {/* Logo Placeholder */}
+                  <div className="w-48 h-48 rounded-2xl flex items-center justify-center transition-all duration-300"
+                    style={{
+                      backgroundColor: 'rgba(42, 212, 210, 0.1)',
+                      border: '3px dashed rgba(42, 212, 210, 0.3)'
+                    }}
+                  >
+                    <div className="text-center">
+                      <div className="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: 'rgba(42, 212, 210, 0.2)' }}
+                      >
+                        <Package className="h-10 w-10" style={{ color: '#2AD4D2' }} />
+                      </div>
+                      <p className="text-sm font-bold text-gray-500">Logo Partner</p>
+                      <p className="text-xs text-gray-400">200 x 200 px</p>
+                    </div>
+                  </div>
+
+                  {/* Partner Name Placeholder */}
+                  <div className="w-full">
+                    <div className="h-8 rounded-lg mb-3"
+                      style={{
+                        backgroundColor: 'rgba(59, 231, 174, 0.1)',
+                        border: '2px dashed rgba(59, 231, 174, 0.3)'
+                      }}
+                    >
+                      <p className="text-center text-sm font-semibold text-gray-500 leading-8">Nombre del Partner</p>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-4">Breve descripción del partner y su valor agregado para clientes Xpend</p>
+                  </div>
+
+                  {/* Link Placeholder */}
+                  <div className="w-full pt-4 border-t" style={{ borderColor: 'rgba(42, 212, 210, 0.2)' }}>
+                    <a
+                      href="#"
+                      className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-bold transition-all duration-300 group-hover:scale-105"
+                      style={{
+                        backgroundColor: 'rgba(42, 212, 210, 0.1)',
+                        color: '#2AD4D2',
+                        border: '2px solid rgba(42, 212, 210, 0.3)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#2AD4D2'
+                        e.currentTarget.style.color = '#ffffff'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(42, 212, 210, 0.1)'
+                        e.currentTarget.style.color = '#2AD4D2'
+                      }}
+                    >
+                      Visitar Sitio Web
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </a>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Partner Slot 2 */}
+            <Card className="backdrop-blur-md border-2 shadow-2xl transition-all duration-300 hover:shadow-3xl hover:scale-105 group cursor-pointer"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                borderColor: 'rgba(59, 231, 174, 0.3)'
+              }}
+            >
+              <CardContent className="p-12">
+                <div className="flex flex-col items-center text-center space-y-6">
+                  {/* Logo Placeholder */}
+                  <div className="w-48 h-48 rounded-2xl flex items-center justify-center transition-all duration-300"
+                    style={{
+                      backgroundColor: 'rgba(59, 231, 174, 0.1)',
+                      border: '3px dashed rgba(59, 231, 174, 0.3)'
+                    }}
+                  >
+                    <div className="text-center">
+                      <div className="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: 'rgba(59, 231, 174, 0.2)' }}
+                      >
+                        <Users className="h-10 w-10" style={{ color: '#3BE7AE' }} />
+                      </div>
+                      <p className="text-sm font-bold text-gray-500">Logo Partner</p>
+                      <p className="text-xs text-gray-400">200 x 200 px</p>
+                    </div>
+                  </div>
+
+                  {/* Partner Name Placeholder */}
+                  <div className="w-full">
+                    <div className="h-8 rounded-lg mb-3"
+                      style={{
+                        backgroundColor: 'rgba(42, 212, 210, 0.1)',
+                        border: '2px dashed rgba(42, 212, 210, 0.3)'
+                      }}
+                    >
+                      <p className="text-center text-sm font-semibold text-gray-500 leading-8">Nombre del Partner</p>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-4">Breve descripción del partner y su valor agregado para clientes Xpend</p>
+                  </div>
+
+                  {/* Link Placeholder */}
+                  <div className="w-full pt-4 border-t" style={{ borderColor: 'rgba(59, 231, 174, 0.2)' }}>
+                    <a
+                      href="#"
+                      className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-bold transition-all duration-300 group-hover:scale-105"
+                      style={{
+                        backgroundColor: 'rgba(59, 231, 174, 0.1)',
+                        color: '#3BE7AE',
+                        border: '2px solid rgba(59, 231, 174, 0.3)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#3BE7AE'
+                        e.currentTarget.style.color = '#ffffff'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(59, 231, 174, 0.1)'
+                        e.currentTarget.style.color = '#3BE7AE'
+                      }}
+                    >
+                      Visitar Sitio Web
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </a>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Partnership CTA */}
+          <div className="mt-16 text-center">
+            <div className="inline-block px-8 py-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'rgba(59, 231, 174, 0.1)' }}>
+              <h3 className="text-2xl font-bold mb-3" style={{ color: '#2D3E3D' }}>
+                ¿Quieres ser nuestro Partner?
+              </h3>
+              <p className="text-gray-600 mb-4 max-w-2xl">
+                Únete a nuestro ecosistema de partners estratégicos y ofrece valor agregado a empresas líderes en Strategic Sourcing
+              </p>
+              <Button
+                className="px-8 py-3 rounded-xl font-bold shadow-lg transition-all duration-300"
+                style={{ backgroundColor: '#3BE7AE', color: '#2D3E3D' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#2AD4D2'
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 20px 40px rgba(59, 231, 174, 0.3)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#3BE7AE'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = ''
+                }}
+              >
+                Contáctanos para Partnerships
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
             </div>
           </div>
         </div>

@@ -49,25 +49,10 @@ export function Logo({ className, size = 'md', variant = 'default', showSlogan =
         height={heightClasses[size]}
         priority
         className="object-contain"
-        style={variant === 'white' ? { 
+        style={variant === 'white' ? {
           filter: 'brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%)'
         } : undefined}
       />
-      {showSlogan && (
-        <p 
-          className={cn(
-            'font-medium tracking-wide mt-1',
-            sloganSizes[size]
-          )}
-          style={{ 
-            color: sloganColors[variant],
-            letterSpacing: '0.1em',
-            fontFamily: 'inherit'
-          }}
-        >
-          Del gasto al valor.
-        </p>
-      )}
     </div>
   )
 }

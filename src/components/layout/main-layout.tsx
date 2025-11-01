@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Sidebar } from './sidebar'
 import { Topbar } from './topbar'
 import { ChangePasswordModal } from '@/components/forms/change-password-modal'
-import { JuanXpendoChat } from '@/components/ui/juan-xpendo-chat'
+import { AnaChat } from '@/components/ui/ana-chat'
 import { supabaseBrowser } from '@/lib/supabase'
 
 interface MainLayoutProps {
@@ -79,7 +79,7 @@ export function MainLayout({
       )}
 
       {/* ANA - AI Assistant (always visible) */}
-      <JuanXpendoChat />
+      <AnaChat />
     </div>
   )
 }
