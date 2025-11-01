@@ -45,7 +45,8 @@ function isOutOfScope(message: string): boolean {
   ]
 
   // No aplicar si el mensaje contiene palabras relacionadas con sourcing
-  const sourcingKeywords = /\b(procurement|sourcing|supplier|proveedor|rfp|rfq|rfi|category|categoría|contract|contrato|negotiat|negociac|compra|abastecimiento|licitación|tender)\b/i
+  const sourcingKeywords =
+    /\b(procurement|sourcing|supplier|proveedor|rfp|rfq|rfi|category|categoría|contract|contrato|negotiat|negociac|compra|abastecimiento|licitación|tender)\b/i
 
   if (sourcingKeywords.test(message)) {
     return false
@@ -67,7 +68,8 @@ export async function POST(req: NextRequest) {
 
     // Detectar intentos de prompt injection
     if (detectPromptInjection(message)) {
-      const safeResponse = "No puedo ayudarte con eso. ¿Tienes alguna consulta sobre sourcing o procurement?"
+      const safeResponse =
+        'No puedo ayudarte con eso. ¿Tienes alguna consulta sobre sourcing o procurement?'
       return new Response(safeResponse, {
         status: 200,
         headers: { 'Content-Type': 'text/plain; charset=utf-8' },
@@ -77,7 +79,16 @@ export async function POST(req: NextRequest) {
     // Generar respuesta con streaming
     const result = await streamJuanResponse(message, conversationHistory)
 
-    // Convertir el stream a respuesta HTTP (método correcto)
+    // Guardar historial de forma no bloqueante (best effort)
+    // Nota: esta llamada no debe romper la respuesta al usuario si falla.
+    if (userId) {
+      // No esperamos el resultado, solo disparamos
+      saveToHistory(userId, message, '[streaming answer]').catch(err =>
+        console.error('saveToHistory failed:', err)
+      )
+    }
+
+    // Convertir el stream a respuesta HTTP
     return result.toTextStreamResponse()
   } catch (error) {
     console.error('Error in chat API:', error)
@@ -93,17 +104,21 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Función auxiliar para guardar historial (sin bloquear)
+// Función auxiliar para guardar historial (temporalmente desactivada para build en Vercel)
 async function saveToHistory(userId: string, userMessage: string, assistantMessage: string) {
   try {
-    const supabase = supabaseBrowser()
-    await supabase.from('chat_history').insert({
-      user_id: userId,
-      user_message: userMessage,
-      assistant_message: assistantMessage,
-    })
+    // TODO: implementar guardado real en Supabase usando un cliente de servidor seguro.
+    // const supabase = supabaseBrowser()
+    // await supabase
+    //   .from('chat_history')
+    //   .insert({
+    //     user_id: userId,
+    //     user_message: userMessage,
+    //     assistant_message: assistantMessage,
+    //   });
+
+    console.log('[saveToHistory] skipped in production build')
   } catch (error) {
     console.error('Error saving chat history:', error)
   }
 }
-
