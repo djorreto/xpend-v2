@@ -18,6 +18,8 @@ export default function FAQPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(0)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [showSolutionsMenu, setShowSolutionsMenu] = useState(false)
+  const [menuTimeout, setMenuTimeout] = useState<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     checkAuth()
@@ -173,22 +175,80 @@ export default function FAQPage() {
 
             {/* Desktop Navigation - Elegante */}
             <nav className="hidden md:flex items-center space-x-8">
-              <a
-                href="/#gestion"
-                className="text-white/90 font-medium transition-all duration-300"
-                onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
+              {/* Menú Desplegable Soluciones */}
+              <div
+                className="relative"
+                onMouseEnter={() => {
+                  if (menuTimeout) clearTimeout(menuTimeout)
+                  setShowSolutionsMenu(true)
+                }}
+                onMouseLeave={() => {
+                  const timeout = setTimeout(() => setShowSolutionsMenu(false), 300)
+                  setMenuTimeout(timeout)
+                }}
               >
-                Gestión Integral
-              </a>
-              <a
-                href="/proveedores"
-                className="text-white/90 font-medium transition-all duration-300"
-                onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
-              >
-                Proveedores
-              </a>
+                <button
+                  className="text-white/90 font-medium transition-all duration-300 flex items-center"
+                  style={{ color: showSolutionsMenu ? '#3BE7AE' : 'rgba(255, 255, 255, 0.9)' }}
+                >
+                  Soluciones
+                  <ChevronDown className={`ml-1 h-4 w-4 transition-transform duration-300 ${showSolutionsMenu ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showSolutionsMenu && (
+                  <div
+                    className="absolute top-full left-0 mt-2 w-56 rounded-xl shadow-2xl overflow-hidden"
+                    style={{
+                      backgroundColor: 'rgba(45, 62, 61, 0.98)',
+                      border: '1px solid rgba(59, 231, 174, 0.2)'
+                    }}
+                  >
+                    <a
+                      href="/rfx-maker-info"
+                      className="block px-6 py-3 text-white/90 font-medium transition-all duration-200"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(59, 231, 174, 0.15)'
+                        e.currentTarget.style.color = '#3BE7AE'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'
+                      }}
+                    >
+                      RFx Maker
+                    </a>
+                    <a
+                      href="/sourcing-plan-info"
+                      className="block px-6 py-3 text-white/90 font-medium transition-all duration-200"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(59, 231, 174, 0.15)'
+                        e.currentTarget.style.color = '#3BE7AE'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'
+                      }}
+                    >
+                      Sourcing Plan
+                    </a>
+                    <a
+                      href="/proveedores"
+                      className="block px-6 py-3 text-white/90 font-medium transition-all duration-200"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(59, 231, 174, 0.15)'
+                        e.currentTarget.style.color = '#3BE7AE'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'
+                      }}
+                    >
+                      Proveedores
+                    </a>
+                  </div>
+                )}
+              </div>
+
               <a
                 href="/nosotros"
                 className="text-white/90 font-medium transition-all duration-300"
@@ -219,20 +279,25 @@ export default function FAQPage() {
             <div className="hidden md:flex items-center space-x-4">
               {isAuthenticated && (
                 <Button
-                  variant="ghost"
-                  className="text-white/90 font-medium transition-all duration-300"
+                  variant="outline"
+                  className="font-medium transition-all duration-300"
+                  style={{
+                    backgroundColor: 'rgba(100, 116, 139, 0.4)',
+                    color: '#f1f5f9',
+                    borderColor: 'rgba(241, 245, 249, 0.2)'
+                  }}
                   onClick={async () => {
                     const supabase = supabaseBrowser()
                     await supabase.auth.signOut()
                     setIsAuthenticated(false)
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
-                    e.currentTarget.style.color = '#ffffff'
+                    e.currentTarget.style.backgroundColor = 'rgba(100, 116, 139, 0.6)'
+                    e.currentTarget.style.borderColor = 'rgba(241, 245, 249, 0.4)'
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'
+                    e.currentTarget.style.backgroundColor = 'rgba(100, 116, 139, 0.4)'
+                    e.currentTarget.style.borderColor = 'rgba(241, 245, 249, 0.2)'
                   }}
                 >
                   Cerrar Sesión
