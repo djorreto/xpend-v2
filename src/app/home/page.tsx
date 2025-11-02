@@ -242,22 +242,30 @@ export default function HomePage() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden bg-blue-900 border-t border-blue-800">
+          <div className="md:hidden border-t" style={{ backgroundColor: '#2D3E3D', borderTopColor: 'rgba(59, 231, 174, 0.3)' }}>
             <div className="px-2 pt-2 pb-3 space-y-1">
               <div className="px-3 py-2">
-                <p className="text-xs font-bold text-blue-300 uppercase tracking-wide mb-2">Soluciones</p>
-                <a href="/rfx-maker-info" className="block px-3 py-2 text-white hover:text-blue-200">RFx Maker</a>
-                <a href="/sourcing-plan-info" className="block px-3 py-2 text-white hover:text-blue-200">Sourcing Plan</a>
-                <a href="/proveedores" className="block px-3 py-2 text-white hover:text-blue-200">Proveedores</a>
+                <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: '#3BE7AE' }}>Soluciones</p>
+                <a href="/rfx-maker-info" className="block px-3 py-2 text-white transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'} onMouseLeave={(e) => e.currentTarget.style.color = '#ffffff'}>RFx Maker</a>
+                <a href="/sourcing-plan-info" className="block px-3 py-2 text-white transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'} onMouseLeave={(e) => e.currentTarget.style.color = '#ffffff'}>Sourcing Plan</a>
+                <a href="/proveedores" className="block px-3 py-2 text-white transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'} onMouseLeave={(e) => e.currentTarget.style.color = '#ffffff'}>Proveedores</a>
               </div>
-              <a href="/nosotros" className="block px-3 py-2 text-white hover:text-blue-200">Nosotros</a>
-              <a href="/blog" className="block px-3 py-2 text-white hover:text-blue-200">Blog</a>
-              <a href="/faq" className="block px-3 py-2 text-white hover:text-blue-200">FAQ</a>
+              <a href="/nosotros" className="block px-3 py-2 text-white transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'} onMouseLeave={(e) => e.currentTarget.style.color = '#ffffff'}>Nosotros</a>
+              <a href="/blog" className="block px-3 py-2 text-white transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'} onMouseLeave={(e) => e.currentTarget.style.color = '#ffffff'}>Blog</a>
+              <a href="/faq" className="block px-3 py-2 text-white transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'} onMouseLeave={(e) => e.currentTarget.style.color = '#ffffff'}>FAQ</a>
               <div className="px-3 py-2 space-y-2">
                 {isAuthenticated && (
                   <Button
                     variant="ghost"
-                    className="w-full text-white hover:text-blue-200 hover:bg-blue-800"
+                    className="w-full text-white"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(59, 231, 174, 0.2)'
+                      e.currentTarget.style.color = '#3BE7AE'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent'
+                      e.currentTarget.style.color = '#ffffff'
+                    }}
                     onClick={async () => {
                       const supabase = supabaseBrowser()
                       await supabase.auth.signOut()
