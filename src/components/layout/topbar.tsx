@@ -93,10 +93,8 @@ export function Topbar({ user, onOpenMobileMenu }: TopbarProps) {
 
                 {/* Right side */}
                 <div className="flex items-center space-x-2 md:space-x-4">
-                  {/* Version Selector - Hidden on small mobile */}
-                  <div className="hidden sm:block">
-                    <VersionSelector />
-                  </div>
+                  {/* Version Selector - Responsive: icon+badge en móvil, full en desktop */}
+                  <VersionSelector />
 
                   {/* Logo - Hidden on mobile and tablet */}
                   <div className="hidden lg:flex items-center cursor-pointer" onClick={() => router.push('/home')}>
