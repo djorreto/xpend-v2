@@ -20,7 +20,8 @@ import {
   Target,
   Shield,
   Brain,
-  FileEdit
+  FileEdit,
+  X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -41,9 +42,11 @@ const navigation = [
 interface SidebarProps {
   companyName?: string
   userRole?: string
+  mobileMenuOpen?: boolean
+  onCloseMobileMenu?: () => void
 }
 
-export function Sidebar({ companyName, userRole }: SidebarProps) {
+export function Sidebar({ companyName, userRole, mobileMenuOpen = false, onCloseMobileMenu }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [cachedRole, setCachedRole] = useState<string | undefined>(undefined)
   const [cachedCompanyName, setCachedCompanyName] = useState<string | undefined>(undefined)
@@ -89,7 +92,13 @@ export function Sidebar({ companyName, userRole }: SidebarProps) {
     <div
       className={cn(
         'flex flex-col border-r transition-all duration-300 shadow-lg',
-        collapsed ? 'w-16' : 'w-64'
+        // Desktop: normal sidebar behavior
+        'md:relative md:translate-x-0',
+        collapsed ? 'md:w-16' : 'md:w-64',
+        // Mobile: drawer behavior
+        'fixed inset-y-0 left-0 z-50 w-64',
+        'transform transition-transform duration-300 ease-in-out',
+        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
       )}
       style={{
         background: 'linear-gradient(to bottom, #2D3E3D, #263331)',
@@ -128,11 +137,39 @@ export function Sidebar({ companyName, userRole }: SidebarProps) {
             </div>
           </div>
         )}
+        {/* Mobile: Close button, Desktop: Collapse button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            if (onCloseMobileMenu) {
+              onCloseMobileMenu()
+            } else {
+              setCollapsed(!collapsed)
+            }
+          }}
+          className={cn(
+            "h-8 w-8 text-white",
+            "md:hidden" // Only show close X on mobile
+          )}
+          style={{
+            ['--hover-bg' as any]: 'rgba(42, 212, 210, 0.2)'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(42, 212, 210, 0.2)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          <X className="h-5 w-5" />
+        </Button>
+
+        {/* Desktop only: Collapse button */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setCollapsed(!collapsed)}
-          className="h-8 w-8 text-white"
+          className={cn(
+            "h-8 w-8 text-white",
+            "hidden md:flex" // Only show on desktop
+          )}
           style={{
             ['--hover-bg' as any]: 'rgba(42, 212, 210, 0.2)'
           }}
@@ -155,6 +192,12 @@ export function Sidebar({ companyName, userRole }: SidebarProps) {
             <Link
               key={item.name}
               href={item.href}
+              onClick={() => {
+                // Close mobile menu when navigating
+                if (onCloseMobileMenu) {
+                  onCloseMobileMenu()
+                }
+              }}
               className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200 shadow-sm"
               style={{
                 backgroundColor: isActive ? '#2AD4D2' : 'transparent',

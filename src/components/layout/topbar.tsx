@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, User, LogOut, Settings, Home, Key } from 'lucide-react'
+import { Search, User, LogOut, Settings, Home, Key, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -29,9 +29,10 @@ interface TopbarProps {
     avatar?: string
     role: string
   }
+  onOpenMobileMenu?: () => void
 }
 
-export function Topbar({ user }: TopbarProps) {
+export function Topbar({ user, onOpenMobileMenu }: TopbarProps) {
   const supabase = supabaseBrowser()
   const [searchQuery, setSearchQuery] = useState('')
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
@@ -66,10 +67,20 @@ export function Topbar({ user }: TopbarProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center justify-between px-6">
+      <div className="flex h-16 items-center justify-between px-4 md:px-6 gap-3">
+        {/* Mobile Menu Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden h-10 w-10"
+          onClick={onOpenMobileMenu}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+
         {/* Search */}
         <div className="flex-1 max-w-md">
-          <div className="relative">
+          <div className="relative hidden sm:block">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar proyectos, licitaciones..."
@@ -81,11 +92,13 @@ export function Topbar({ user }: TopbarProps) {
         </div>
 
                 {/* Right side */}
-                <div className="flex items-center space-x-4">
-                  {/* Version Selector */}
-                  <VersionSelector />
+                <div className="flex items-center space-x-2 md:space-x-4">
+                  {/* Version Selector - Hidden on small mobile */}
+                  <div className="hidden sm:block">
+                    <VersionSelector />
+                  </div>
 
-                  {/* Logo */}
+                  {/* Logo - Hidden on mobile and tablet */}
                   <div className="hidden lg:flex items-center cursor-pointer" onClick={() => router.push('/home')}>
                     <Logo size="sm" />
                   </div>

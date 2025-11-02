@@ -25,6 +25,7 @@ export function MainLayout({
 }: MainLayoutProps) {
   const [mustChangePassword, setMustChangePassword] = useState(false)
   const [checkingPassword, setCheckingPassword] = useState(true)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     checkPasswordChange()
@@ -55,16 +56,32 @@ export function MainLayout({
 
   return (
     <div className="flex h-screen bg-background">
+      {/* Mobile Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <Sidebar companyName={companyName} userRole={user?.role} />
+      <Sidebar
+        companyName={companyName}
+        userRole={user?.role}
+        mobileMenuOpen={mobileMenuOpen}
+        onCloseMobileMenu={() => setMobileMenuOpen(false)}
+      />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Topbar */}
-        <Topbar user={user} />
+        <Topbar
+          user={user}
+          onOpenMobileMenu={() => setMobileMenuOpen(true)}
+        />
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4 md:p-6">
           {children}
         </main>
       </div>
