@@ -45,21 +45,17 @@ interface SidebarProps {
 
 export function Sidebar({ companyName, userRole }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
-  const [cachedRole, setCachedRole] = useState<string | undefined>(() => {
-    // Initialize from sessionStorage to prevent flickering
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('xpend-user-role') || undefined
-    }
-    return undefined
-  })
-  const [cachedCompanyName, setCachedCompanyName] = useState<string | undefined>(() => {
-    // Initialize from sessionStorage to prevent flickering
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('xpend-company-name') || undefined
-    }
-    return undefined
-  })
+  const [cachedRole, setCachedRole] = useState<string | undefined>(undefined)
+  const [cachedCompanyName, setCachedCompanyName] = useState<string | undefined>(undefined)
   const pathname = usePathname()
+
+  // Load cached values from sessionStorage on mount (client-side only)
+  useEffect(() => {
+    const storedRole = sessionStorage.getItem('xpend-user-role')
+    const storedCompanyName = sessionStorage.getItem('xpend-company-name')
+    if (storedRole) setCachedRole(storedRole)
+    if (storedCompanyName) setCachedCompanyName(storedCompanyName)
+  }, [])
 
   // Update cached role in state and sessionStorage when userRole changes
   useEffect(() => {
@@ -119,17 +115,16 @@ export function Sidebar({ companyName, userRole }: SidebarProps) {
               <Building2 className="h-6 w-6" style={{ color: '#2D3E3D' }} />
             </div>
             <div className="min-w-0 flex-1 overflow-hidden" suppressHydrationWarning>
-              {effectiveCompanyName ? (
-                <h1
-                  className="text-sm font-bold text-white leading-tight line-clamp-2"
-                  title={effectiveCompanyName}
-                  suppressHydrationWarning
-                >
-                  {effectiveCompanyName}
-                </h1>
-              ) : (
-                <div className="h-5 w-32 bg-white/10 rounded animate-pulse" suppressHydrationWarning />
-              )}
+              <h1
+                className={cn(
+                  "text-sm font-bold text-white leading-tight line-clamp-2",
+                  !effectiveCompanyName && "h-5 w-32 bg-white/10 rounded animate-pulse"
+                )}
+                title={effectiveCompanyName || ''}
+                suppressHydrationWarning
+              >
+                {effectiveCompanyName || '\u00A0'}
+              </h1>
             </div>
           </div>
         )}
@@ -153,7 +148,7 @@ export function Sidebar({ companyName, userRole }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1" suppressHydrationWarning>
         {filteredNavigation.map((item) => {
           const isActive = pathname === item.href
           return (

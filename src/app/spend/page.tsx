@@ -89,7 +89,7 @@ export default function SpendPage() {
         })
 
         const spendDataArray = mockSpendData
-        setSpendData(spendDataArray)
+        setSpendData(spendDataArray as any)
 
         // Calculate totals
         const total = spendDataArray.reduce((sum, item) => sum + item.amount, 0)
@@ -216,7 +216,7 @@ export default function SpendPage() {
         }, {} as Record<string, { total: number; count: number }>)
 
         const categoryArray = Object.entries(categoryTotals)
-          .map(([category, data]) => ({
+          .map(([category, data]: [string, { total: number; count: number }]) => ({
             category,
             total: data.total,
             percentage: total > 0 ? Math.round((data.total / total) * 100) : 0,
@@ -238,7 +238,7 @@ export default function SpendPage() {
         }, {} as Record<string, { total: number; count: number }>)
 
         const vendorArray = Object.entries(vendorTotals)
-          .map(([vendor, data]) => ({
+          .map(([vendor, data]: [string, { total: number; count: number }]) => ({
             vendor,
             total: data.total,
             percentage: total > 0 ? Math.round((data.total / total) * 100) : 0,

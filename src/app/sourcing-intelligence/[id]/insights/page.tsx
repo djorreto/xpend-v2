@@ -103,10 +103,10 @@ export default function InsightsPage() {
     const margin = 15
 
     // Colores Xpend
-    const xpendTeal = [42, 212, 210]
-    const xpendGreen = [59, 231, 174]
-    const xpendDark = [45, 62, 61]
-    const xpendRed = [239, 68, 68]
+    const xpendTeal: [number, number, number] = [42, 212, 210]
+    const xpendGreen: [number, number, number] = [59, 231, 174]
+    const xpendDark: [number, number, number] = [45, 62, 61]
+    const xpendRed: [number, number, number] = [239, 68, 68]
 
     // ===== PÁGINA 1: PORTADA =====
     // Fondo degradado simulado con rectángulos
@@ -507,7 +507,7 @@ export default function InsightsPage() {
 
     yPos += 10
 
-    const actionItems = [
+    const actionItems: Array<{ q: string; text: string; color: [number, number, number] }> = [
       { q: 'Q1', text: 'Iniciar licitaciones en categorías de Apalancamiento para capturar ahorros rápidos', color: [59, 231, 174] },
       { q: 'Q2', text: 'Desarrollar estrategias de dual sourcing para Cuellos de Botella', color: [42, 212, 210] },
       { q: 'Q3', text: 'Negociar acuerdos marco con proveedores estratégicos', color: [59, 231, 174] },

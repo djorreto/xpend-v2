@@ -78,17 +78,17 @@ export default function EditSourcingPlanPage() {
 
         setFormData({
           plan_year: mockPlan.plan_year,
-          quarter: mockPlan.quarter,
+          quarter: mockPlan.quarter as any,
           title: mockPlan.title,
           description: mockPlan.description || '',
           category: mockPlan.category || '',
-          initiative_type: mockPlan.initiative_type,
+          initiative_type: mockPlan.initiative_type as any,
           estimated_spend: mockPlan.estimated_spend.toString(),
           actual_spend: mockPlan.actual_spend?.toString() || '',
           currency: mockPlan.currency,
           projected_savings_percentage: mockPlan.projected_savings_percentage?.toString() || '',
           actual_savings_percentage: mockPlan.actual_savings_percentage?.toString() || '',
-          status: mockPlan.status,
+          status: mockPlan.status as any,
           is_spot: mockPlan.is_spot,
           notes: mockPlan.notes || ''
         })

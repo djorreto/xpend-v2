@@ -364,7 +364,7 @@ export default function RfxProjectPage({ params }: Props) {
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bold text-gray-900">{project.title}</h1>
                 <Badge>{project.rfx_type}</Badge>
-                <Badge variant={project.status === 'ready' ? 'success' : 'secondary'}>
+                <Badge variant={project.status === 'ready' ? 'default' : 'secondary'}>
                   {project.status}
                 </Badge>
               </div>

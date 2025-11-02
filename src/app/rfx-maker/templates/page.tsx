@@ -265,7 +265,7 @@ export default function TemplatesAdminPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-xl font-bold">{template.name}</h3>
-                        <Badge variant={template.status === 'active' ? 'success' : 'secondary'}>
+                        <Badge variant={template.status === 'active' ? 'default' : 'secondary'}>
                           {template.status}
                         </Badge>
                         {template.is_active_version && (

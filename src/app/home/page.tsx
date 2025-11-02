@@ -22,7 +22,9 @@ import {
   Receipt,
   ClipboardList,
   Calendar,
-  DollarSign
+  DollarSign,
+  FileEdit,
+  Sparkles
 } from 'lucide-react'
 import { Logo } from '@/components/ui/logo'
 import { supabaseBrowser } from '@/lib/supabase'
@@ -30,6 +32,8 @@ import { supabaseBrowser } from '@/lib/supabase'
 export default function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [showSolutionsMenu, setShowSolutionsMenu] = useState(false)
+  const [menuTimeout, setMenuTimeout] = useState<NodeJS.Timeout | null>(null)
 
 
 
@@ -65,22 +69,80 @@ export default function HomePage() {
 
             {/* Desktop Navigation - Elegante */}
             <nav className="hidden md:flex items-center space-x-8">
-              <a
-                href="#gestion"
-                className="text-white/90 font-medium transition-all duration-300"
-                onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
+              {/* Menú Desplegable Soluciones */}
+              <div
+                className="relative"
+                onMouseEnter={() => {
+                  if (menuTimeout) clearTimeout(menuTimeout)
+                  setShowSolutionsMenu(true)
+                }}
+                onMouseLeave={() => {
+                  const timeout = setTimeout(() => setShowSolutionsMenu(false), 300)
+                  setMenuTimeout(timeout)
+                }}
               >
-                Gestión Integral
-              </a>
-              <a
-                href="/proveedores"
-                className="text-white/90 font-medium transition-all duration-300"
-                onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
-              >
-                Proveedores
-              </a>
+                <button
+                  className="text-white/90 font-medium transition-all duration-300 flex items-center"
+                  style={{ color: showSolutionsMenu ? '#3BE7AE' : 'rgba(255, 255, 255, 0.9)' }}
+                >
+                  Soluciones
+                  <ChevronDown className={`ml-1 h-4 w-4 transition-transform duration-300 ${showSolutionsMenu ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showSolutionsMenu && (
+                  <div
+                    className="absolute top-full left-0 mt-2 w-56 rounded-xl shadow-2xl overflow-hidden"
+                    style={{
+                      backgroundColor: 'rgba(45, 62, 61, 0.98)',
+                      border: '1px solid rgba(59, 231, 174, 0.2)'
+                    }}
+                  >
+                    <a
+                      href="/rfx-maker-info"
+                      className="block px-6 py-3 text-white/90 font-medium transition-all duration-200"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(59, 231, 174, 0.15)'
+                        e.currentTarget.style.color = '#3BE7AE'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'
+                      }}
+                    >
+                      RFx Maker
+                    </a>
+                    <a
+                      href="/sourcing-plan-info"
+                      className="block px-6 py-3 text-white/90 font-medium transition-all duration-200"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(59, 231, 174, 0.15)'
+                        e.currentTarget.style.color = '#3BE7AE'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'
+                      }}
+                    >
+                      Sourcing Plan
+                    </a>
+                    <a
+                      href="/proveedores"
+                      className="block px-6 py-3 text-white/90 font-medium transition-all duration-200"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(59, 231, 174, 0.15)'
+                        e.currentTarget.style.color = '#3BE7AE'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'
+                      }}
+                    >
+                      Proveedores
+                    </a>
+                  </div>
+                )}
+              </div>
+
               <a
                 href="/nosotros"
                 className="text-white/90 font-medium transition-all duration-300"
@@ -111,20 +173,30 @@ export default function HomePage() {
             <div className="hidden md:flex items-center space-x-4">
               {isAuthenticated && (
                 <Button
-                  variant="ghost"
-                  className="text-white/90 font-medium transition-all duration-300"
+                  variant="outline"
+                  className="px-6 py-2.5 rounded-lg font-semibold shadow-lg transition-all duration-300"
+                  style={{
+                    backgroundColor: 'rgba(100, 116, 139, 0.4)',
+                    borderColor: 'rgba(148, 163, 184, 0.5)',
+                    color: '#f1f5f9',
+                    borderWidth: '2px'
+                  }}
                   onClick={async () => {
                     const supabase = supabaseBrowser()
                     await supabase.auth.signOut()
                     setIsAuthenticated(false)
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+                    e.currentTarget.style.backgroundColor = 'rgba(100, 116, 139, 0.6)'
+                    e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.8)'
                     e.currentTarget.style.color = '#ffffff'
+                    e.currentTarget.style.transform = 'translateY(-1px)'
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'
+                    e.currentTarget.style.backgroundColor = 'rgba(100, 116, 139, 0.4)'
+                    e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.5)'
+                    e.currentTarget.style.color = '#f1f5f9'
+                    e.currentTarget.style.transform = 'translateY(0)'
                   }}
                 >
                   Cerrar Sesión
@@ -172,8 +244,12 @@ export default function HomePage() {
         {isMenuOpen && (
           <div className="md:hidden bg-blue-900 border-t border-blue-800">
             <div className="px-2 pt-2 pb-3 space-y-1">
-              <a href="#gestion" className="block px-3 py-2 text-white hover:text-blue-200">Gestión Integral</a>
-              <a href="/proveedores" className="block px-3 py-2 text-white hover:text-blue-200">Proveedores</a>
+              <div className="px-3 py-2">
+                <p className="text-xs font-bold text-blue-300 uppercase tracking-wide mb-2">Soluciones</p>
+                <a href="/rfx-maker-info" className="block px-3 py-2 text-white hover:text-blue-200">RFx Maker</a>
+                <a href="/sourcing-plan-info" className="block px-3 py-2 text-white hover:text-blue-200">Sourcing Plan</a>
+                <a href="/proveedores" className="block px-3 py-2 text-white hover:text-blue-200">Proveedores</a>
+              </div>
               <a href="/nosotros" className="block px-3 py-2 text-white hover:text-blue-200">Nosotros</a>
               <a href="/blog" className="block px-3 py-2 text-white hover:text-blue-200">Blog</a>
               <a href="/faq" className="block px-3 py-2 text-white hover:text-blue-200">FAQ</a>
@@ -212,16 +288,16 @@ export default function HomePage() {
             {/* Left Content */}
             <div className="text-white">
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-4" style={{ letterSpacing: '-0.02em' }}>
-                Coordina y optimiza tu
+                Del control operativo a la
                 <span style={{
                   background: 'linear-gradient(135deg, #3BE7AE 0%, #2AD4D2 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text'
-                }}> Strategic Sourcing</span> con IA
+                }}> gestión estratégica</span> del procurement.
               </h1>
               <p className="text-xl mb-10 leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
-                Libera a tu área de Strategic Sourcing de tareas operativas, desde el análisis de categorías hasta la gestión de proyectos, conectándola con el negocio para tomar decisiones más estratégicas.
+                Xpend es la capa de inteligencia y gestión que conecta gasto, planificación y ejecución de compras. Profesionaliza tu área y potencia tu Procurement Performance, sin reemplazar tus sistemas actuales.
               </p>
               <Button
                 onClick={handleDemo}
@@ -344,17 +420,108 @@ export default function HomePage() {
         background: 'linear-gradient(to bottom, #1a2625 0%, #f9fafb 100%)'
       }}></div>
 
-      {/* Gestión Integral Section */}
-      <section id="gestion" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white">
+      {/* El Problema Section */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-20">
+          <div className="text-center mb-16">
             <h2 className="text-5xl font-bold mb-6" style={{ color: '#2D3E3D', letterSpacing: '-0.02em' }}>
-              GESTIÓN INTEGRAL DE STRATEGIC SOURCING
+              Las herramientas actuales procesan, pero no controlan.
             </h2>
             <div className="w-24 h-1.5 mx-auto mb-6 rounded-full" style={{ background: 'linear-gradient(90deg, #3BE7AE 0%, #2AD4D2 100%)' }}></div>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Todo lo que necesitas para coordinar y optimizar tu estrategia de compras, en una sola plataforma
+            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+              Plataformas como Ariba, Coupa o WherEX automatizan órdenes, aprobaciones y licitaciones, pero dejan fuera lo más importante: la gestión estratégica y el control real del desempeño del procurement.
             </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <Card className="border-2 shadow-lg hover:shadow-xl transition-all duration-300" style={{ borderColor: 'rgba(239, 68, 68, 0.2)' }}>
+              <CardContent className="p-8">
+                <div className="flex items-start">
+                  <div className="p-3 rounded-xl mr-4" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}>
+                    <ClipboardList className="h-6 w-6 text-red-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold mb-2" style={{ color: '#2D3E3D' }}>Planes dispersos</h3>
+                    <p className="text-gray-600 text-sm">Planes de compras dispersos y sin trazabilidad.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 shadow-lg hover:shadow-xl transition-all duration-300" style={{ borderColor: 'rgba(239, 68, 68, 0.2)' }}>
+              <CardContent className="p-8">
+                <div className="flex items-start">
+                  <div className="p-3 rounded-xl mr-4" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}>
+                    <DollarSign className="h-6 w-6 text-red-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold mb-2" style={{ color: '#2D3E3D' }}>Gasto sin análisis</h3>
+                    <p className="text-gray-600 text-sm">Gasto sin análisis ni categorización inteligente.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 shadow-lg hover:shadow-xl transition-all duration-300" style={{ borderColor: 'rgba(239, 68, 68, 0.2)' }}>
+              <CardContent className="p-8">
+                <div className="flex items-start">
+                  <div className="p-3 rounded-xl mr-4" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}>
+                    <Target className="h-6 w-6 text-red-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold mb-2" style={{ color: '#2D3E3D' }}>Poca visibilidad</h3>
+                    <p className="text-gray-600 text-sm">Poca visibilidad sobre proyectos, plazos y oportunidades de ahorro.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Separator */}
+      <div className="h-20" style={{
+        background: 'linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%)'
+      }}></div>
+
+      {/* La Solución Section */}
+      <section id="gestion" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-5xl font-bold mb-6" style={{ color: '#2D3E3D', letterSpacing: '-0.02em' }}>
+              Xpend: la capa que transforma datos en gestión.
+            </h2>
+            <div className="w-24 h-1.5 mx-auto mb-6 rounded-full" style={{ background: 'linear-gradient(90deg, #3BE7AE 0%, #2AD4D2 100%)' }}></div>
+            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed mb-6">
+              Xpend es un Procurement Management Layer que se conecta a tus sistemas actuales y los convierte en una plataforma viva:
+            </p>
+            <ul className="text-left text-lg text-gray-700 max-w-3xl mx-auto space-y-3 mb-8">
+              <li className="flex items-start">
+                <CheckCircle className="h-6 w-6 mr-3 mt-1 flex-shrink-0" style={{ color: '#3BE7AE' }} />
+                <span>Analiza y categoriza el gasto con IA.</span>
+              </li>
+              <li className="flex items-start">
+                <CheckCircle className="h-6 w-6 mr-3 mt-1 flex-shrink-0" style={{ color: '#3BE7AE' }} />
+                <span>Visualiza tu matriz de Kraljic y detecta oportunidades.</span>
+              </li>
+              <li className="flex items-start">
+                <CheckCircle className="h-6 w-6 mr-3 mt-1 flex-shrink-0" style={{ color: '#3BE7AE' }} />
+                <span>Monitorea planes, proyectos y licitaciones en tiempo real.</span>
+              </li>
+              <li className="flex items-start">
+                <CheckCircle className="h-6 w-6 mr-3 mt-1 flex-shrink-0" style={{ color: '#3BE7AE' }} />
+                <span>Mide y comunica tu Procurement Performance con dashboards automáticos.</span>
+              </li>
+            </ul>
+            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+              Y cuando llega el momento de actuar, Xpend también apoya en definir y ejecutar estrategias de compra, desde la redacción de bases RFI, RFQ o RFP hasta el seguimiento del proceso completo. <strong>Del control a la acción, todo en un mismo entorno.</strong>
+            </p>
+          </div>
+
+          <div className="text-center mb-20 mt-16">
+            <h3 className="text-3xl font-bold mb-4" style={{ color: '#2D3E3D' }}>
+              Lo que incluye
+            </h3>
           </div>
 
           {/* Grid de Módulos */}
@@ -369,47 +536,71 @@ export default function HomePage() {
                 <p className="text-gray-600 mb-4">
                   Planifica y da seguimiento a tus iniciativas de sourcing por año y trimestre. Proyecta ahorros y mide resultados reales.
                 </p>
-                <ul className="space-y-2 text-sm text-gray-600">
+                <ul className="space-y-2 text-sm text-gray-600 mb-6">
                   <li className="flex items-center">
                     <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
-                    Plan anual y trimestral
+                    Análisis de gasto con IA
                   </li>
                   <li className="flex items-center">
                     <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
-                    Proyección vs. real de ahorros
+                    Matriz de Kraljic
                   </li>
                   <li className="flex items-center">
                     <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
-                    Iniciativas spot
+                    Proyección vs. real
                   </li>
                 </ul>
+                <a href="/sourcing-plan-info">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full font-semibold transition-all duration-300 group-hover:bg-[#2AD4D2] group-hover:text-white group-hover:border-[#2AD4D2]"
+                    style={{ borderColor: '#2AD4D2', color: '#2AD4D2' }}
+                  >
+                    Conocer más <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </a>
               </CardContent>
             </Card>
 
-            {/* Licitaciones */}
-            <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 group">
+            {/* RFx Maker */}
+            <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 group relative overflow-hidden">
+              <div className="absolute top-4 right-4 inline-flex items-center px-3 py-1 rounded-full text-xs font-bold" style={{ backgroundColor: 'rgba(198, 255, 0, 0.2)', color: '#2D3E3D' }}>
+                <Sparkles className="h-3 w-3 mr-1" />
+                BETA
+              </div>
               <CardContent className="p-8">
                 <div className="p-4 rounded-xl mb-6 inline-block" style={{ backgroundColor: 'rgba(59, 231, 174, 0.15)' }}>
-                  <Receipt className="h-8 w-8" style={{ color: '#3BE7AE' }} />
+                  <FileEdit className="h-8 w-8" style={{ color: '#3BE7AE' }} />
                 </div>
-                <h3 className="text-2xl font-bold mb-4" style={{ color: '#2D3E3D' }}>Licitaciones</h3>
+                <h3 className="text-2xl font-bold mb-4" style={{ color: '#2D3E3D' }}>RFx Maker</h3>
                 <p className="text-gray-600 mb-4">
-                  Gestiona RFP, RFQ y RFI de forma centralizada. Controla fechas límite, evaluación de propuestas y adjudicaciones.
+                  Crea bases técnicas y administrativas para RFI, RFQ y RFP con IA. De semanas a minutos.
                 </p>
-                <ul className="space-y-2 text-sm text-gray-600">
+                <ul className="space-y-2 text-sm text-gray-600 mb-6">
                   <li className="flex items-center">
                     <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
-                    Gestión de RFP/RFQ/RFI
+                    Generación con IA
                   </li>
                   <li className="flex items-center">
                     <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
-                    Evaluación de propuestas
+                    Plantillas inteligentes
                   </li>
                   <li className="flex items-center">
                     <CheckCircle className="h-4 w-4 mr-2" style={{ color: '#3BE7AE' }} />
-                    Tracking de deadlines
+                    Exportación DOCX/PDF
                   </li>
                 </ul>
+                <a href="/rfx-maker-info">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full font-semibold transition-all duration-300 group-hover:bg-[#3BE7AE] group-hover:text-white group-hover:border-[#3BE7AE]"
+                    style={{ borderColor: '#3BE7AE', color: '#3BE7AE' }}
+                  >
+                    Conocer más <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </a>
               </CardContent>
             </Card>
 
@@ -528,10 +719,10 @@ export default function HomePage() {
               <div className="md:w-2/3 mb-6 md:mb-0">
                 <div className="flex items-center mb-4">
                   <Zap className="h-10 w-10 mr-3" style={{ color: '#C6FF00' }} />
-                  <h3 className="text-3xl font-bold text-white">ANA - Asistente de IA</h3>
+                  <h3 className="text-3xl font-bold text-white">🤖 ANA, IA de compras</h3>
                 </div>
                 <p className="text-xl text-white/85 mb-4">
-                  Tu experto personal en Strategic Sourcing con IA, disponible 24/7
+                  Responde, analiza y sugiere acciones en tiempo real.
                 </p>
                 <ul className="space-y-2 text-white/80">
                   <li className="flex items-center">
@@ -557,69 +748,89 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* CTA Button */}
-          <div className="text-center mt-16">
-            <a href={isAuthenticated ? "/dashboard" : "/login"}>
-              <Button
-                size="lg"
-                className="px-10 py-5 rounded-xl font-bold text-lg shadow-xl transition-all duration-300"
-                style={{ backgroundColor: '#3BE7AE', color: '#2D3E3D' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#2AD4D2'
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 20px 40px rgba(59, 231, 174, 0.3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#3BE7AE'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = ''
-                }}
-              >
-                {isAuthenticated ? "Ir a Dashboard" : "Comenzar Ahora"}
-                <ArrowRight className="ml-2 h-6 w-6" />
-              </Button>
-            </a>
+          {/* Otros módulos destacados */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+            <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300">
+              <CardContent className="p-8">
+                <div className="p-4 rounded-xl mb-4 inline-block" style={{ backgroundColor: 'rgba(59, 231, 174, 0.15)' }}>
+                  <BarChart3 className="h-8 w-8" style={{ color: '#3BE7AE' }} />
+                </div>
+                <h3 className="text-2xl font-bold mb-3" style={{ color: '#2D3E3D' }}>📊 Dashboards y reportes</h3>
+                <p className="text-gray-600">
+                  Mide tu Procurement Performance en tiempo real con KPIs automáticos y visualización avanzada.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300">
+              <CardContent className="p-8">
+                <div className="p-4 rounded-xl mb-4 inline-block" style={{ backgroundColor: 'rgba(42, 212, 210, 0.15)' }}>
+                  <ClipboardList className="h-8 w-8" style={{ color: '#2AD4D2' }} />
+                </div>
+                <h3 className="text-2xl font-bold mb-3" style={{ color: '#2D3E3D' }}>🗂️ Plan, seguimiento y ejecución</h3>
+                <p className="text-gray-600">
+                  Trazabilidad total desde la planificación hasta los RFP y RFQ.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300">
+              <CardContent className="p-8">
+                <div className="p-4 rounded-xl mb-4 inline-block" style={{ backgroundColor: 'rgba(59, 231, 174, 0.15)' }}>
+                  <Globe className="h-8 w-8" style={{ color: '#3BE7AE' }} />
+                </div>
+                <h3 className="text-2xl font-bold mb-3" style={{ color: '#2D3E3D' }}>🔗 Integraciones</h3>
+                <p className="text-gray-600">
+                  SAP, WherEX, Ariba y más — sin implementaciones pesadas.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
 
-      {/* Features Section - Elegante */}
+      {/* Por qué importa Section */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-20">
+          <div className="text-center mb-16">
             <h2 className="text-5xl font-bold mb-6" style={{ color: '#2D3E3D', letterSpacing: '-0.02em' }}>
-              ¿Por qué elegir Xpend?
+              Resolvemos las preguntas que toda gerencia se hace cada trimestre.
             </h2>
             <div className="w-24 h-1.5 mx-auto mb-6 rounded-full" style={{ background: 'linear-gradient(90deg, #3BE7AE 0%, #2AD4D2 100%)' }}></div>
-            <p className="text-xl font-medium text-gray-600">
-              La plataforma de coordinación que tu equipo de Strategic Sourcing necesita
-            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-            <div className="text-center group">
-              <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 transition-all duration-300 shadow-lg group-hover:shadow-2xl" style={{ backgroundColor: 'rgba(42, 212, 210, 0.15)' }}>
-                <Zap className="h-10 w-10" style={{ color: '#2AD4D2' }} />
-              </div>
-              <h3 className="text-2xl font-bold mb-4" style={{ color: '#2D3E3D' }}>Automatización Inteligente</h3>
-              <p className="text-gray-600 leading-relaxed">Automatiza tareas repetitivas y enfócate en decisiones estratégicas con IA.</p>
-            </div>
+          <div className="max-w-4xl mx-auto mb-12">
+            <Card className="border-2 shadow-2xl" style={{ borderColor: 'rgba(59, 231, 174, 0.3)', backgroundColor: 'rgba(59, 231, 174, 0.05)' }}>
+              <CardContent className="p-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
+                  <div className="space-y-6">
+                    <div className="p-4 rounded-xl" style={{ backgroundColor: 'rgba(255, 255, 255, 0.8)' }}>
+                      <h3 className="text-3xl font-bold mb-2" style={{ color: '#2D3E3D' }}>¿Dónde estamos?</h3>
+                    </div>
+                    <div className="p-4 rounded-xl" style={{ backgroundColor: 'rgba(255, 255, 255, 0.8)' }}>
+                      <h3 className="text-3xl font-bold mb-2" style={{ color: '#2D3E3D' }}>¿Cuánto gastamos?</h3>
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    <div className="p-4 rounded-xl" style={{ backgroundColor: 'rgba(255, 255, 255, 0.8)' }}>
+                      <h3 className="text-3xl font-bold mb-2" style={{ color: '#2D3E3D' }}>¿Qué proyectos se atrasan?</h3>
+                    </div>
+                    <div className="p-4 rounded-xl" style={{ backgroundColor: 'rgba(255, 255, 255, 0.8)' }}>
+                      <h3 className="text-3xl font-bold mb-2" style={{ color: '#2D3E3D' }}>¿Qué oportunidades de ahorro tenemos?</h3>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-            <div className="text-center group">
-              <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 transition-all duration-300 shadow-lg group-hover:shadow-2xl" style={{ backgroundColor: 'rgba(59, 231, 174, 0.15)' }}>
-                <Shield className="h-10 w-10" style={{ color: '#3BE7AE' }} />
-              </div>
-              <h3 className="text-2xl font-bold mb-4" style={{ color: '#2D3E3D' }}>Seguridad Empresarial</h3>
-              <p className="text-gray-600 leading-relaxed">Datos seguros con encriptación de nivel empresarial y cumplimiento normativo.</p>
-            </div>
-
-            <div className="text-center group">
-              <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 transition-all duration-300 shadow-lg group-hover:shadow-2xl" style={{ backgroundColor: 'rgba(42, 212, 210, 0.15)' }}>
-                <Globe className="h-10 w-10" style={{ color: '#2AD4D2' }} />
-              </div>
-              <h3 className="text-2xl font-bold mb-4" style={{ color: '#2D3E3D' }}>Integración Total</h3>
-              <p className="text-gray-600 leading-relaxed">Se integra con tus herramientas existentes de sourcing y licitaciones.</p>
-            </div>
+          <div className="text-center">
+            <p className="text-2xl text-gray-600 mb-4 max-w-2xl mx-auto">
+              Ningún ERP o plataforma responde bien a eso.
+            </p>
+            <p className="text-3xl font-bold" style={{ color: '#3BE7AE' }}>
+              Xpend sí.
+            </p>
           </div>
         </div>
       </section>
@@ -817,17 +1028,22 @@ export default function HomePage() {
 
         <div className="max-w-5xl mx-auto text-center relative z-10">
           <h2 className="text-5xl md:text-6xl font-bold text-white mb-8" style={{ letterSpacing: '-0.02em' }}>
-            ¿Listo para optimizar tu <span style={{
-              background: 'linear-gradient(135deg, #3BE7AE 0%, #2AD4D2 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>Strategic Sourcing</span>?
+            La inteligencia que tu área de compras necesitaba.
           </h2>
-          <p className="text-2xl mb-12" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
-            Únete a las empresas que ya están transformando su gestión de compras estratégicas
+          <div className="text-2xl mb-8 space-y-3" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
+            <p>Xpend convierte el gasto en estrategia,</p>
+            <p>los datos en decisiones,</p>
+            <p>y el procurement en una verdadera palanca de valor.</p>
+          </div>
+          <p className="text-3xl font-bold mb-12" style={{
+            background: 'linear-gradient(135deg, #3BE7AE 0%, #2AD4D2 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
+            Del control operativo a la gestión estratégica del procurement.
           </p>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center">
+          <div className="flex justify-center">
             <Button
               onClick={handleDemo}
               size="lg"
@@ -851,30 +1067,6 @@ export default function HomePage() {
               Agendar Demo Gratuita
               <ArrowRight className="ml-2 h-6 w-6" />
             </Button>
-            <a href={isAuthenticated ? "/dashboard" : "/login"}>
-              <Button
-                variant="outline"
-                size="lg"
-                className="px-10 py-6 text-lg font-bold rounded-xl transition-all duration-300"
-                style={{
-                  borderColor: '#3BE7AE',
-                  color: '#3BE7AE',
-                  borderWidth: '2px'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#3BE7AE'
-                  e.currentTarget.style.color = '#2D3E3D'
-                  e.currentTarget.style.transform = 'translateY(-3px)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                  e.currentTarget.style.color = '#3BE7AE'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                }}
-              >
-                {isAuthenticated ? "Ir a Dashboard" : "Acceder a la Plataforma"}
-              </Button>
-            </a>
           </div>
         </div>
       </section>
@@ -886,7 +1078,7 @@ export default function HomePage() {
             <div>
               <Logo size="md" variant="white" />
               <p className="mt-6 text-gray-400 leading-relaxed">
-                La plataforma de coordinación para Strategic Sourcing que tu equipo necesita.
+                Del control operativo a la gestión estratégica del procurement. La capa de inteligencia que conecta gasto, planificación y ejecución.
               </p>
             </div>
             <div>

@@ -1,0 +1,22 @@
+
+> xpend-v2@2.0.0 dev
+> next dev
+
+ ⚠ Port 3000 is in use, trying 3001 instead.
+   ▲ Next.js 14.0.4
+   - Local:        http://localhost:3001
+   - Environments: .env.local
+
+ ✓ Ready in 1826ms
+ ○ Compiling /home ...
+ ✓ Compiled /home in 6.8s (850 modules)
+ ✓ Compiled in 610ms (417 modules)
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 2.7s (3856 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ✓ Compiled in 886ms (3870 modules)
+ ✓ Compiled in 1041ms (3870 modules)
+ ✓ Compiled in 778ms (3870 modules)
+ ✓ Compiled in 573ms (3870 modules)
+ ✓ Compiled in 332ms (3870 modules)
+ ✓ Compiled in 593ms (3870 modules)

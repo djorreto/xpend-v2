@@ -112,7 +112,7 @@ export default function SettingsPage() {
 
       setUserSettings({
         full_name: profile.full_name,
-        email: authUser.email,
+        email: authUser.email || '',
         role: profile.role
       })
 

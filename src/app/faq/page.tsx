@@ -39,7 +39,11 @@ export default function FAQPage() {
       questions: [
         {
           q: '¿Qué es Xpend?',
-          a: 'Xpend es una plataforma web de gestión para Strategic Sourcing que te ayuda a coordinar licitaciones, gestionar proveedores, planificar compras y generar reportes ejecutivos. Incluye ANA, tu asistente de IA especializado en procurement.'
+          a: 'Xpend es la capa de inteligencia y gestión que conecta gasto, planificación y ejecución de compras. Transforma el procurement del control operativo a la gestión estratégica. Incluye ANA, tu asistente de IA especializado en procurement. Actualmente en versión Beta MVP.'
+        },
+        {
+          q: '¿Qué significa que está en versión Beta MVP?',
+          a: 'Estamos en fase Beta MVP (Producto Mínimo Viable), lo que significa que la plataforma tiene las funcionalidades core operativas y está siendo mejorada continuamente con feedback de usuarios reales. Algunas funciones avanzadas están en desarrollo activo.'
         },
         {
           q: '¿Para qué tipo de empresas está diseñado Xpend?',
@@ -56,7 +60,7 @@ export default function FAQPage() {
       questions: [
         {
           q: '¿Qué módulos están actualmente disponibles en Xpend?',
-          a: 'Actualmente Xpend cuenta con: Gestión de Licitaciones (RFP/RFQ/RFI), Gestión de Proveedores, Proyectos de Sourcing, Sourcing Plan (planificación anual y trimestral), Spend Analysis, Reportes Ejecutivos, y ANA Chat (asistente de IA para sourcing).'
+          a: 'Actualmente Xpend cuenta con: RFx Maker (generación de bases RFI/RFQ/RFP con IA), Gestión de Licitaciones, Gestión de Proveedores, Proyectos de Sourcing, Sourcing Plan con análisis de gasto y matriz de Kraljic, Spend Analysis con categorización inteligente, Reportes Ejecutivos, y ANA Chat (asistente de IA 24/7).'
         },
         {
           q: '¿Cómo funciona la Gestión de Licitaciones?',
@@ -64,7 +68,11 @@ export default function FAQPage() {
         },
         {
           q: '¿Qué es el Sourcing Plan?',
-          a: 'Es un módulo de planificación donde defines tus iniciativas de sourcing por trimestre y año, proyectas ahorros esperados y haces seguimiento del avance real. Te ayuda a mantener visibilidad de tus objetivos anuales de ahorro.'
+          a: 'Es un módulo de planificación estratégica donde defines tus iniciativas de sourcing por trimestre y año, proyectas ahorros esperados y haces seguimiento del avance real. Incluye análisis de gasto potenciado con IA, visualización de la matriz de Kraljic, y detección automática de oportunidades de ahorro por categoría.'
+        },
+        {
+          q: '¿Qué es RFx Maker?',
+          a: 'RFx Maker es un módulo que te ayuda a crear bases técnicas y administrativas para RFI, RFQ y RFP utilizando inteligencia artificial. Puedes partir de plantillas predefinidas, políticas de tu empresa, y generar documentos profesionales listos para publicar. Acelera drásticamente el proceso de creación de licitaciones.'
         },
         {
           q: '¿Cómo funciona la gestión de Proveedores?',
@@ -132,7 +140,7 @@ export default function FAQPage() {
         },
         {
           q: '¿La plataforma está en desarrollo activo?',
-          a: 'Sí, Xpend está en constante evolución. Agregamos nuevas funcionalidades regularmente basándonos en feedback de usuarios y necesidades del mercado de Strategic Sourcing.'
+          a: 'Sí, Xpend está en versión Beta MVP en constante evolución. Agregamos nuevas funcionalidades regularmente basándonos en feedback de usuarios y necesidades del mercado de Strategic Sourcing. Tu participación como usuario beta es fundamental para mejorar la plataforma.'
         },
         {
           q: '¿Puedo solicitar nuevas funcionalidades?',

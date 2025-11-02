@@ -123,6 +123,7 @@ export default function ReportsPage() {
               type: 'spend_analysis',
               description: 'Análisis detallado de gastos del cuarto trimestre',
               created_at: new Date().toISOString(),
+              created_by: 'user-demo-1',
               status: 'completed'
             },
             {
@@ -131,6 +132,7 @@ export default function ReportsPage() {
               type: 'project_status',
               description: 'Reporte de estado actual de todos los proyectos',
               created_at: new Date(Date.now() - 86400000).toISOString(),
+              created_by: 'user-demo-1',
               status: 'completed'
             },
             {
@@ -139,6 +141,7 @@ export default function ReportsPage() {
               type: 'vendor_performance',
               description: 'Evaluación de rendimiento de proveedores principales',
               created_at: new Date(Date.now() - 172800000).toISOString(),
+              created_by: 'user-demo-1',
               status: 'generating'
             }
           ]
@@ -176,6 +179,7 @@ export default function ReportsPage() {
           type: type,
           description: `Reporte generado automáticamente el ${new Date().toLocaleDateString('es-ES')}`,
           created_at: new Date().toISOString(),
+          created_by: 'user-demo-1',
           status: 'completed'
         }
 

@@ -224,7 +224,7 @@ export default function NosotrosPage() {
             </h2>
             <div className="max-w-4xl mx-auto space-y-6">
               <p className="text-xl text-gray-700 leading-relaxed">
-                Detrás de Xpend hay dos ingenieros con trayectoria en procurement, minería y energía solar que vivieron de cerca los desafíos de las áreas de abastecimiento: procesos lentos, falta de trazabilidad y escasa integración tecnológica.
+                Detrás de Xpend hay un equipo multidisciplinario con trayectoria en procurement, minería, energía solar y tecnología que vivió de cerca los desafíos de las áreas de abastecimiento: procesos lentos, falta de trazabilidad y escasa integración tecnológica.
               </p>
               <p className="text-xl text-gray-700 leading-relaxed">
                 Después de liderar proyectos de optimización de gasto y transformación digital en distintas industrias, entendimos que las empresas necesitan herramientas que combinen tecnología, gestión y estrategia para tomar mejores decisiones de compra.

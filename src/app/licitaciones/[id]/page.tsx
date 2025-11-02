@@ -115,14 +115,12 @@ export default function LicitacionDetailPage() {
         })
 
         // Add mock department and user data
-        const mockLicitacionWithRelations = {
+        setLicitacion({
           ...mockLicitacion,
           department: { id: 'dept-1', name: 'Finanzas' },
           responsible_user: { id: 'user-1', full_name: 'Juan Pérez', email: 'juan.perez@empresa.com' },
           created_by_user: { id: 'user-1', full_name: 'Juan Pérez', email: 'juan.perez@empresa.com' }
-        }
-
-        setLicitacion(mockLicitacionWithRelations)
+        } as any)
         return
       }
 
@@ -600,13 +598,13 @@ export default function LicitacionDetailPage() {
                     </div>
                   </div>
                 )}
-                {licitacion.created_by_user && (
+                {(licitacion as any).created_by_user && (
                   <div className="flex items-start space-x-4">
                     <User className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
                       <h4 className="font-medium">Creado por</h4>
                       <p className="text-muted-foreground">
-                        {licitacion.created_by_user.full_name || licitacion.created_by_user.email}
+                        {(licitacion as any).created_by_user.full_name || (licitacion as any).created_by_user.email}
                       </p>
                       <p className="text-xs text-muted-foreground">{formatDate(licitacion.created_at)}</p>
                     </div>

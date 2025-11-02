@@ -120,7 +120,9 @@ export async function GET(req: NextRequest) {
 function generateResponse(project: any, format: string) {
   if (format === 'docx') {
     const docxBuffer = generateDocx(project)
-    return new NextResponse(docxBuffer, {
+    // Convertir Buffer a Uint8Array para NextResponse
+    const uint8Array = new Uint8Array(docxBuffer)
+    return new NextResponse(uint8Array, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'Content-Disposition': `attachment; filename="${project.project_code}_${project.rfx_type}.docx"`,

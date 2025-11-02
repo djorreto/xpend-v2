@@ -133,7 +133,7 @@ export default function SourcingPlanPage() {
           filteredPlans = filteredPlans.filter(p => p.is_spot === filters.is_spot)
         }
 
-        setPlans(filteredPlans)
+        setPlans(filteredPlans as any)
         setStats(mockSourcingPlanStats)
         setLoading(false)
         return

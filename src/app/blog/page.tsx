@@ -35,47 +35,20 @@ export default function BlogPage() {
     console.log('Agendar demo')
   }
 
-  const blogPosts = [
-    {
-      id: 1,
-      title: '5 Estrategias para Optimizar tu Strategic Sourcing con IA',
-      excerpt: 'Descubre cómo la inteligencia artificial está transformando la gestión de compras estratégicas y cómo puedes aprovecharla en tu organización.',
-      date: '15 Enero 2025',
-      readTime: '8 min',
-      category: 'Innovación',
-      icon: Lightbulb,
-      color: '#3BE7AE'
-    },
-    {
-      id: 2,
-      title: 'Gestión de Proveedores: Del Excel a la Automatización',
-      excerpt: 'El cambio de paradigma en la evaluación y seguimiento de proveedores. Casos de éxito y mejores prácticas del mercado.',
-      date: '10 Enero 2025',
-      readTime: '6 min',
-      category: 'Proveedores',
-      icon: Users,
-      color: '#2AD4D2'
-    },
-    {
-      id: 3,
-      title: 'Cómo Medir el ROI de tu Área de Strategic Sourcing',
-      excerpt: 'Métricas clave, KPIs y metodologías para demostrar el valor generado por tu equipo de compras estratégicas.',
-      date: '5 Enero 2025',
-      readTime: '10 min',
-      category: 'Métricas',
-      icon: TrendingUp,
-      color: '#3BE7AE'
-    },
-    {
-      id: 4,
-      title: 'Seguridad de Datos en Plataformas de Sourcing',
-      excerpt: 'Todo lo que necesitas saber sobre protección de información sensible, compliance y mejores prácticas de ciberseguridad.',
-      date: '28 Diciembre 2024',
-      readTime: '7 min',
-      category: 'Seguridad',
-      icon: Shield,
-      color: '#2AD4D2'
-    }
+  const blogPosts: Array<{
+    id: number
+    title?: string
+    excerpt?: string
+    date?: string
+    readTime?: string
+    category?: string
+    icon?: any
+    color?: string
+  }> = [
+    { id: 1 },
+    { id: 2 },
+    { id: 3 },
+    { id: 4 }
   ]
 
   return (
@@ -260,92 +233,46 @@ export default function BlogPage() {
       {/* Main Content */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white">
         <div className="max-w-7xl mx-auto">
-          {/* Featured Post */}
+          {/* Featured Post Placeholder */}
           <div className="mb-16">
-            <Card className="backdrop-blur-md border-0 shadow-2xl transition-all duration-300 hover:shadow-3xl overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.98)' }}>
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="p-12">
-                  <div className="inline-block px-4 py-2 rounded-lg mb-4 font-bold text-sm" style={{ backgroundColor: 'rgba(59, 231, 174, 0.15)', color: '#3BE7AE' }}>
-                    DESTACADO
-                  </div>
-                  <h2 className="text-4xl font-bold mb-6" style={{ color: '#2D3E3D' }}>
-                    El Futuro del Strategic Sourcing: Tendencias 2025
-                  </h2>
-                  <p className="text-xl text-gray-700 mb-8 leading-relaxed">
-                    IA generativa, automatización avanzada, sostenibilidad y nuevas regulaciones. Un análisis profundo de lo que viene para las áreas de compras estratégicas en Latinoamérica.
-                  </p>
-                  <div className="flex items-center mb-8 text-gray-600">
-                    <Calendar className="h-5 w-5 mr-2" style={{ color: '#2AD4D2' }} />
-                    <span className="mr-6">20 Enero 2025</span>
-                    <Clock className="h-5 w-5 mr-2" style={{ color: '#2AD4D2' }} />
-                    <span>12 min lectura</span>
-                  </div>
-                  <Button
-                    className="px-8 py-3 rounded-xl font-bold transition-all duration-300"
-                    style={{ backgroundColor: '#3BE7AE', color: '#2D3E3D' }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#2AD4D2'
-                      e.currentTarget.style.transform = 'translateY(-2px)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#3BE7AE'
-                      e.currentTarget.style.transform = 'translateY(0)'
-                    }}
-                  >
-                    Leer Artículo
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
+            <Card className="backdrop-blur-md border-2 border-dashed shadow-2xl overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.5)', borderColor: 'rgba(42, 212, 210, 0.3)' }}>
+              <div className="p-20 text-center">
+                <div className="inline-block p-6 rounded-2xl mb-6" style={{ backgroundColor: 'rgba(59, 231, 174, 0.1)' }}>
+                  <TrendingUp className="h-24 w-24" style={{ color: '#3BE7AE', opacity: 0.5 }} />
                 </div>
-                <div className="rounded-2xl p-12 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(42, 212, 210, 0.1) 0%, rgba(59, 231, 174, 0.1) 100%)' }}>
-                  <TrendingUp className="h-48 w-48" style={{ color: '#3BE7AE', opacity: 0.3 }} />
-                </div>
+                <h2 className="text-3xl font-bold mb-4" style={{ color: '#2D3E3D', opacity: 0.6 }}>
+                  Artículo Destacado
+                </h2>
+                <p className="text-lg text-gray-500">
+                  Próximamente publicaremos contenido sobre Strategic Sourcing, tendencias y mejores prácticas.
+                </p>
               </div>
             </Card>
           </div>
 
-          {/* Blog Posts Grid */}
+          {/* Blog Posts Grid - Empty Placeholders */}
           <div className="mb-16">
             <h3 className="text-3xl font-bold mb-8" style={{ color: '#2D3E3D' }}>Artículos Recientes</h3>
             <div className="grid md:grid-cols-2 gap-8">
-              {blogPosts.map((post) => {
-                const Icon = post.icon
-                return (
-                  <Card
-                    key={post.id}
-                    className="backdrop-blur-md border-0 shadow-2xl transition-all duration-300 hover:shadow-3xl cursor-pointer group"
-                    style={{ backgroundColor: 'rgba(255, 255, 255, 0.98)' }}
-                  >
-                    <CardContent className="p-8">
-                      <div className="flex items-center mb-6">
-                        <div className="p-3 rounded-xl mr-4" style={{ backgroundColor: `${post.color}15` }}>
-                          <Icon className="h-8 w-8" style={{ color: post.color }} />
-                        </div>
-                        <span className="px-3 py-1 rounded-lg text-xs font-bold" style={{ backgroundColor: `${post.color}15`, color: post.color }}>
-                          {post.category.toUpperCase()}
-                        </span>
-                      </div>
-                      <h4 className="text-2xl font-bold mb-4 group-hover:text-opacity-80 transition-all" style={{ color: '#2D3E3D' }}>
-                        {post.title}
-                      </h4>
-                      <p className="text-gray-700 mb-6 leading-relaxed">
-                        {post.excerpt}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Calendar className="h-4 w-4 mr-2" style={{ color: post.color }} />
-                          <span className="mr-4">{post.date}</span>
-                          <Clock className="h-4 w-4 mr-2" style={{ color: post.color }} />
-                          <span>{post.readTime}</span>
-                        </div>
-                        <ArrowRight
-                          className="h-5 w-5 group-hover:translate-x-2 transition-transform"
-                          style={{ color: post.color }}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
+              {blogPosts.map((post) => (
+                <Card
+                  key={post.id}
+                  className="backdrop-blur-md border-2 border-dashed transition-all duration-300"
+                  style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)', borderColor: 'rgba(42, 212, 210, 0.2)' }}
+                >
+                  <CardContent className="p-12 text-center">
+                    <div className="inline-block p-4 rounded-xl mb-4" style={{ backgroundColor: 'rgba(59, 231, 174, 0.1)' }}>
+                      <TrendingUp className="h-12 w-12" style={{ color: '#3BE7AE', opacity: 0.3 }} />
+                    </div>
+                    <h4 className="text-xl font-bold mb-3" style={{ color: '#2D3E3D', opacity: 0.5 }}>
+                      Artículo #{post.id}
+                    </h4>
+                    <p className="text-gray-500 text-sm">
+                      Próximamente
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
 
@@ -363,10 +290,9 @@ export default function BlogPage() {
               <input
                 type="email"
                 placeholder="tu@email.com"
-                className="flex-1 px-6 py-4 rounded-xl border-2 text-gray-700 focus:outline-none focus:ring-2 transition-all"
+                className="flex-1 px-6 py-4 rounded-xl border-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#3BE7AE] transition-all"
                 style={{
-                  borderColor: 'rgba(42, 212, 210, 0.3)',
-                  focusRing: '#3BE7AE'
+                  borderColor: 'rgba(42, 212, 210, 0.3)'
                 }}
               />
               <Button

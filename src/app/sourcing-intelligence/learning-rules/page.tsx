@@ -270,7 +270,7 @@ export default function LearningRulesPage() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
                           {getRuleTypeBadge(rule.rule_type)}
-                          {getSourceBadge(rule.source)}
+                          {rule.source && getSourceBadge(rule.source)}
                           <Badge variant="outline">
                             Boost: +{(rule.confidence_boost * 100).toFixed(0)}%
                           </Badge>

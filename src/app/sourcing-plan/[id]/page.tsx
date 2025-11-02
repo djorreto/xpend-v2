@@ -92,7 +92,7 @@ export default function SourcingPlanDetailPage() {
         const mockPlan = mockSourcingPlansData.find(p => p.id === planId)
         if (!mockPlan) throw new Error('Iniciativa no encontrada')
 
-        setPlan(mockPlan)
+        setPlan(mockPlan as any)
         setLoading(false)
         return
       }
@@ -432,7 +432,7 @@ export default function SourcingPlanDetailPage() {
         </div>
 
         {/* Asociaciones con Licitaciones o Proyectos */}
-        {(plan.licitacion_id || plan.project_id) && (
+        {((plan as any).licitacion_id || (plan as any).project_id) && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -442,31 +442,31 @@ export default function SourcingPlanDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {plan.licitacion_id && (
+                {(plan as any).licitacion_id && (
                   <div className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <div className="text-sm font-medium">Licitación Asociada</div>
-                      <p className="text-sm text-muted-foreground">ID: {plan.licitacion_id}</p>
+                      <p className="text-sm text-muted-foreground">ID: {(plan as any).licitacion_id}</p>
                     </div>
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => router.push(`/licitaciones/${plan.licitacion_id}`)}
+                      onClick={() => router.push(`/licitaciones/${(plan as any).licitacion_id}`)}
                     >
                       Ver Licitación
                     </Button>
                   </div>
                 )}
-                {plan.project_id && (
+                {(plan as any).project_id && (
                   <div className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <div className="text-sm font-medium">Proyecto Asociado</div>
-                      <p className="text-sm text-muted-foreground">ID: {plan.project_id}</p>
+                      <p className="text-sm text-muted-foreground">ID: {(plan as any).project_id}</p>
                     </div>
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => router.push(`/projects/${plan.project_id}`)}
+                      onClick={() => router.push(`/projects/${(plan as any).project_id}`)}
                     >
                       Ver Proyecto
                     </Button>

@@ -161,7 +161,7 @@ export default function ProjectFilesPage() {
 
       // Upload file to storage
       const { data: uploadData, error: uploadError } = await ProjectFileService.upload(projectId, file)
-      if (uploadError) throw uploadError
+      if (uploadError || !uploadData) throw uploadError || new Error('Upload failed')
 
       // Save file record to database
       const { data: fileRecord, error: dbError } = await supabase
@@ -200,7 +200,7 @@ export default function ProjectFilesPage() {
   const handleDownload = async (file: ProjectFile) => {
     try {
       const { data, error } = await ProjectFileService.download(file.file_path)
-      if (error) throw error
+      if (error || !data) throw error || new Error('Download failed')
 
       // Create download link
       const url = URL.createObjectURL(data)

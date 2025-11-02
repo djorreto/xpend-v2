@@ -175,7 +175,36 @@ export default function DashboardPage() {
 
       // ✅ Si es usuario demo sin empresa, usar datos mock directamente
       if (profile.role === 'demo' && !profile.company_id) {
-        setMetrics(mockMetrics)
+        const demoMetrics: DashboardMetrics = {
+          totalProjects: mockDashboardData.projects.total,
+          activeProjects: mockDashboardData.projects.active,
+          totalLicitaciones: mockDashboardData.licitaciones.total,
+          activeLicitaciones: mockDashboardData.licitaciones.active,
+          totalSpend: mockDashboardData.spend.total,
+          monthlySpend: mockDashboardData.spend.thisMonth,
+          spendByCategory: mockDashboardData.spend.byCategory,
+          recentProjects: mockDashboardData.recentProjects.map(p => ({
+            id: p.id,
+            name: p.name,
+            status: p.status,
+            progress: p.progress
+          })),
+          upcomingMilestones: mockDashboardData.upcomingMilestones.map(m => ({
+            id: m.id,
+            project: m.projectName,
+            milestone: m.milestone,
+            dueDate: m.dueDate
+          })),
+          sourcingPlan: {
+            totalPlanned: 8,
+            inProgress: 3,
+            completed: 2,
+            totalProjectedSavings: 1250000000,
+            totalActualSavings: 980000000,
+            achievementRate: 78.4
+          }
+        }
+        setMetrics(demoMetrics)
         setCompany({ name: 'Empresa Demo' } as any)
         setLoading(false)
         return
