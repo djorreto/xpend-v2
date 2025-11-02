@@ -1082,178 +1082,41 @@ export default function HomePage() {
       {/* Footer - Elegante */}
       <footer className="py-16 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#1a2625' }}>
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-            <div>
-              <Logo size="md" variant="white" />
-              <p className="mt-6 text-gray-400 leading-relaxed">
-                Del control operativo a la gestión estratégica del procurement. La capa de inteligencia que conecta gasto, planificación y ejecución.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-lg font-bold mb-6 text-white">Producto</h3>
-              <ul className="space-y-3 text-gray-400">
-                <li>
-                  <a
-                    href="#"
-                    className="transition-colors duration-200"
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = ''}
-                  >
-                    Características
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="transition-colors duration-200"
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = ''}
-                  >
-                    Precios
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="transition-colors duration-200"
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = ''}
-                  >
-                    Integraciones
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="transition-colors duration-200"
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = ''}
-                  >
-                    API
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-lg font-bold mb-6 text-white">Empresa</h3>
-              <ul className="space-y-3 text-gray-400">
-                <li>
-                  <a
-                    href="#"
-                    className="transition-colors duration-200"
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = ''}
-                  >
-                    Nosotros
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="transition-colors duration-200"
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = ''}
-                  >
-                    Carreras
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="transition-colors duration-200"
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = ''}
-                  >
-                    Blog
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="transition-colors duration-200"
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = ''}
-                  >
-                    Contacto
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-lg font-bold mb-6 text-white">Soporte</h3>
-              <ul className="space-y-3 text-gray-400">
-                <li>
-                  <a
-                    href="#"
-                    className="transition-colors duration-200"
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = ''}
-                  >
-                    Centro de Ayuda
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="transition-colors duration-200"
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = ''}
-                  >
-                    Documentación
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="transition-colors duration-200"
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = ''}
-                  >
-                    Estado del Sistema
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#"
-                    className="transition-colors duration-200"
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = ''}
-                  >
-                    Comunidad
-                  </a>
-                </li>
-              </ul>
-            </div>
+          <div className="flex flex-col items-center text-center mb-12">
+            <Logo size="md" variant="white" />
+            <p className="mt-6 text-gray-400 leading-relaxed max-w-2xl">
+              Del control operativo a la gestión estratégica del procurement. La capa de inteligencia que conecta gasto, planificación y ejecución.
+            </p>
           </div>
           <div className="border-t pt-10 flex flex-col md:flex-row justify-between items-center" style={{ borderTopColor: 'rgba(59, 231, 174, 0.2)' }}>
             <p className="text-gray-400 text-sm font-medium">
               © 2025 <span style={{ color: '#3BE7AE', fontWeight: 'bold' }}>Xpend™</span> - Marca en trámite INAPI.
             </p>
             <div className="flex space-x-8 mt-4 md:mt-0">
-              <a
-                href="#"
-                className="text-gray-400 text-sm font-medium transition-colors duration-200"
+              <button
+                type="button"
+                className="text-gray-400 text-sm font-medium transition-colors duration-200 cursor-default"
                 onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                 onMouseLeave={(e) => e.currentTarget.style.color = ''}
               >
                 Privacidad
-              </a>
-              <a
-                href="#"
-                className="text-gray-400 text-sm font-medium transition-colors duration-200"
+              </button>
+              <button
+                type="button"
+                className="text-gray-400 text-sm font-medium transition-colors duration-200 cursor-default"
                 onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                 onMouseLeave={(e) => e.currentTarget.style.color = ''}
               >
                 Términos
-              </a>
-              <a
-                href="#"
-                className="text-gray-400 text-sm font-medium transition-colors duration-200"
+              </button>
+              <button
+                type="button"
+                className="text-gray-400 text-sm font-medium transition-colors duration-200 cursor-default"
                 onMouseEnter={(e) => e.currentTarget.style.color = '#3BE7AE'}
                 onMouseLeave={(e) => e.currentTarget.style.color = ''}
               >
                 Cookies
-              </a>
+              </button>
             </div>
           </div>
         </div>
