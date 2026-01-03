@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { supabaseBrowser } from '@/lib/supabase'
 
-type AppVersion = 'functional' | 'mockup'
+type AppVersion = 'functional'
 
 interface VersionContextType {
   version: AppVersion
@@ -20,64 +20,41 @@ interface VersionProviderProps {
 }
 
 export function VersionProvider({ children }: VersionProviderProps) {
-  const [version, setVersion] = useState<AppVersion>('functional')
+  const [version] = useState<AppVersion>('functional')
   const [isDemo, setIsDemo] = useState(false)
 
-  // Check if user is demo user on mount
+  // Solo verifica si es demo, pero mantiene modo funcional siempre
   useEffect(() => {
+    const checkUserRole = async () => {
+      try {
+        const supabase = supabaseBrowser()
+        let { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user) {
+          await new Promise(r => setTimeout(r, 150))
+          ;({ data: { session } } = await supabase.auth.getSession())
+        }
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single()
+          if (profile?.role === 'demo') {
+            setIsDemo(true)
+          }
+        }
+      } catch (error) {
+        console.error('Error checking user role:', error)
+      }
+    }
     checkUserRole()
   }, [])
 
-  const checkUserRole = async () => {
-    try {
-      // First, load version from localStorage immediately (for faster UI)
-      const savedVersion = localStorage.getItem('xpend-version') as AppVersion
-      if (savedVersion && (savedVersion === 'functional' || savedVersion === 'mockup')) {
-        setVersion(savedVersion)
-      }
-
-      // Then check if user is demo (this may override the saved version)
-      const supabase = supabaseBrowser()
-
-      // Wait a bit for session to hydrate if needed
-      let { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        await new Promise(r => setTimeout(r, 150))
-        ;({ data: { session } } = await supabase.auth.getSession())
-      }
-
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
-
-        if (profile?.role === 'demo') {
-          setIsDemo(true)
-          setVersion('mockup') // Force mockup mode for demo users
-          localStorage.setItem('xpend-version', 'mockup') // Save it
-          return
-        }
-      }
-    } catch (error) {
-      console.error('Error checking user role:', error)
-    }
-  }
-
-  // Save version to localStorage when it changes (but only if not demo user)
-  useEffect(() => {
-    if (!isDemo) {
-      console.log('🔄 Version changed to:', version)
-      localStorage.setItem('xpend-version', version)
-    }
-  }, [version, isDemo])
-
   const value: VersionContextType = {
     version,
-    setVersion: isDemo ? () => {} : setVersion, // Prevent demo users from changing version
-    isFunctional: version === 'functional',
-    isMockup: version === 'mockup',
+    setVersion: () => {}, // modo único funcional
+    isFunctional: true,
+    isMockup: false,
     isDemo
   }
 

@@ -27,6 +27,7 @@ export default function NewLicitacionPage() {
   const [users, setUsers] = useState<any[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [sourcingPlans, setSourcingPlans] = useState<any[]>([])
+  const [selectedPlans, setSelectedPlans] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -46,7 +47,6 @@ export default function NewLicitacionPage() {
     awarded_amount: '',
     department_id: '',
     responsible_user_id: '',
-    sourcing_plan_id: '',
     request_date: undefined as Date | undefined,
     publication_date: undefined as Date | undefined,
     questions_date: undefined as Date | undefined,
@@ -127,16 +127,13 @@ export default function NewLicitacionPage() {
           setUsers(usersData)
         }
 
-        // Load active sourcing plans (licitacion type, planned or in_progress)
+        // Load sourcing plans (para asociar licitaciones)
         const currentYear = new Date().getFullYear()
         const { data: plansData, error: plansError } = await supabase
           .from('sourcing_plans')
-          .select('id, title, plan_year, quarter, status')
+          .select('id, title, plan_year, quarter, status, initiative_type')
           .eq('company_id', profile.company_id)
-          .eq('initiative_type', 'licitacion')
           .gte('plan_year', currentYear - 1)
-          .in('status', ['planned', 'in_progress'])
-          .is('licitacion_id', null)
           .order('plan_year', { ascending: false })
           .order('quarter', { ascending: true })
 
@@ -248,7 +245,6 @@ export default function NewLicitacionPage() {
           awarded_amount: formData.awarded_amount ? parseFloat(formData.awarded_amount) : null,
           department_id: formData.department_id || null,
           responsible_user_id: formData.responsible_user_id || null,
-          sourcing_plan_id: formData.sourcing_plan_id || null,
           request_date: formData.request_date ? format(formData.request_date, 'yyyy-MM-dd') : null,
           publication_date: formData.publication_date ? format(formData.publication_date, 'yyyy-MM-dd') : null,
           questions_date: formData.questions_date ? format(formData.questions_date, 'yyyy-MM-dd') : null,
@@ -270,15 +266,13 @@ export default function NewLicitacionPage() {
 
       if (error) throw error
 
-      // If sourcing_plan_id is provided and not "none", update the sourcing plan with the licitacion_id
-      if (formData.sourcing_plan_id && formData.sourcing_plan_id !== 'none') {
-        await supabase
-          .from('sourcing_plans')
-          .update({
-            licitacion_id: data.id,
-            status: 'in_progress'
-          })
-          .eq('id', formData.sourcing_plan_id)
+      // Asociar múltiples iniciativas en tabla puente
+      if (selectedPlans.length) {
+        const links = selectedPlans.map(planId => ({
+          plan_id: planId,
+          licitacion_id: data.id
+        }))
+        await supabase.from('sourcing_plan_licitaciones').insert(links)
       }
 
       addToast({
@@ -423,6 +417,57 @@ export default function NewLicitacionPage() {
                       <SelectItem value="construction_project">Proyecto de construcción</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Asociar a iniciativas del Sourcing Plan */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Iniciativas del Sourcing Plan</CardTitle>
+              <CardDescription>Selecciona una o varias iniciativas asociadas (opcional).</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Iniciativas</Label>
+                <div className="flex flex-col gap-2">
+                  <div className="grid gap-2">
+                    {sourcingPlans.map(plan => {
+                      const isSelected = selectedPlans.includes(plan.id)
+                      return (
+                        <button
+                          type="button"
+                          key={plan.id}
+                          className={cn(
+                            'flex items-center justify-between rounded-lg border px-3 py-2 text-left transition',
+                            isSelected ? 'border-primary bg-primary/5' : 'border-muted'
+                          )}
+                          onClick={() => {
+                            setSelectedPlans(prev =>
+                              isSelected ? prev.filter(id => id !== plan.id) : [...prev, plan.id]
+                            )
+                          }}
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-sm font-semibold">{plan.title}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {plan.plan_year} - {plan.quarter} • {plan.initiative_type}
+                            </span>
+                          </div>
+                          <div
+                            className={cn(
+                              'h-2 w-2 rounded-full',
+                              isSelected ? 'bg-primary' : 'bg-muted-foreground/40'
+                            )}
+                          />
+                        </button>
+                      )
+                    })}
+                    {sourcingPlans.length === 0 && (
+                      <p className="text-sm text-muted-foreground">No hay iniciativas disponibles.</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>

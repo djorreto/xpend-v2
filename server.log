@@ -20,3 +20,12 @@
  ✓ Compiled in 573ms (3870 modules)
  ✓ Compiled in 332ms (3870 modules)
  ✓ Compiled in 593ms (3870 modules)
+ ⚠ Found a change in next.config.js. Restarting the server to apply the changes...
+   ▲ Next.js 14.0.4
+   - Local:        http://localhost:3000
+   - Environments: .env.local
+
+ ✓ Ready in 2.4s
+ ○ Compiling / ...
+ ✓ Compiled / in 2.8s (784 modules)
+ ✓ Compiled /home in 537ms (843 modules)

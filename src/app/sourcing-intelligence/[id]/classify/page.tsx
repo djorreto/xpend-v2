@@ -257,7 +257,7 @@ export default function ClassifyPage() {
                     🤖 Listo para clasificar con IA
                   </h3>
                   <p className="text-blue-800 mb-3">
-                    Tus {pendingCount} líneas están marcadas como "Requiere Revisión" porque aún no han sido clasificadas.
+                    Tus {pendingCount} líneas están marcadas como &quot;Requiere Revisión&quot; porque aún no han sido clasificadas.
                     La IA las analizará y asignará categorías automáticamente.
                   </p>
                   <div className="bg-white/50 rounded-lg p-3 mb-3">
@@ -415,7 +415,7 @@ export default function ClassifyPage() {
                       <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <p className="text-xs font-semibold text-blue-900 mb-1">💬 Justificación de la IA:</p>
                         <p className="text-sm text-blue-800 italic">
-                          "{line.ai_justification}"
+                          &quot;{line.ai_justification}&quot;
                         </p>
                       </div>
                     )}
@@ -424,7 +424,7 @@ export default function ClassifyPage() {
                     {line.needs_review && !line.category && (
                       <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <p className="text-sm text-yellow-800">
-                          ⏳ Esta línea aún no ha sido clasificada. Usa el botón <strong>"Clasificar Automáticamente"</strong> arriba para que la IA la analice.
+                          ⏳ Esta línea aún no ha sido clasificada. Usa el botón <strong>&quot;Clasificar Automáticamente&quot;</strong> arriba para que la IA la analice.
                         </p>
                       </div>
                     )}

@@ -25,9 +25,9 @@ export interface Company {
 // Server-side helper to get current user profile
 export async function getCurrentProfile(): Promise<Profile | null> {
   const supabase = createClient()
-  
+
   const { data: { user }, error: userError } = await supabase.auth.getUser()
-  
+
   if (userError || !user) {
     return null
   }
@@ -52,9 +52,9 @@ export async function getCurrentUserWithCompany(): Promise<{
   company: Company | null
 } | null> {
   const supabase = createClient()
-  
+
   const { data: { user }, error: userError } = await supabase.auth.getUser()
-  
+
   if (userError || !user) {
     return null
   }
@@ -91,10 +91,11 @@ export async function getCurrentUserWithCompany(): Promise<{
 
 // Client-side helper to get current user profile
 export async function getCurrentProfileClient(): Promise<Profile | null> {
-  const { supabase } = await import('@/lib/supabase')
-  
+  const { supabaseBrowser } = await import('@/lib/supabase')
+  const supabase = supabaseBrowser()
+
   const { data: { user }, error: userError } = await supabase.auth.getUser()
-  
+
   if (userError || !user) {
     return null
   }
@@ -115,17 +116,17 @@ export async function getCurrentProfileClient(): Promise<Profile | null> {
 // Helper to check if user has required role
 export function hasRole(profile: Profile | null, requiredRole: string): boolean {
   if (!profile) return false
-  
+
   const roleHierarchy = {
     'viewer': 0,
     'analyst': 1,
     'manager': 2,
     'admin': 3
   }
-  
+
   const userLevel = roleHierarchy[profile.role] || 0
   const requiredLevel = roleHierarchy[requiredRole as keyof typeof roleHierarchy] || 0
-  
+
   return userLevel >= requiredLevel
 }
 

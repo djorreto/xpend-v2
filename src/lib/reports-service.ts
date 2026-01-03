@@ -30,7 +30,7 @@ export class ReportsService {
     parameters: ReportParameters = {}
   ): Promise<ReportData> {
     const supabase = supabaseBrowser()
-    
+
     // Obtener datos de gastos
     const { data: spendData, error } = await supabase
       .from('spend_data')
@@ -44,14 +44,14 @@ export class ReportsService {
     // Filtrar por categorías si se especifican
     let filteredData = spendData || []
     if (parameters.categories?.length) {
-      filteredData = filteredData.filter(item => 
+      filteredData = filteredData.filter(item =>
         parameters.categories!.includes(item.category)
       )
     }
 
     // Filtrar por proveedores si se especifican
     if (parameters.vendors?.length) {
-      filteredData = filteredData.filter(item => 
+      filteredData = filteredData.filter(item =>
         parameters.vendors!.includes(item.vendor)
       )
     }
@@ -73,7 +73,7 @@ export class ReportsService {
       {
         type: 'pie',
         title: 'Distribución por Categoría',
-        data: Object.entries(categoryTotals).map(([category, amount]) => ({
+        data: (Object.entries(categoryTotals) as Array<[string, number]>).map(([category, amount]) => ({
           name: category,
           value: amount,
           percentage: totalSpend > 0 ? Math.round((amount / totalSpend) * 100) : 0
@@ -82,7 +82,7 @@ export class ReportsService {
       {
         type: 'bar',
         title: 'Top 10 Proveedores',
-        data: Object.entries(vendorTotals)
+        data: (Object.entries(vendorTotals) as Array<[string, number]>)
           .sort(([,a], [,b]) => b - a)
           .slice(0, 10)
           .map(([vendor, amount]) => ({
@@ -117,7 +117,7 @@ export class ReportsService {
     parameters: ReportParameters = {}
   ): Promise<ReportData> {
     const supabase = supabaseBrowser()
-    
+
     // Obtener proyectos
     const { data: projects, error } = await supabase
       .from('projects')
@@ -131,7 +131,7 @@ export class ReportsService {
 
     let filteredProjects = projects || []
     if (parameters.projects?.length) {
-      filteredProjects = filteredProjects.filter(project => 
+      filteredProjects = filteredProjects.filter(project =>
         parameters.projects!.includes(project.id)
       )
     }
@@ -142,7 +142,7 @@ export class ReportsService {
       return acc
     }, {} as Record<string, number>)
 
-    const totalBudget = filteredProjects.reduce((sum, project) => 
+    const totalBudget = filteredProjects.reduce((sum, project) =>
       sum + (project.budget || 0), 0
     )
 
@@ -151,14 +151,14 @@ export class ReportsService {
 
     // Obtener hitos próximos
     const upcomingMilestones = filteredProjects
-      .flatMap(project => 
-        project.project_milestones?.map(milestone => ({
+      .flatMap(project =>
+        project.project_milestones?.map((milestone: any) => ({
           ...milestone,
           project_name: project.name
         })) || []
       )
-      .filter(milestone => 
-        !milestone.completed && 
+      .filter(milestone =>
+        !milestone.completed &&
         new Date(milestone.due_date) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
       )
       .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
@@ -199,7 +199,7 @@ export class ReportsService {
     parameters: ReportParameters = {}
   ): Promise<ReportData> {
     const supabase = supabaseBrowser()
-    
+
     // Obtener datos de gastos por proveedor
     const { data: spendData, error } = await supabase
       .from('spend_data')
@@ -212,7 +212,7 @@ export class ReportsService {
 
     let filteredData = spendData || []
     if (parameters.vendors?.length) {
-      filteredData = filteredData.filter(item => 
+      filteredData = filteredData.filter(item =>
         parameters.vendors!.includes(item.vendor)
       )
     }
@@ -229,13 +229,13 @@ export class ReportsService {
           lastTransaction: item.date
         }
       }
-      
+
       acc[item.vendor].totalSpend += Number(item.amount)
       acc[item.vendor].transactionCount += 1
       acc[item.vendor].categories.add(item.category)
       acc[item.vendor].firstTransaction = item.date < acc[item.vendor].firstTransaction ? item.date : acc[item.vendor].firstTransaction
       acc[item.vendor].lastTransaction = item.date > acc[item.vendor].lastTransaction ? item.date : acc[item.vendor].lastTransaction
-      
+
       return acc
     }, {} as Record<string, any>)
 
@@ -296,7 +296,7 @@ export class ReportsService {
     parameters: ReportParameters = {}
   ) {
     const supabase = supabaseBrowser()
-    
+
     const { data, error } = await supabase
       .from('reports')
       .insert({
@@ -323,7 +323,7 @@ export class ReportsService {
     fileSize?: number
   ) {
     const supabase = supabaseBrowser()
-    
+
     const updateData: any = { status }
     if (filePath) updateData.file_path = filePath
     if (fileSize) updateData.file_size = fileSize
@@ -343,7 +343,7 @@ export class ReportsService {
   // Obtener reportes de la empresa
   static async getCompanyReports(companyId: string) {
     const supabase = supabaseBrowser()
-    
+
     const { data, error } = await supabase
       .from('reports')
       .select(`
@@ -370,11 +370,11 @@ export class ReportsService {
     const headers = Object.keys(reportData.details[0] || {})
     const csvRows = [
       headers.join(','),
-      ...reportData.details.map(row => 
+      ...reportData.details.map(row =>
         headers.map(header => {
           const value = row[header]
-          return typeof value === 'string' && value.includes(',') 
-            ? `"${value}"` 
+          return typeof value === 'string' && value.includes(',')
+            ? `"${value}"`
             : value
         }).join(',')
       )
@@ -389,7 +389,7 @@ export class ReportsService {
     companyId: string
   ): Promise<string> {
     const filePath = `reports/${companyId}/${Date.now()}-${fileName}`
-    
+
     const { data, error } = await StorageService.uploadFile({
       bucket: 'reports',
       path: filePath,
@@ -408,6 +408,9 @@ export class ReportsService {
     })
 
     if (error) throw error
+    if (!data) {
+      throw new Error('Archivo no encontrado en storage')
+    }
     return data
   }
 }

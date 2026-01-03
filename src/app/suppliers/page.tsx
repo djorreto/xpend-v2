@@ -28,16 +28,10 @@ import {
   TrendingDown
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { useVersion } from '@/contexts/version-context'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
-import {
-  mockSuppliersData,
-  mockAdministrativeEvaluationsData,
-  mockLicitacionSuppliersData
-} from '@/lib/mock-data'
 import type {
   Supplier,
   AdministrativeEvaluation,
@@ -66,7 +60,6 @@ const statusColors = {
 
 export default function SuppliersPage() {
   const router = useRouter()
-  const { isMockup } = useVersion()
   const { addToast } = useToast()
 
   const [user, setUser] = useState<any>(null)
@@ -83,34 +76,14 @@ export default function SuppliersPage() {
 
   useEffect(() => {
     loadSuppliers()
-  }, [isMockup])
+  }, [])
 
   const loadSuppliers = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      // Check if we're in mockup mode
-      if (isMockup) {
-        // Use mock data in mockup mode
-        setUser({
-          name: 'Usuario Demo',
-          email: 'demo@xpend.cl',
-          role: 'admin'
-        })
-
-        setCompany({
-          name: 'Xpend',
-          id: '550e8400-e29b-41d4-a716-446655440000'
-        })
-
-        setSuppliers(mockSuppliersData as Supplier[])
-        setAdministrativeEvaluations(mockAdministrativeEvaluationsData as AdministrativeEvaluation[])
-        setLicitacionSuppliers(mockLicitacionSuppliersData as LicitacionSupplier[])
-        return
-      }
-
-      // In functional mode, try to connect to Supabase
+      // Solo modo funcional: conectar a Supabase
       const supabase = supabaseBrowser()
 
       // 1) Asegurar que la sesión esté hidratada
@@ -130,6 +103,7 @@ export default function SuppliersPage() {
         .single()
 
       if (profileError || !profile) throw new Error('Perfil no encontrado')
+      if (!profile.company_id) throw new Error('El perfil no tiene empresa asignada')
 
       setUser({
         name: profile.full_name || authUser.email,
@@ -191,6 +165,7 @@ export default function SuppliersPage() {
       setLicitacionSuppliers(licitacionSuppliersData || [])
 
     } catch (err) {
+      console.error('Error loading suppliers:', err)
       setError(err instanceof Error ? err.message : 'Error al cargar proveedores')
       addToast({
         type: 'error',
@@ -264,11 +239,18 @@ export default function SuppliersPage() {
   const filteredSuppliers = suppliers.filter(supplier => {
     // Filtro de búsqueda
     if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      if (!supplier.fantasy_name.toLowerCase().includes(query) &&
-          !supplier.legal_name.toLowerCase().includes(query) &&
-          !supplier.rut.toLowerCase().includes(query) &&
-          !supplier.contact_name?.toLowerCase().includes(query)) {
+    const query = searchQuery.toLowerCase()
+    const fantasyName = supplier.fantasy_name?.toLowerCase() || ''
+    const legalName = supplier.legal_name?.toLowerCase() || ''
+    const rut = supplier.rut?.toLowerCase() || ''
+    const contactName = supplier.contact_name?.toLowerCase() || ''
+
+    if (
+      !fantasyName.includes(query) &&
+      !legalName.includes(query) &&
+      !rut.includes(query) &&
+      !contactName.includes(query)
+    ) {
         return false
       }
     }
@@ -306,17 +288,6 @@ export default function SuppliersPage() {
     }
 
     try {
-      if (isMockup) {
-        // In mockup mode, just show success message
-        addToast({
-          type: 'success',
-          title: 'Proveedor eliminado',
-          message: 'El proveedor ha sido eliminado correctamente (modo demo)'
-        })
-        loadSuppliers()
-        return
-      }
-
       // In functional mode, delete from Supabase
       const supabase = supabaseBrowser()
       const { error } = await supabase
@@ -371,13 +342,6 @@ export default function SuppliersPage() {
             <p className="text-muted-foreground">
               Gestiona todos tus proveedores y sus evaluaciones
             </p>
-            {isMockup && (
-              <div className="mt-2">
-                <Badge variant="outline" className="text-xs">
-                  Modo Demo - Datos Mock
-                </Badge>
-              </div>
-            )}
           </div>
           <Button onClick={() => router.push('/suppliers/new')}>
             <Plus className="mr-2 h-4 w-4" />
@@ -570,15 +534,13 @@ export default function SuppliersPage() {
                             >
                               <Edit className="h-3 w-3" />
                             </Button>
-                            {!isMockup && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteSupplier(supplier.id)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteSupplier(supplier.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
                           </div>
                         </td>
                       </tr>

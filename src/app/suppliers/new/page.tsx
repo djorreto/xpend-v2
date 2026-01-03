@@ -10,9 +10,9 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { 
-  ArrowLeft, 
-  Save, 
+import {
+  ArrowLeft,
+  Save,
   Building2,
   User,
   Mail,
@@ -20,7 +20,6 @@ import {
   Globe,
   FileText
 } from 'lucide-react'
-import { useVersion } from '@/contexts/version-context'
 import { supabaseBrowser } from '@/lib/supabase'
 import { useToast } from '@/components/ui/toast'
 import type { CreateSupplierData, ServiceType } from '@/types'
@@ -39,7 +38,6 @@ const serviceTypeLabels: Record<ServiceType, string> = {
 
 export default function NewSupplierPage() {
   const router = useRouter()
-  const { isMockup } = useVersion()
   const { addToast } = useToast()
 
   const [user, setUser] = useState<any>(null)
@@ -65,24 +63,9 @@ export default function NewSupplierPage() {
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        if (isMockup) {
-          // Use demo data in mockup mode
-          setUser({
-            id: '550e8400-e29b-41d4-a716-446655440001',
-            name: 'Usuario Demo',
-            email: 'demo@xpend.cl',
-            role: 'admin'
-          })
-          setCompany({
-            id: '550e8400-e29b-41d4-a716-446655440000',
-            name: 'Xpend'
-          })
-          return
-        }
-
         // In functional mode, load real user data
         const supabase = supabaseBrowser()
-        
+
         // Get current user
         const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
         if (userError || !authUser) {
@@ -130,7 +113,7 @@ export default function NewSupplierPage() {
     }
 
     loadUserData()
-  }, [isMockup])
+  }, [])
 
   const handleInputChange = (field: keyof CreateSupplierData, value: string) => {
     setFormData(prev => ({
@@ -207,21 +190,9 @@ export default function NewSupplierPage() {
     setLoading(true)
 
     try {
-      // Mockup mode: simulate creation
-      if (isMockup) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        addToast({
-          type: 'success',
-          title: 'Proveedor creado',
-          message: 'El proveedor ha sido creado correctamente (modo demo)'
-        })
-        router.push('/suppliers')
-        return
-      }
-
       // Functional mode: create in Supabase
       const supabase = supabaseBrowser()
-      
+
       // Get authenticated user
       const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
       if (userError || !authUser) {
@@ -236,7 +207,7 @@ export default function NewSupplierPage() {
           .select('company_id')
           .eq('id', authUser.id)
           .single()
-        
+
         companyId = profile?.company_id
       }
 
@@ -246,7 +217,7 @@ export default function NewSupplierPage() {
 
       // Generate supplier ID
       const supplierId = `supplier-${Date.now()}`
-      
+
       // Prepare supplier data
       const supplierData = {
         id: supplierId,
@@ -263,7 +234,7 @@ export default function NewSupplierPage() {
       if (ndaFile) {
         const fileExt = ndaFile.name.split('.').pop()
         const fileName = `${supplierId}-nda.${fileExt}`
-        
+
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('supplier-documents')
           .upload(fileName, ndaFile)

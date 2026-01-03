@@ -109,44 +109,8 @@ export default function ReportsPage() {
           setCompany(companyData)
         }
 
-        // Load reports from database (temporary mock data until DB is configured)
-        try {
-          const reportsData = await ReportsService.getCompanyReports(profile.company_id)
-          setReports(reportsData)
-        } catch (reportsError) {
-          // If reports table doesn't exist yet, use mock data
-          console.log('Reports table not configured yet, using mock data')
-          const mockReports: Report[] = [
-            {
-              id: '1',
-              name: 'Análisis de Gastos Q4 2024',
-              type: 'spend_analysis',
-              description: 'Análisis detallado de gastos del cuarto trimestre',
-              created_at: new Date().toISOString(),
-              created_by: 'user-demo-1',
-              status: 'completed'
-            },
-            {
-              id: '2',
-              name: 'Estado de Proyectos Activos',
-              type: 'project_status',
-              description: 'Reporte de estado actual de todos los proyectos',
-              created_at: new Date(Date.now() - 86400000).toISOString(),
-              created_by: 'user-demo-1',
-              status: 'completed'
-            },
-            {
-              id: '3',
-              name: 'Rendimiento de Proveedores',
-              type: 'vendor_performance',
-              description: 'Evaluación de rendimiento de proveedores principales',
-              created_at: new Date(Date.now() - 172800000).toISOString(),
-              created_by: 'user-demo-1',
-              status: 'generating'
-            }
-          ]
-          setReports(mockReports)
-        }
+        const reportsData = await ReportsService.getCompanyReports(profile.company_id)
+        setReports(reportsData)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar reportes')
@@ -165,33 +129,10 @@ export default function ReportsPage() {
 
     try {
       addToast({
-        type: 'info',
-        title: 'Generando reporte',
-        message: 'El reporte se está generando, esto puede tomar unos minutos...'
+        type: 'error',
+        title: 'No implementado',
+        message: 'Generación de reportes aún no implementada con Supabase'
       })
-
-      // Simular generación de reporte (hasta que se configure la DB)
-      setTimeout(() => {
-        const reportName = `${reportTypes[type as keyof typeof reportTypes]} - ${new Date().toLocaleDateString('es-ES')}`
-        const newReport: Report = {
-          id: Date.now().toString(),
-          name: reportName,
-          type: type,
-          description: `Reporte generado automáticamente el ${new Date().toLocaleDateString('es-ES')}`,
-          created_at: new Date().toISOString(),
-          created_by: 'user-demo-1',
-          status: 'completed'
-        }
-
-        setReports(prev => [newReport, ...prev])
-
-        addToast({
-          type: 'success',
-          title: 'Reporte generado',
-          message: 'El reporte ha sido generado exitosamente'
-        })
-      }, 2000)
-
     } catch (err) {
       addToast({
         type: 'error',

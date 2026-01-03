@@ -18,15 +18,28 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Link2
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { useVersion } from '@/contexts/version-context'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
-import { mockSourcingPlansData } from '@/lib/mock-data'
 import type { SourcingPlan, Quarter, InitiativeType, PlanStatus } from '@/types'
+
+type SPLLink = {
+  plan_id: string
+  licitacion_id: string
+  licitacion?: {
+    id: string
+    titulo: string | null
+    estado: string | null
+    baseline_amount?: number | null
+    baseline_currency?: string | null
+    awarded_amount?: number | null
+    savings_amount?: number | null
+  }
+}
 
 const statusColors: Record<PlanStatus, string> = {
   planned: 'bg-blue-100 text-blue-800',
@@ -58,44 +71,23 @@ export default function SourcingPlanDetailPage() {
   const router = useRouter()
   const params = useParams()
   const planId = params.id as string
-  const { isMockup } = useVersion()
 
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<any>(null)
   const [plan, setPlan] = useState<SourcingPlan | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [linkedLicitaciones, setLinkedLicitaciones] = useState<SPLLink[]>([])
+  const [invoicesTotal, setInvoicesTotal] = useState(0)
 
   useEffect(() => {
     loadPlan()
-  }, [planId, isMockup])
+  }, [planId])
 
   const loadPlan = async () => {
     try {
       setLoading(true)
       setError(null)
-
-      const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-      if (isMockup || !isSupabaseConfigured) {
-        // Modo mockup
-        setUser({
-          name: 'Usuario Demo',
-          email: 'demo@xpend.cl',
-          role: 'admin'
-        })
-        setCompany({
-          name: 'Xpend Demo',
-          id: 'company-1'
-        })
-
-        const mockPlan = mockSourcingPlansData.find(p => p.id === planId)
-        if (!mockPlan) throw new Error('Iniciativa no encontrada')
-
-        setPlan(mockPlan as any)
-        setLoading(false)
-        return
-      }
 
       // Modo funcional con Supabase
       const supabase = supabaseBrowser()
@@ -131,9 +123,7 @@ export default function SourcingPlanDetailPage() {
           .select(`
             *,
             department:departments(id, name),
-            responsible_user:profiles!responsible_user_id(id, full_name, email),
-            licitacion:licitaciones(id, titulo, estado),
-            project:projects(id, title, status)
+            responsible_user:profiles!responsible_user_id(id, full_name, email)
           `)
           .eq('id', planId)
           .eq('company_id', profile.company_id)
@@ -143,6 +133,39 @@ export default function SourcingPlanDetailPage() {
         if (!planData) throw new Error('Iniciativa no encontrada')
 
         setPlan(planData)
+
+        // Cargar licitaciones vinculadas (tabla puente)
+        const { data: linkData } = await supabase
+          .from('sourcing_plan_licitaciones')
+          .select(`
+            plan_id,
+            licitacion_id,
+            licitacion:licitaciones(
+              id,
+              titulo,
+              estado,
+              baseline_amount,
+              baseline_currency,
+              awarded_amount,
+              savings_amount
+            )
+          `)
+          .eq('plan_id', planId)
+
+        setLinkedLicitaciones((linkData || []) as SPLLink[])
+
+        // Calcular total de facturas de las licitaciones vinculadas
+        const licIds = (linkData || []).map(l => l.licitacion_id)
+        if (licIds.length) {
+          const { data: invData } = await supabase
+            .from('service_invoices')
+            .select('amount, licitacion_id')
+            .in('licitacion_id', licIds)
+          const totalInv = (invData || []).reduce((sum, inv) => sum + (inv.amount || 0), 0)
+          setInvoicesTotal(totalInv)
+        } else {
+          setInvoicesTotal(0)
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar la iniciativa')
@@ -172,9 +195,24 @@ export default function SourcingPlanDetailPage() {
   }
 
   const StatusIcon = statusIcons[plan.status]
-  const achievementRate = plan.projected_savings_amount && plan.actual_savings_amount
-    ? (plan.actual_savings_amount / plan.projected_savings_amount) * 100
-    : null
+
+  // Agregados a partir de licitaciones vinculadas
+  const linkedBaseline = linkedLicitaciones.reduce((sum, link) => {
+    const val = link.licitacion?.baseline_amount || 0
+    return sum + val
+  }, 0)
+  const linkedSavings = linkedLicitaciones.reduce((sum, link) => {
+    const val = link.licitacion?.savings_amount || 0
+    return sum + val
+  }, 0)
+
+  // Baseline total = propio + suma de licitaciones
+  const totalBaseline = (plan.estimated_spend || 0) + linkedBaseline
+  // Ahorro proyectado: mantenemos el proyectado propio
+  const projected = plan.projected_savings_amount || 0
+  // Ahorro real = ahorro propio + ahorro de licitaciones
+  const actual = (plan.actual_savings_amount || 0) + linkedSavings
+  const achievementRate = projected > 0 ? (actual / projected) * 100 : null
 
   return (
     <MainLayout user={user} companyName={company?.name}>
@@ -245,6 +283,9 @@ export default function SourcingPlanDetailPage() {
               <div className="text-2xl font-bold">
                 {formatCurrency(plan.estimated_spend, plan.currency)}
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Total con licitaciones: {formatCurrency(totalBaseline, plan.currency)}
+              </p>
             </CardContent>
           </Card>
 
@@ -275,13 +316,13 @@ export default function SourcingPlanDetailPage() {
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             </CardHeader>
             <CardContent>
-              {plan.actual_savings_amount ? (
+              {actual ? (
                 <>
                   <div className="text-2xl font-bold text-emerald-600">
-                    {formatCurrency(plan.actual_savings_amount, plan.currency)}
+                    {formatCurrency(actual, plan.currency)}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {plan.actual_savings_percentage?.toFixed(1)}% del spend
+                    {plan.actual_savings_percentage?.toFixed(1) ?? '-'}% del spend
                   </p>
                 </>
               ) : (
@@ -315,6 +356,22 @@ export default function SourcingPlanDetailPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Gasto real (facturas) */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Gasto real (facturas)</CardTitle>
+            <DollarSign className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatCurrency(invoicesTotal, plan.currency)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Suma de facturas asociadas a las licitaciones vinculadas
+            </p>
+          </CardContent>
+        </Card>
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Información General */}
@@ -392,13 +449,13 @@ export default function SourcingPlanDetailPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">Proyectado</div>
-                    {plan.projected_savings_amount ? (
+                {(projected + linkedSavings) ? (
                       <>
                         <p className="font-bold text-green-600">
-                          {formatCurrency(plan.projected_savings_amount, plan.currency)}
+                      {formatCurrency(projected + linkedSavings, plan.currency)}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {plan.projected_savings_percentage?.toFixed(1)}%
+                      {plan.projected_savings_percentage?.toFixed(1) ?? '-'}%
                         </p>
                       </>
                     ) : (
@@ -407,13 +464,13 @@ export default function SourcingPlanDetailPage() {
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">Real</div>
-                    {plan.actual_savings_amount ? (
+                {(plan.actual_savings_amount || linkedSavings) ? (
                       <>
                         <p className="font-bold text-emerald-600">
-                          {formatCurrency(plan.actual_savings_amount, plan.currency)}
+                      {formatCurrency((plan.actual_savings_amount || 0) + linkedSavings, plan.currency)}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {plan.actual_savings_percentage?.toFixed(1)}%
+                      {plan.actual_savings_percentage?.toFixed(1) ?? '-'}%
                         </p>
                       </>
                     ) : (
@@ -431,51 +488,65 @@ export default function SourcingPlanDetailPage() {
           </Card>
         </div>
 
-        {/* Asociaciones con Licitaciones o Proyectos */}
-        {((plan as any).licitacion_id || (plan as any).project_id) && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Asociaciones
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {(plan as any).licitacion_id && (
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <div className="text-sm font-medium">Licitación Asociada</div>
-                      <p className="text-sm text-muted-foreground">ID: {(plan as any).licitacion_id}</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => router.push(`/licitaciones/${(plan as any).licitacion_id}`)}
-                    >
-                      Ver Licitación
-                    </Button>
-                  </div>
-                )}
-                {(plan as any).project_id && (
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <div className="text-sm font-medium">Proyecto Asociado</div>
-                      <p className="text-sm text-muted-foreground">ID: {(plan as any).project_id}</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => router.push(`/projects/${(plan as any).project_id}`)}
-                    >
-                      Ver Proyecto
-                    </Button>
-                  </div>
-                )}
+        {/* Licitaciones vinculadas (N:M) */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Licitaciones asociadas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {linkedLicitaciones.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sin licitaciones vinculadas.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b text-muted-foreground">
+                    <tr>
+                      <th className="text-left py-2">ID</th>
+                      <th className="text-left py-2">Título</th>
+                      <th className="text-left py-2">Estado</th>
+                      <th className="text-right py-2">Baseline</th>
+                      <th className="text-right py-2">Adjudicado</th>
+                      <th className="text-right py-2">Ahorro</th>
+                      <th className="text-center py-2">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {linkedLicitaciones.map(link => (
+                      <tr key={link.licitacion_id} className="border-b last:border-0">
+                        <td className="py-2 font-mono text-xs text-muted-foreground">{link.licitacion_id}</td>
+                        <td className="py-2">{link.licitacion?.titulo || 'Sin título'}</td>
+                        <td className="py-2">{link.licitacion?.estado || '-'}</td>
+                        <td className="py-2 text-right">
+                          {link.licitacion?.baseline_amount
+                            ? formatCurrency(link.licitacion.baseline_amount, link.licitacion.baseline_currency || plan.currency)
+                            : '-'}
+                        </td>
+                        <td className="py-2 text-right">
+                          {link.licitacion?.awarded_amount
+                            ? formatCurrency(link.licitacion.awarded_amount, link.licitacion.baseline_currency || plan.currency)
+                            : '-'}
+                        </td>
+                        <td className="py-2 text-right">
+                          {link.licitacion?.savings_amount
+                            ? formatCurrency(link.licitacion.savings_amount, link.licitacion.baseline_currency || plan.currency)
+                            : '-'}
+                        </td>
+                        <td className="py-2 text-center">
+                          <Button size="sm" variant="outline" onClick={() => router.push(`/licitaciones/${link.licitacion_id}`)}>
+                            Ver
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
         {/* Metadata */}
         <Card>

@@ -29,17 +29,10 @@ import {
   Star
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { useVersion } from '@/contexts/version-context'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
-import {
-  mockSuppliersData,
-  mockAdministrativeEvaluationsData,
-  mockTechnicalEvaluationsData,
-  mockLicitacionSuppliersData
-} from '@/lib/mock-data'
 import type {
   Supplier,
   AdministrativeEvaluation,
@@ -68,7 +61,6 @@ const statusColors = {
 export default function SupplierDetailPage() {
   const router = useRouter()
   const params = useParams()
-  const { isMockup } = useVersion()
   const { addToast } = useToast()
 
   const [user, setUser] = useState<any>(null)
@@ -86,19 +78,6 @@ export default function SupplierDetailPage() {
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        if (isMockup) {
-          setUser({
-            name: 'Usuario Demo',
-            email: 'demo@xpend.cl',
-            role: 'admin'
-          })
-          setCompany({
-            name: 'Xpend',
-            id: '550e8400-e29b-41d4-a716-446655440000'
-          })
-          return
-        }
-
         const supabase = supabaseBrowser()
         const { data: { user: authUser } } = await supabase.auth.getUser()
         if (!authUser) return
@@ -138,40 +117,16 @@ export default function SupplierDetailPage() {
     }
 
     loadUserData()
-  }, [isMockup])
+  }, [])
 
   useEffect(() => {
     loadSupplierDetails()
-  }, [supplierId, isMockup])
+  }, [supplierId])
 
   const loadSupplierDetails = async () => {
     try {
       setLoading(true)
       setError(null)
-
-      if (isMockup) {
-        // Find supplier in mock data
-        const foundSupplier = mockSuppliersData.find(s => s.id === supplierId)
-        if (!foundSupplier) {
-          throw new Error('Proveedor no encontrado')
-        }
-
-        setSupplier(foundSupplier as Supplier)
-
-        // Find administrative evaluation
-        const adminEval = mockAdministrativeEvaluationsData.find(e => e.supplier_id === supplierId)
-        setAdministrativeEvaluation(adminEval as AdministrativeEvaluation || null)
-
-        // Find technical evaluations
-        const techEvals = mockTechnicalEvaluationsData.filter(e => e.supplier_id === supplierId)
-        setTechnicalEvaluations(techEvals as TechnicalEvaluation[])
-
-        // Find licitacion suppliers
-        const licitacionSupps = mockLicitacionSuppliersData.filter(ls => ls.supplier_id === supplierId)
-        setLicitacionSuppliers(licitacionSupps as LicitacionSupplier[])
-
-        return
-      }
 
       // Functional mode: load from Supabase
       const supabase = supabaseBrowser()
@@ -286,38 +241,19 @@ export default function SupplierDetailPage() {
     }
 
     try {
-      if (isMockup) {
-        addToast({
-          type: 'success',
-          title: 'Proveedor eliminado',
-          message: 'El proveedor ha sido eliminado correctamente (modo demo)'
-        })
-        router.push('/suppliers')
-        return
-      }
-
       // TODO: Implement Supabase deletion
-      throw new Error('Modo funcional no implementado aún')
+      throw new Error('Eliminación no implementada aún')
 
     } catch (err) {
       addToast({
         type: 'error',
         title: 'Error',
-        message: 'No se pudo eliminar el proveedor'
+        message: err instanceof Error ? err.message : 'No se pudo eliminar el proveedor'
       })
     }
   }
 
   const downloadNDA = () => {
-    if (isMockup) {
-      addToast({
-        type: 'info',
-        title: 'Descarga simulada',
-        message: 'En modo demo, la descarga del NDA es simulada'
-      })
-      return
-    }
-
     // TODO: Implement real NDA download
   }
 
@@ -363,12 +299,10 @@ export default function SupplierDetailPage() {
               <Edit className="mr-2 h-4 w-4" />
               Editar
             </Button>
-            {!isMockup && (
-              <Button variant="destructive" onClick={handleDeleteSupplier}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Eliminar
-              </Button>
-            )}
+            <Button variant="destructive" onClick={handleDeleteSupplier}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Eliminar
+            </Button>
           </div>
         </div>
 
@@ -377,11 +311,6 @@ export default function SupplierDetailPage() {
           <Badge className={supplier.is_active ? statusColors.active : statusColors.inactive}>
             {supplier.is_active ? 'Activo' : 'Inactivo'}
           </Badge>
-          {isMockup && (
-            <Badge variant="outline" className="text-xs">
-              Modo Demo - Datos Mock
-            </Badge>
-          )}
         </div>
 
         {/* Main Content */}

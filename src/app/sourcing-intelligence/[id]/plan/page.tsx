@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { supabaseBrowser } from '@/lib/supabase'
 import { Target, TrendingUp, Users, DollarSign, ArrowRight } from 'lucide-react'
 import { SIProcurementPlan, SIPlanItem } from '@/types'
+import { useToast } from '@/components/ui/toast'
 
 export default function PlanPage() {
   const router = useRouter()
@@ -22,6 +23,9 @@ export default function PlanPage() {
   const [items, setItems] = useState<SIPlanItem[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [addingId, setAddingId] = useState<string | null>(null)
+  const [existingCategories, setExistingCategories] = useState<Set<string>>(new Set())
+  const { addToast } = useToast()
 
   useEffect(() => {
     loadData()
@@ -66,12 +70,80 @@ export default function PlanPage() {
           if (itemsData) {
             setItems(itemsData)
           }
+
+          // Marcar categorías ya creadas en Sourcing Plan para evitar duplicados
+          const { data: existingPlans } = await supabase
+            .from('sourcing_plans')
+            .select('id, category, title')
+            .eq('company_id', profile.company_id)
+
+          if (existingPlans) {
+            const setCat = new Set<string>()
+            existingPlans.forEach(p => {
+              const key = (p.category || p.title || '').trim().toLowerCase()
+              if (key) setCat.add(key)
+            })
+            setExistingCategories(setCat)
+          }
         }
       }
     } catch (error) {
       console.error('Error loading data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleAddToSourcingPlan = async (item: SIPlanItem) => {
+    if (!company || !user) {
+      addToast({ type: 'error', title: 'Error', message: 'Empresa o usuario no detectados' })
+      return
+    }
+    const key = (item.category || item.id).trim().toLowerCase()
+    if (existingCategories.has(key)) {
+      addToast({ type: 'info', title: 'Ya está en el plan', message: 'Esta categoría ya fue añadida al Sourcing Plan' })
+      return
+    }
+    setAddingId(item.id)
+    try {
+      const { error } = await supabase
+        .from('sourcing_plans')
+        .insert({
+          company_id: company.id,
+          plan_year: plan?.plan_year || new Date().getFullYear(),
+          quarter: item.recommended_quarter || 'Q1',
+          initiative_type: 'licitacion',
+          title: item.category || 'Categoría sin nombre',
+          description: `Generado desde Sourcing Intelligence (upload ${uploadId}). Ajusta la descripción y responsables en Sourcing Plan.`,
+          category: item.category,
+          estimated_spend: item.total_spend || 0,
+          currency: 'CLP',
+          projected_savings_percentage: item.projected_savings_percentage || 0,
+          projected_savings_amount: item.projected_savings_amount || 0,
+          status: 'planned',
+          is_spot: false,
+          created_by: user.id
+        })
+
+      if (error) throw error
+      addToast({
+        type: 'success',
+        title: 'Iniciativa creada',
+        message: 'La categoría fue enviada al Sourcing Plan'
+      })
+      setExistingCategories(prev => {
+        const next = new Set(prev)
+        next.add(key)
+        return next
+      })
+    } catch (err: any) {
+      addToast({
+        type: 'error',
+        title: 'No se pudo enviar',
+        message: err?.message || 'Error al crear la iniciativa'
+      })
+    } finally {
+      setAddingId(null)
     }
   }
 
@@ -264,6 +336,7 @@ export default function PlanPage() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ahorro</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trimestre</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kraljic</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -295,6 +368,20 @@ export default function PlanPage() {
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         {getQuadrantBadge(item.kraljic_quadrant!)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAddToSourcingPlan(item)}
+                          disabled={addingId === item.id || existingCategories.has((item.category || item.id).trim().toLowerCase())}
+                        >
+                          {existingCategories.has((item.category || item.id).trim().toLowerCase())
+                            ? 'Ya añadido'
+                            : addingId === item.id
+                              ? 'Enviando...'
+                              : 'Añadir al Sourcing Plan'}
+                        </Button>
                       </td>
                     </tr>
                   ))}

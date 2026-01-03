@@ -11,7 +11,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ArrowLeft, Save } from 'lucide-react'
-import { useVersion } from '@/contexts/version-context'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { useToast } from '@/components/ui/toast'
@@ -19,7 +18,6 @@ import type { Quarter, InitiativeType, PlanStatus } from '@/types'
 
 export default function NewSourcingPlanPage() {
   const router = useRouter()
-  const { isMockup } = useVersion()
   const { addToast } = useToast()
 
   const [user, setUser] = useState<any>(null)
@@ -45,30 +43,12 @@ export default function NewSourcingPlanPage() {
 
   useEffect(() => {
     loadUserData()
-  }, [isMockup])
+  }, [])
 
   const loadUserData = async () => {
     try {
       setLoading(true)
 
-      const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-      if (isMockup || !isSupabaseConfigured) {
-        // Modo mockup
-        setUser({
-          name: 'Usuario Demo',
-          email: 'demo@xpend.cl',
-          role: 'admin'
-        })
-        setCompany({
-          name: 'Xpend Demo',
-          id: 'company-1'
-        })
-        setLoading(false)
-        return
-      }
-
-      // Modo funcional con Supabase
       const supabase = supabaseBrowser()
       const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
       if (userError || !authUser) throw new Error('Usuario no autenticado')
@@ -143,23 +123,6 @@ export default function NewSourcingPlanPage() {
         ? (estimatedSpend * savingsPercentage) / 100
         : null
 
-      const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-      if (isMockup || !isSupabaseConfigured) {
-        // Modo mockup - simular guardado
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
-        addToast({
-          type: 'success',
-          title: 'Iniciativa creada',
-          message: `${formData.title} se creó exitosamente`
-        })
-
-        router.push('/sourcing-plan')
-        return
-      }
-
-      // Modo funcional con Supabase
       const supabase = supabaseBrowser()
 
       const newPlan = {

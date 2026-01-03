@@ -25,15 +25,14 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
-  XCircle
+  XCircle,
+  Grid
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { useVersion } from '@/contexts/version-context'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
-import { mockSourcingPlansData, mockSourcingPlanStats } from '@/lib/mock-data'
 import type { SourcingPlan, SourcingPlanFilters, Quarter, InitiativeType, PlanStatus } from '@/types'
 
 // Labels y colores
@@ -72,7 +71,6 @@ const statusIcons: Record<PlanStatus, any> = {
 
 export default function SourcingPlanPage() {
   const router = useRouter()
-  const { isMockup } = useVersion()
   const { addToast } = useToast()
 
   const [user, setUser] = useState<any>(null)
@@ -93,51 +91,12 @@ export default function SourcingPlanPage() {
 
   useEffect(() => {
     loadSourcingPlans()
-  }, [isMockup, filters])
+  }, [filters])
 
   const loadSourcingPlans = async () => {
     try {
       setLoading(true)
       setError(null)
-
-      const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-      if (isMockup || !isSupabaseConfigured) {
-        // Modo mockup
-        setUser({
-          name: 'Usuario Demo',
-          email: 'demo@xpend.cl',
-          role: 'admin'
-        })
-        setCompany({
-          name: 'Xpend Demo',
-          id: 'company-1'
-        })
-
-        // Filtrar mock data
-        let filteredPlans = [...mockSourcingPlansData]
-
-        if (filters.plan_year) {
-          filteredPlans = filteredPlans.filter(p => p.plan_year === filters.plan_year)
-        }
-        if (filters.quarter) {
-          filteredPlans = filteredPlans.filter(p => p.quarter === filters.quarter)
-        }
-        if (filters.initiative_type) {
-          filteredPlans = filteredPlans.filter(p => p.initiative_type === filters.initiative_type)
-        }
-        if (filters.status) {
-          filteredPlans = filteredPlans.filter(p => p.status === filters.status)
-        }
-        if (filters.is_spot !== undefined) {
-          filteredPlans = filteredPlans.filter(p => p.is_spot === filters.is_spot)
-        }
-
-        setPlans(filteredPlans as any)
-        setStats(mockSourcingPlanStats)
-        setLoading(false)
-        return
-      }
 
       // Modo funcional con Supabase
       const supabase = supabaseBrowser()
@@ -196,11 +155,44 @@ export default function SourcingPlanPage() {
         const { data: plansData, error: plansError } = await query
         if (plansError) throw plansError
 
-        setPlans(plansData || [])
+        // Para chips y agregados, traer enlaces y datos de licitaciones
+        const planIds = (plansData || []).map(p => p.id)
+        let countsByPlan: Record<string, number> = {}
+        let licBaselineByPlan: Record<string, number> = {}
+        let licSavingsByPlan: Record<string, number> = {}
+        let planLinksData: any[] = []
+        if (planIds.length) {
+          const { data } = await supabase
+            .from('sourcing_plan_licitaciones')
+            .select(`
+              plan_id,
+              licitacion:licitaciones(
+                baseline_amount,
+                baseline_currency,
+                savings_amount
+              )
+            `)
+            .in('plan_id', planIds)
+          planLinksData = data || []
+          planLinksData.forEach(link => {
+            const pid = link.plan_id
+            countsByPlan[pid] = (countsByPlan[pid] || 0) + 1
+            const b = link.licitacion?.baseline_amount || 0
+            const s = link.licitacion?.savings_amount || 0
+            licBaselineByPlan[pid] = (licBaselineByPlan[pid] || 0) + b
+            licSavingsByPlan[pid] = (licSavingsByPlan[pid] || 0) + s
+          })
+        }
 
-        // Calcular estadísticas (simplificado para ahora)
-        // En producción, esto sería mejor hacerlo con una función de Supabase o API endpoint
-        calculateStats(plansData || [])
+        setPlans((plansData || []).map(p => ({
+          ...p,
+          licitaciones_count: countsByPlan[p.id] || 0,
+          lic_baseline_sum: licBaselineByPlan[p.id] || 0,
+          lic_savings_sum: licSavingsByPlan[p.id] || 0
+        })))
+
+        // Calcular estadísticas incluyendo aportes de licitaciones
+        calculateStats(plansData || [], licBaselineByPlan, licSavingsByPlan)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar el plan')
@@ -214,16 +206,26 @@ export default function SourcingPlanPage() {
     }
   }
 
-  const calculateStats = (plansData: SourcingPlan[]) => {
+  const calculateStats = (
+    plansData: SourcingPlan[],
+    licBaselineByPlan: Record<string, number>,
+    licSavingsByPlan: Record<string, number>
+  ) => {
     const planned = plansData.filter(p => p.status === 'planned' && !p.is_spot).length
     const inProgress = plansData.filter(p => p.status === 'in_progress').length
     const completed = plansData.filter(p => p.status === 'completed').length
     const spot = plansData.filter(p => p.is_spot).length
 
-    const totalEstimated = plansData.reduce((sum, p) => sum + (p.estimated_spend || 0), 0)
+    const totalEstimated = plansData.reduce((sum, p) => {
+      const licBaseline = licBaselineByPlan[p.id] || 0
+      return sum + (p.estimated_spend || 0) + licBaseline
+    }, 0)
     const totalActual = plansData.reduce((sum, p) => sum + (p.actual_spend || 0), 0)
     const totalProjectedSavings = plansData.reduce((sum, p) => sum + (p.projected_savings_amount || 0), 0)
-    const totalActualSavings = plansData.reduce((sum, p) => sum + (p.actual_savings_amount || 0), 0)
+    const totalActualSavings = plansData.reduce((sum, p) => {
+      const licSavings = licSavingsByPlan[p.id] || 0
+      return sum + (p.actual_savings_amount || 0) + licSavings
+    }, 0)
 
     const completionRate = planned > 0 ? (completed / planned) * 100 : 0
     const achievementRate = totalProjectedSavings > 0 ? (totalActualSavings / totalProjectedSavings) * 100 : 0
@@ -388,6 +390,10 @@ export default function SourcingPlanPage() {
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               Exportar
             </Button>
+            <Button variant="outline" onClick={() => router.push('/sourcing-plan/kraljic')}>
+              <Grid className="mr-2 h-4 w-4" />
+              Ver Matriz Kraljic
+            </Button>
             <Button onClick={() => router.push('/sourcing-plan/new')}>
               <Plus className="mr-2 h-4 w-4" />
               Nueva Iniciativa
@@ -481,13 +487,19 @@ export default function SourcingPlanPage() {
               {showFilters && (
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4 pt-4 border-t">
                   <Select
-                    value={filters.plan_year?.toString() || ''}
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, plan_year: parseInt(value) }))}
+                    value={filters.plan_year?.toString() || 'all'}
+                    onValueChange={(value) =>
+                      setFilters(prev => ({
+                        ...prev,
+                        plan_year: value === 'all' ? undefined : parseInt(value, 10)
+                      }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Año" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
                       <SelectItem value="2024">2024</SelectItem>
                       <SelectItem value="2025">2025</SelectItem>
                       <SelectItem value="2026">2026</SelectItem>
@@ -570,6 +582,7 @@ export default function SourcingPlanPage() {
                     <th className="text-left p-4 font-medium">Año/Trim</th>
                     <th className="text-left p-4 font-medium">Tipo</th>
                     <th className="text-left p-4 font-medium">Estado</th>
+                    <th className="text-center p-4 font-medium">Licitaciones</th>
                     <th className="text-right p-4 font-medium">Spend Estimado</th>
                     <th className="text-right p-4 font-medium">Ahorro Proyectado</th>
                     <th className="text-right p-4 font-medium">Ahorro Real</th>
@@ -634,6 +647,11 @@ export default function SourcingPlanPage() {
                               {statusLabels[plan.status]}
                             </Badge>
                           </div>
+                        </td>
+
+                        {/* Licitaciones asociadas */}
+                        <td className="p-4 text-center">
+                          <Badge variant="outline">{(plan as any).licitaciones_count || 0}</Badge>
                         </td>
 
                         {/* Spend Estimado */}

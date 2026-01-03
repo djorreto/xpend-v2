@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Database, Layers, ChevronDown } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Building2, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -9,136 +9,121 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Badge } from '@/components/ui/badge'
-import { useVersion } from '@/contexts/version-context'
 import { useToast } from '@/components/ui/toast'
-import { cn } from '@/lib/utils'
+import { supabaseBrowser } from '@/lib/supabase'
 
-export function VersionSelector() {
-  const { version, setVersion, isFunctional, isMockup, isDemo } = useVersion()
+type CompanyOption = {
+  id: string
+  name: string
+}
+
+type VersionSelectorProps = {
+  tone?: 'default' | 'sidebar'
+  fullWidth?: boolean
+}
+
+export function VersionSelector({ tone = 'default', fullWidth = false }: VersionSelectorProps) {
   const { addToast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
+  const [companies, setCompanies] = useState<CompanyOption[]>([])
+  const [selectedCompany, setSelectedCompany] = useState<CompanyOption | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  // Hide version selector for demo users
-  if (isDemo) {
-    return null
-  }
+  useEffect(() => {
+    const loadCompanies = async () => {
+      try {
+        const supabase = supabaseBrowser()
+        const { data: { session } } = await supabase.auth.getSession()
+        const user = session?.user
+        if (!user) throw new Error('Usuario no autenticado')
 
-  const versions = [
-    {
-      id: 'functional' as const,
-      name: 'Funcional',
-      description: 'Datos reales de Supabase',
-      icon: Database,
-      color: 'text-[#2D3E3D] border-[#C6FF00]',
-      bgColor: '#C6FF00',
-      badge: 'LIVE'
-    },
-    {
-      id: 'mockup' as const,
-      name: 'Mock-up',
-      description: 'Datos simulados para demo',
-      icon: Layers,
-      color: 'bg-blue-100 text-blue-800 border-blue-200',
-      bgColor: undefined,
-      badge: 'DEMO'
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, company_id')
+          .eq('id', user.id)
+          .single()
+
+        if (profileError || !profile) throw new Error('Perfil no encontrado')
+        if (!profile.company_id) {
+          setCompanies([])
+          setSelectedCompany(null)
+          return
+        }
+
+        const { data: companyData, error: companyError } = await supabase
+          .from('companies')
+          .select('id, name')
+          .in('id', [profile.company_id])
+
+        if (companyError) throw companyError
+
+        const opts = (companyData || []).map(c => ({ id: c.id, name: c.name }))
+        setCompanies(opts)
+        setSelectedCompany(opts[0] || null)
+      } catch (err) {
+        console.error('Error loading companies for selector:', err)
+        addToast({
+          type: 'error',
+          title: 'Error',
+          message: 'No se pudo cargar la empresa'
+        })
+      } finally {
+        setLoading(false)
+      }
     }
-  ]
 
-  const currentVersion = versions.find(v => v.id === version)
+    loadCompanies()
+  }, [addToast])
+
+  const hasMultiple = companies.length > 1
+
+  const buttonClasses =
+    tone === 'sidebar'
+      ? 'h-10 px-3 text-sm font-semibold bg-[#1f2f2e] text-white hover:bg-[#26403f] border border-[#2AD4D2]/40 justify-between w-full'
+      : 'h-8 px-3 text-xs font-medium'
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="outline"
-          className="h-8 px-3 text-xs font-medium"
+          variant={tone === 'sidebar' ? 'default' : 'outline'}
+          className={buttonClasses}
+          style={tone === 'sidebar' ? { boxShadow: '0 2px 6px rgba(0,0,0,0.15)' } : undefined}
         >
-          {currentVersion && (
-            <>
-              <currentVersion.icon className="h-3 w-3 mr-2" />
-              <span className="hidden sm:inline">{currentVersion.name}</span>
-              <Badge
-                variant="outline"
-                className={cn(
-                  'ml-2 text-[10px] px-1.5 py-0.5',
-                  currentVersion.color
-                )}
-                style={currentVersion.bgColor ? { backgroundColor: currentVersion.bgColor, borderColor: currentVersion.bgColor } : undefined}
-              >
-                {currentVersion.badge}
-              </Badge>
-              <ChevronDown className="h-3 w-3 ml-1" />
-            </>
-          )}
+          <Building2 className="mr-2 h-3 w-3" />
+          <span className="hidden sm:inline">
+            {selectedCompany?.name || (loading ? 'Cargando...' : 'Sin empresa')}
+          </span>
+          <ChevronDown className="ml-1 h-3 w-3" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
-        {versions.map((versionOption) => {
-          const Icon = versionOption.icon
-          const isSelected = versionOption.id === version
-
-          return (
+        {hasMultiple ? (
+          companies.map(company => (
             <DropdownMenuItem
-              key={versionOption.id}
+              key={company.id}
               onClick={() => {
-                if (!isSelected) {
-                  console.log('🔄 Switching to version:', versionOption.id)
-
-                  // Save to localStorage FIRST
-                  localStorage.setItem('xpend-version', versionOption.id)
-
-                  // Then update state
-                  setVersion(versionOption.id)
-
-                  // Show toast notification
-                  addToast({
-                    type: 'success',
-                    title: `Cambiado a ${versionOption.name}`,
-                    message: 'El cambio se aplicó correctamente'
-                  })
-                }
+                setSelectedCompany(company)
                 setIsOpen(false)
               }}
-              className={cn(
-                'flex items-center space-x-3 p-3 cursor-pointer',
-                isSelected && 'bg-accent'
-              )}
+              className="flex items-center space-x-3 p-3 cursor-pointer"
             >
-              <div
-                className="p-2 rounded-lg"
-                style={versionOption.bgColor ? { backgroundColor: versionOption.bgColor } : undefined}
-              >
-                <Icon className="h-4 w-4" style={versionOption.bgColor ? { color: '#2D3E3D' } : undefined} />
+              <div className="p-2 rounded-lg bg-muted">
+                <Building2 className="h-4 w-4" />
               </div>
-
               <div className="flex-1">
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium text-sm">
-                    {versionOption.name}
-                  </span>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      'text-[10px] px-1.5 py-0.5',
-                      versionOption.color
-                    )}
-                    style={versionOption.bgColor ? { backgroundColor: versionOption.bgColor, borderColor: versionOption.bgColor } : undefined}
-                  >
-                    {versionOption.badge}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {versionOption.description}
-                </p>
+                <div className="font-medium text-sm">{company.name}</div>
+                <p className="text-xs text-muted-foreground">Seleccionar empresa</p>
               </div>
-
-              {isSelected && (
-                <div className="w-2 h-2 rounded-full bg-primary" />
-              )}
+              {selectedCompany?.id === company.id && <div className="h-2 w-2 rounded-full bg-primary" />}
             </DropdownMenuItem>
-          )
-        })}
+          ))
+        ) : (
+          <DropdownMenuItem className="flex items-center space-x-3 p-3 text-xs text-muted-foreground">
+            <Building2 className="h-4 w-4" />
+            <span>{loading ? 'Cargando...' : 'No hay más empresas asociadas'}</span>
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

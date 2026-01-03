@@ -861,140 +861,93 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* Partner Slot 1 */}
-            <Card className="backdrop-blur-md border-2 shadow-2xl transition-all duration-300 hover:shadow-3xl hover:scale-105 group cursor-pointer"
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                borderColor: 'rgba(59, 231, 174, 0.3)'
-              }}
-            >
-              <CardContent className="p-12">
-                <div className="flex flex-col items-center text-center space-y-6">
-                  {/* Logo Placeholder */}
-                  <div className="w-48 h-48 rounded-2xl flex items-center justify-center transition-all duration-300"
-                    style={{
-                      backgroundColor: 'rgba(42, 212, 210, 0.1)',
-                      border: '3px dashed rgba(42, 212, 210, 0.3)'
-                    }}
-                  >
-                    <div className="text-center">
-                      <div className="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: 'rgba(42, 212, 210, 0.2)' }}
-                      >
-                        <Package className="h-10 w-10" style={{ color: '#2AD4D2' }} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            {[
+              {
+                name: 'Xinergy',
+                description: 'Consultora de eficiencias, procurement y operaciones.',
+                logo: 'https://qtncgtqgvilbjhrvzoxe.supabase.co/storage/v1/object/public/Partners/Xinergy.png',
+                website: 'https://xinergy.cl'
+              },
+              {
+                name: 'Dux Partners',
+                description: 'Consultora de optimización de operaciones logísticas y productivas.',
+                logo: 'https://qtncgtqgvilbjhrvzoxe.supabase.co/storage/v1/object/public/Partners/Dux.png',
+                website: 'https://duxpartners.cl/'
+              },
+              {
+                name: 'Opticks',
+                description: 'SaaS de gestión de inventarios y optimización de capital de trabajo.',
+                logo: 'https://qtncgtqgvilbjhrvzoxe.supabase.co/storage/v1/object/public/Partners/Opticks.png',
+                website: 'https://opticks.cl/'
+              },
+              {
+                name: 'Reverse',
+                description: 'SaaS de venta de activos (Reverse sourcing).',
+                logo: 'https://qtncgtqgvilbjhrvzoxe.supabase.co/storage/v1/object/public/Partners/Reverse.png',
+                website: ''
+              }
+            ].map((partner) => (
+              <Card
+                key={partner.name}
+                className="backdrop-blur-md border-2 shadow-2xl transition-all duration-300 hover:shadow-3xl hover:scale-105 group cursor-pointer"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                  borderColor: 'rgba(59, 231, 174, 0.3)'
+                }}
+              >
+                <CardContent className="p-10 md:p-12">
+                  <div className="flex flex-col items-center text-center space-y-6">
+                    <div
+                      className="w-full max-w-sm mx-auto rounded-2xl flex items-center justify-center transition-all duration-300 overflow-hidden shadow-inner"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(42, 212, 210, 0.12), rgba(59, 231, 174, 0.12))',
+                        border: '1px solid rgba(42, 212, 210, 0.18)',
+                        minHeight: '140px'
+                      }}
+                    >
+                      <img
+                        src={partner.logo}
+                        alt={partner.name}
+                        className="object-contain max-h-24 w-auto px-6 py-4"
+                      />
+                    </div>
+
+                    <div className="w-full space-y-2">
+                      <h3 className="text-lg font-bold text-gray-700">{partner.name}</h3>
+                      <p className="text-sm text-gray-500">{partner.description}</p>
+                    </div>
+
+                    {partner.website ? (
+                      <div className="w-full pt-4 border-t" style={{ borderColor: 'rgba(42, 212, 210, 0.15)' }}>
+                        <a
+                          href={partner.website}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-bold transition-all duration-300 group-hover:scale-105"
+                          style={{
+                            backgroundColor: 'rgba(42, 212, 210, 0.1)',
+                            color: '#2AD4D2',
+                            border: '2px solid rgba(42, 212, 210, 0.3)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#2AD4D2'
+                            e.currentTarget.style.color = '#ffffff'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(42, 212, 210, 0.1)'
+                            e.currentTarget.style.color = '#2AD4D2'
+                          }}
+                        >
+                          Visitar Sitio Web
+                          <ArrowRight className="ml-2 h-5 w-5" />
+                        </a>
                       </div>
-                      <p className="text-sm font-bold text-gray-500">Logo Partner</p>
-                      <p className="text-xs text-gray-400">200 x 200 px</p>
-                    </div>
+                    ) : null}
                   </div>
-
-                  {/* Partner Name Placeholder */}
-                  <div className="w-full">
-                    <div className="h-8 rounded-lg mb-3"
-                      style={{
-                        backgroundColor: 'rgba(59, 231, 174, 0.1)',
-                        border: '2px dashed rgba(59, 231, 174, 0.3)'
-                      }}
-                    >
-                      <p className="text-center text-sm font-semibold text-gray-500 leading-8">Nombre del Partner</p>
-                    </div>
-                    <p className="text-sm text-gray-500 mb-4">Breve descripción del partner y su valor agregado para clientes Xpend</p>
-                  </div>
-
-                  {/* Link Placeholder */}
-                  <div className="w-full pt-4 border-t" style={{ borderColor: 'rgba(42, 212, 210, 0.2)' }}>
-                    <a
-                      href="#"
-                      className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-bold transition-all duration-300 group-hover:scale-105"
-                      style={{
-                        backgroundColor: 'rgba(42, 212, 210, 0.1)',
-                        color: '#2AD4D2',
-                        border: '2px solid rgba(42, 212, 210, 0.3)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#2AD4D2'
-                        e.currentTarget.style.color = '#ffffff'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(42, 212, 210, 0.1)'
-                        e.currentTarget.style.color = '#2AD4D2'
-                      }}
-                    >
-                      Visitar Sitio Web
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </a>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Partner Slot 2 */}
-            <Card className="backdrop-blur-md border-2 shadow-2xl transition-all duration-300 hover:shadow-3xl hover:scale-105 group cursor-pointer"
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                borderColor: 'rgba(59, 231, 174, 0.3)'
-              }}
-            >
-              <CardContent className="p-12">
-                <div className="flex flex-col items-center text-center space-y-6">
-                  {/* Logo Placeholder */}
-                  <div className="w-48 h-48 rounded-2xl flex items-center justify-center transition-all duration-300"
-                    style={{
-                      backgroundColor: 'rgba(59, 231, 174, 0.1)',
-                      border: '3px dashed rgba(59, 231, 174, 0.3)'
-                    }}
-                  >
-                    <div className="text-center">
-                      <div className="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: 'rgba(59, 231, 174, 0.2)' }}
-                      >
-                        <Users className="h-10 w-10" style={{ color: '#3BE7AE' }} />
-                      </div>
-                      <p className="text-sm font-bold text-gray-500">Logo Partner</p>
-                      <p className="text-xs text-gray-400">200 x 200 px</p>
-                    </div>
-                  </div>
-
-                  {/* Partner Name Placeholder */}
-                  <div className="w-full">
-                    <div className="h-8 rounded-lg mb-3"
-                      style={{
-                        backgroundColor: 'rgba(42, 212, 210, 0.1)',
-                        border: '2px dashed rgba(42, 212, 210, 0.3)'
-                      }}
-                    >
-                      <p className="text-center text-sm font-semibold text-gray-500 leading-8">Nombre del Partner</p>
-                    </div>
-                    <p className="text-sm text-gray-500 mb-4">Breve descripción del partner y su valor agregado para clientes Xpend</p>
-                  </div>
-
-                  {/* Link Placeholder */}
-                  <div className="w-full pt-4 border-t" style={{ borderColor: 'rgba(59, 231, 174, 0.2)' }}>
-                    <a
-                      href="#"
-                      className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-bold transition-all duration-300 group-hover:scale-105"
-                      style={{
-                        backgroundColor: 'rgba(59, 231, 174, 0.1)',
-                        color: '#3BE7AE',
-                        border: '2px solid rgba(59, 231, 174, 0.3)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#3BE7AE'
-                        e.currentTarget.style.color = '#ffffff'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(59, 231, 174, 0.1)'
-                        e.currentTarget.style.color = '#3BE7AE'
-                      }}
-                    >
-                      Visitar Sitio Web
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </a>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           {/* Partnership CTA */}

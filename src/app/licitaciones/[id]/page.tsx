@@ -18,16 +18,18 @@ import {
   Download,
   ExternalLink,
   TrendingDown,
-  TrendingUp
+  TrendingUp,
+  Plus,
+  LinkIcon
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
-import { useVersion } from '@/contexts/version-context'
-import { mockLicitacionesData } from '@/lib/mock-data'
 import type { Licitacion } from '@/types'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 
 const statusColors = {
   planned: 'bg-gray-100 text-gray-800',
@@ -71,13 +73,23 @@ export default function LicitacionDetailPage() {
   const params = useParams()
   const licitacionId = params.id as string
   const { addToast } = useToast()
-  const { isMockup } = useVersion()
 
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<any>(null)
   const [licitacion, setLicitacion] = useState<Licitacion | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [linkedPlans, setLinkedPlans] = useState<any[]>([])
+  const [invoices, setInvoices] = useState<any[]>([])
+  const [savingInvoice, setSavingInvoice] = useState(false)
+  const [invoiceForm, setInvoiceForm] = useState({
+    amount: '',
+    currency: 'CLP',
+    category: '',
+    description: '',
+    invoice_date: '',
+    provider: ''
+  })
 
   useEffect(() => {
     if (licitacionId) {
@@ -89,40 +101,6 @@ export default function LicitacionDetailPage() {
     try {
       setLoading(true)
       setError(null)
-
-      // Check if we're in mockup mode or if Supabase is not configured
-      const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL &&
-                                   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-      if (isMockup || !isSupabaseConfigured) {
-        // Use mock data
-        const mockLicitacion = mockLicitacionesData.find(l => l.id === licitacionId)
-
-        if (!mockLicitacion) {
-          throw new Error('Licitación no encontrada')
-        }
-
-        // Set mock user and company data
-        setUser({
-          name: 'Usuario Demo',
-          email: 'demo@xpend.cl',
-          role: 'admin'
-        })
-
-        setCompany({
-          name: 'Xpend',
-          id: 'company-1'
-        })
-
-        // Add mock department and user data
-        setLicitacion({
-          ...mockLicitacion,
-          department: { id: 'dept-1', name: 'Finanzas' },
-          responsible_user: { id: 'user-1', full_name: 'Juan Pérez', email: 'juan.perez@empresa.com' },
-          created_by_user: { id: 'user-1', full_name: 'Juan Pérez', email: 'juan.perez@empresa.com' }
-        } as any)
-        return
-      }
 
       const supabase = supabaseBrowser()
 
@@ -177,7 +155,31 @@ export default function LicitacionDetailPage() {
       if (licitacionError) throw licitacionError
       if (!data) throw new Error('Licitación no encontrada')
 
-      setLicitacion(data)
+        setLicitacion(data)
+
+      // Load linked sourcing plans (N:M)
+      const { data: links } = await supabase
+        .from('sourcing_plan_licitaciones')
+        .select('plan_id, contribution_baseline, contribution_savings, plan:sourcing_plans(id, title, plan_year, quarter)')
+        .eq('licitacion_id', licitacionId)
+      setLinkedPlans(
+        (links || []).map(link => ({
+          plan_id: link.plan_id,
+          title: link.plan?.title,
+          plan_year: link.plan?.plan_year,
+          quarter: link.plan?.quarter,
+          contribution_baseline: link.contribution_baseline,
+          contribution_savings: link.contribution_savings
+        }))
+      )
+
+      // Load service invoices for this licitacion
+      const { data: invoicesData } = await supabase
+        .from('service_invoices')
+        .select('*')
+        .eq('licitacion_id', licitacionId)
+        .order('invoice_date', { ascending: false })
+      setInvoices(invoicesData || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar la licitación')
       addToast({
@@ -196,17 +198,6 @@ export default function LicitacionDetailPage() {
     }
 
     try {
-      if (isMockup) {
-        // In mockup mode, just show success message
-        addToast({
-          type: 'success',
-          title: 'Licitación eliminada',
-          message: 'La licitación ha sido eliminada correctamente (modo demo)'
-        })
-        router.push('/licitaciones')
-        return
-      }
-
       const supabase = supabaseBrowser()
       const { error } = await supabase
         .from('licitaciones')
@@ -234,16 +225,6 @@ export default function LicitacionDetailPage() {
     if (!licitacion?.tender_document_path) return
 
     try {
-      if (isMockup) {
-        // In mockup mode, show demo message
-        addToast({
-          type: 'info',
-          title: 'Modo Demo',
-          message: 'En modo demo, la descarga es simulada'
-        })
-        return
-      }
-
       const supabase = supabaseBrowser()
       const { data, error } = await supabase.storage
         .from('documents')
@@ -266,6 +247,61 @@ export default function LicitacionDetailPage() {
         title: 'Error',
         message: 'No se pudo descargar el documento'
       })
+    }
+  }
+
+  const handleInvoiceChange = (field: string, value: string) => {
+    setInvoiceForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleSaveInvoice = async () => {
+    if (!licitacion || !company || !invoiceForm.amount) {
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: 'Monto y licitación son obligatorios'
+      })
+      return
+    }
+    setSavingInvoice(true)
+    try {
+      const supabase = supabaseBrowser()
+      const { error } = await supabase
+        .from('service_invoices')
+        .insert({
+          licitacion_id: licitacion.id,
+          company_id: company.id,
+          amount: parseFloat(invoiceForm.amount),
+          currency: invoiceForm.currency,
+          category: invoiceForm.category || null,
+          description: invoiceForm.description || null,
+          invoice_date: invoiceForm.invoice_date || null,
+          provider: invoiceForm.provider || null,
+          created_by: user?.id || null
+        })
+      if (error) throw error
+      addToast({
+        type: 'success',
+        title: 'Factura añadida',
+        message: 'El gasto se registró correctamente'
+      })
+      await loadLicitacionDetails()
+      setInvoiceForm({
+        amount: '',
+        currency: 'CLP',
+        category: '',
+        description: '',
+        invoice_date: '',
+        provider: ''
+      })
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: err instanceof Error ? err.message : 'No se pudo guardar la factura'
+      })
+    } finally {
+      setSavingInvoice(false)
     }
   }
 
@@ -299,6 +335,8 @@ export default function LicitacionDetailPage() {
       </MainLayout>
     )
   }
+
+  const invoicesTotal = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0)
 
   return (
     <MainLayout user={user} companyName={company?.name}>
@@ -336,6 +374,33 @@ export default function LicitacionDetailPage() {
           </div>
         </div>
 
+        {/* Iniciativas vinculadas */}
+        {linkedPlans.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LinkIcon className="h-5 w-5" />
+                Iniciativas del Sourcing Plan vinculadas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {linkedPlans.map(plan => (
+                <div key={plan.plan_id} className="flex items-center justify-between rounded-lg border px-3 py-2">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold">{plan.title || plan.plan_id}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {plan.plan_year} - {plan.quarter}
+                    </span>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => router.push(`/sourcing-plan/${plan.plan_id}`)}>
+                    Ver iniciativa
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
@@ -369,6 +434,21 @@ export default function LicitacionDetailPage() {
                   {baselineSourceLabels[licitacion.baseline_source as keyof typeof baselineSourceLabels]}
               </p>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Gasto real (facturas)</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {formatCurrency(invoicesTotal, licitacion.baseline_currency)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Suma de facturas registradas
+              </p>
             </CardContent>
           </Card>
 
@@ -423,11 +503,12 @@ export default function LicitacionDetailPage() {
 
         {/* Tabs for Details */}
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="details">Detalles</TabsTrigger>
             <TabsTrigger value="dates">Cronograma</TabsTrigger>
             <TabsTrigger value="team">Equipo</TabsTrigger>
             <TabsTrigger value="documents">Documentos</TabsTrigger>
+            <TabsTrigger value="invoices">Facturas</TabsTrigger>
           </TabsList>
 
           <TabsContent value="details">
@@ -674,6 +755,102 @@ export default function LicitacionDetailPage() {
                 {!licitacion.tender_document_path && !licitacion.tender_link && (
                   <p className="text-muted-foreground text-center py-4">No se han cargado documentos para esta licitación.</p>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="invoices">
+            <Card>
+              <CardHeader>
+                <CardTitle>Facturas / Gastos de servicio</CardTitle>
+                <CardDescription>Registra y visualiza facturas asociadas a esta licitación</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Monto</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={invoiceForm.amount}
+                      onChange={(e) => handleInvoiceChange('amount', e.target.value)}
+                      placeholder="1000000"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Moneda</label>
+                    <Input
+                      value={invoiceForm.currency}
+                      onChange={(e) => handleInvoiceChange('currency', e.target.value)}
+                      placeholder="CLP"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Categoría</label>
+                    <Input
+                      value={invoiceForm.category}
+                      onChange={(e) => handleInvoiceChange('category', e.target.value)}
+                      placeholder="Categoría de gasto"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Proveedor</label>
+                    <Input
+                      value={invoiceForm.provider}
+                      onChange={(e) => handleInvoiceChange('provider', e.target.value)}
+                      placeholder="Nombre del proveedor"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Fecha factura</label>
+                    <Input
+                      type="date"
+                      value={invoiceForm.invoice_date}
+                      onChange={(e) => handleInvoiceChange('invoice_date', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-medium">Descripción</label>
+                    <Textarea
+                      value={invoiceForm.description}
+                      onChange={(e) => handleInvoiceChange('description', e.target.value)}
+                      placeholder="Detalle del gasto"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button onClick={handleSaveInvoice} disabled={savingInvoice}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Guardar factura
+                  </Button>
+                </div>
+
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold">Facturas registradas</h4>
+                    <div className="text-sm text-muted-foreground">
+                      Total: {formatCurrency(invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0), invoiceForm.currency)}
+                    </div>
+                  </div>
+                  {invoices.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No hay facturas registradas.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {invoices.map(inv => (
+                        <div key={inv.id} className="flex items-center justify-between rounded-lg border px-3 py-2">
+                          <div className="flex flex-col text-sm">
+                            <span className="font-semibold">{formatCurrency(inv.amount, inv.currency || licitacion.baseline_currency)}</span>
+                            <span className="text-muted-foreground">
+                              {inv.invoice_date ? formatDate(inv.invoice_date) : 'Sin fecha'} • {inv.provider || 'Sin proveedor'}
+                            </span>
+                            {inv.category && <span className="text-muted-foreground text-xs">Cat: {inv.category}</span>}
+                            {inv.description && <span className="text-muted-foreground text-xs">{inv.description}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

@@ -24,19 +24,6 @@ Disponibles en `/public`:
 
 ## ✨ Características Principales
 
-### 🤖 **NUEVO: Juan Xpendo - Asistente de IA** ⭐
-- **Experto en Strategic Sourcing** con IA (Groq + Llama 3.1 70B)
-- Chat flotante siempre disponible
-- Análisis de documentos técnicos (Word, TXT)
-- Asesoría en tiempo real sobre:
-  - Estrategia de categorías
-  - Cálculo de líneas base
-  - Especificaciones técnicas
-  - Negociación con proveedores
-  - RFP/RFQ/RFI
-  - Total Cost of Ownership (TCO)
-- **📖 Setup:** Ver `JUAN-XPENDO-QUICK-START.md`
-
 ### 🔐 Multi-tenant & Autenticación
 - Soporte para múltiples empresas aisladas
 - Roles: Admin, Manager, Analyst, Viewer, Super Admin, Demo

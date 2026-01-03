@@ -19,7 +19,6 @@ import { supabaseBrowser } from '@/lib/supabase'
 import { useToast } from '@/components/ui/toast'
 import { Logo } from '@/components/ui/logo'
 import { NotificationsDropdown } from '@/components/ui/notifications'
-import { VersionSelector } from '@/components/ui/version-selector'
 import { ChangePasswordModal } from '@/components/forms/change-password-modal'
 
 interface TopbarProps {
@@ -91,18 +90,15 @@ export function Topbar({ user, onOpenMobileMenu }: TopbarProps) {
           </div>
         </div>
 
-                {/* Right side */}
-                <div className="flex items-center space-x-2 md:space-x-4">
-                  {/* Version Selector - Responsive: icon+badge en móvil, full en desktop */}
-                  <VersionSelector />
+        {/* Right side */}
+        <div className="flex items-center space-x-2 md:space-x-4">
+          {/* Logo - Hidden on mobile and tablet */}
+          <div className="hidden lg:flex items-center cursor-pointer" onClick={() => router.push('/home')}>
+            <Logo size="sm" />
+          </div>
 
-                  {/* Logo - Hidden on mobile and tablet */}
-                  <div className="hidden lg:flex items-center cursor-pointer" onClick={() => router.push('/home')}>
-                    <Logo size="sm" />
-                  </div>
-
-                  {/* Notifications */}
-                  <NotificationsDropdown />
+          {/* Notifications */}
+          <NotificationsDropdown />
 
           {/* User menu */}
           <DropdownMenu>

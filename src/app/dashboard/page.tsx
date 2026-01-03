@@ -5,34 +5,15 @@ import { useRouter } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import {
-  FolderOpen,
-  Gavel,
-  TrendingUp,
-  DollarSign,
-  Calendar,
-  Target,
-  CheckCircle2,
-  ArrowRight
-} from 'lucide-react'
+import { Gavel, DollarSign, Target, CheckCircle2, ArrowRight } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
-import { useVersion } from '@/contexts/version-context'
-import { mockDashboardData, mockChartData } from '@/lib/mock-data'
-import {
-  SpendByCategoryChart,
-  SpendDistributionChart,
-  MonthlyTrendChart,
-  ProjectEvolutionChart,
-  SavingsByProjectChart
-} from '@/components/ui/charts'
+import { SpendByCategoryChart, SpendDistributionChart, MonthlyTrendChart } from '@/components/ui/charts'
 
 interface DashboardMetrics {
-  totalProjects: number
-  activeProjects: number
   totalLicitaciones: number
   activeLicitaciones: number
   totalSpend: number
@@ -41,18 +22,6 @@ interface DashboardMetrics {
     category: string
     amount: number
     percentage: number
-  }>
-  recentProjects: Array<{
-    id: string
-    name: string
-    status: string
-    progress: number
-  }>
-  upcomingMilestones: Array<{
-    id: string
-    project: string
-    milestone: string
-    dueDate: string
   }>
   sourcingPlan?: {
     totalPlanned: number
@@ -67,7 +36,6 @@ interface DashboardMetrics {
 export default function DashboardPage() {
   const router = useRouter()
   const supabase = supabaseBrowser()
-  const { isMockup } = useVersion()
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<any>(null)
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
@@ -77,78 +45,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadDashboardData()
-  }, [isMockup])
-
-  // Función para generar datos de ahorros basados en proyectos reales
-  const generateSavingsData = (projects: any[]) => {
-    return projects.map(project => {
-      const budget = project.budget || 0
-      const spent = project.spent || 0
-      const savings = Math.max(0, budget - spent) // Ahorro = presupuesto - gastado
-
-      return {
-        project: project.name,
-        ahorro: savings,
-        presupuesto: budget
-      }
-    }).filter(item => item.presupuesto > 0) // Solo proyectos con presupuesto
-  }
+  }, [])
 
   const loadDashboardData = async () => {
     try {
       setLoading(true)
       setError(null)
-
-      // Si Supabase no está configurado, usar modo mockup
-      const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-      if (isMockup || !isSupabaseConfigured) {
-        // Use mock data
-        setUser({
-          name: 'Juan Pérez',
-          email: 'juan.perez@empresa.com',
-          role: 'admin'
-        })
-        setCompany({
-          id: 'company-1',
-          name: 'Perico los Palotes S.A.',
-          industry: 'Tecnología'
-        })
-
-        // Transform mock data to match interface
-        const mockMetrics: DashboardMetrics = {
-          totalProjects: mockDashboardData.projects.total,
-          activeProjects: mockDashboardData.projects.active,
-          totalLicitaciones: mockDashboardData.licitaciones.total,
-          activeLicitaciones: mockDashboardData.licitaciones.active,
-          totalSpend: mockDashboardData.spend.total,
-          monthlySpend: mockDashboardData.spend.thisMonth,
-          spendByCategory: mockDashboardData.spend.byCategory,
-          recentProjects: mockDashboardData.recentProjects.map(p => ({
-            id: p.id,
-            name: p.name,
-            status: p.status,
-            progress: p.progress
-          })),
-          upcomingMilestones: mockDashboardData.upcomingMilestones.map(m => ({
-            id: m.id,
-            project: m.projectName,
-            milestone: m.milestone,
-            dueDate: m.dueDate
-          })),
-          sourcingPlan: {
-            totalPlanned: 8,
-            inProgress: 3,
-            completed: 2,
-            totalProjectedSavings: 1250000000,
-            totalActualSavings: 980000000,
-            achievementRate: 78.4
-          }
-        }
-        setMetrics(mockMetrics)
-        setLoading(false)
-        return
-      }
 
       // Use real data from Supabase (asegurar sesión hidratada)
       let { data: { session } } = await supabase.auth.getSession()
@@ -173,41 +75,9 @@ export default function DashboardPage() {
         role: profile.role
       })
 
-      // ✅ Si es usuario demo sin empresa, usar datos mock directamente
+      // Si es usuario demo sin empresa, no hay datos que cargar: mostrar error
       if (profile.role === 'demo' && !profile.company_id) {
-        const demoMetrics: DashboardMetrics = {
-          totalProjects: mockDashboardData.projects.total,
-          activeProjects: mockDashboardData.projects.active,
-          totalLicitaciones: mockDashboardData.licitaciones.total,
-          activeLicitaciones: mockDashboardData.licitaciones.active,
-          totalSpend: mockDashboardData.spend.total,
-          monthlySpend: mockDashboardData.spend.thisMonth,
-          spendByCategory: mockDashboardData.spend.byCategory,
-          recentProjects: mockDashboardData.recentProjects.map(p => ({
-            id: p.id,
-            name: p.name,
-            status: p.status,
-            progress: p.progress
-          })),
-          upcomingMilestones: mockDashboardData.upcomingMilestones.map(m => ({
-            id: m.id,
-            project: m.projectName,
-            milestone: m.milestone,
-            dueDate: m.dueDate
-          })),
-          sourcingPlan: {
-            totalPlanned: 8,
-            inProgress: 3,
-            completed: 2,
-            totalProjectedSavings: 1250000000,
-            totalActualSavings: 980000000,
-            achievementRate: 78.4
-          }
-        }
-        setMetrics(demoMetrics)
-        setCompany({ name: 'Empresa Demo' } as any)
-        setLoading(false)
-        return
+        throw new Error('Perfil demo sin empresa asociada: no hay datos para mostrar')
       }
 
       if (profile.company_id) {
@@ -237,15 +107,6 @@ export default function DashboardPage() {
     if (!companyId) return
 
     try {
-      const { data: projects, error: projectsError } = await supabase
-        .from('projects')
-        .select('id, status')
-        .eq('company_id', companyId)
-      if (projectsError) throw projectsError
-
-      const totalProjects = projects?.length || 0
-      const activeProjects = projects?.filter(p => p.status === 'active').length || 0
-
       const { data: licitaciones, error: licitacionesError } = await supabase
         .from('licitaciones')
         .select('id, status')
@@ -282,45 +143,6 @@ export default function DashboardPage() {
         .sort((a, b) => b.amount - a.amount)
         .slice(0, 5)
 
-      const { data: recentProjects, error: recentProjectsError } = await supabase
-        .from('projects')
-        .select('id, name, status')
-        .eq('company_id', companyId)
-        .order('created_at', { ascending: false })
-        .limit(5)
-      if (recentProjectsError) throw recentProjectsError
-
-      const recentProjectsFormatted = recentProjects?.map(p => ({
-        id: p.id,
-        name: p.name,
-        status: p.status,
-        progress: Math.floor(Math.random() * 100)
-      })) || []
-
-      // ✅ CORREGIDO: Upcoming Milestones
-      const { data: milestones, error: milestonesError } = await supabase
-        .from('project_milestones')
-        .select(`
-          id,
-          name,
-          due_date,
-          project:projects!inner(name)
-        `)
-        .eq('projects.company_id', companyId)
-        .eq('completed', false)
-        .gte('due_date', new Date().toISOString().split('T')[0])
-        .order('due_date', { ascending: true })
-        .limit(5)
-
-      if (milestonesError) throw milestonesError
-
-      const upcomingMilestones = (milestones ?? []).map((m: any) => ({
-        id: m.id,
-        project: m.project?.name ?? '',
-        milestone: m.name,
-        dueDate: m.due_date
-      }))
-
       // Sourcing Plan metrics (current year)
       const currentYear = new Date().getFullYear()
       const { data: sourcingPlans, error: sourcingPlanError } = await supabase
@@ -349,15 +171,11 @@ export default function DashboardPage() {
       }
 
       setMetrics({
-        totalProjects,
-        activeProjects,
         totalLicitaciones,
         activeLicitaciones,
         totalSpend,
         monthlySpend,
         spendByCategory,
-        recentProjects: recentProjectsFormatted,
-        upcomingMilestones,
         sourcingPlan: sourcingPlanMetrics
       })
     } catch (err) {
@@ -407,26 +225,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Cards principales */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {/* Proyectos Activos - Turquoise */}
-          <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader
-              className="flex justify-between pb-2"
-              style={{ background: 'linear-gradient(to right, rgba(42, 212, 210, 0.15), rgba(42, 212, 210, 0.25))' }}
-            >
-              <CardTitle className="text-sm font-semibold" style={{ color: '#2D3E3D' }}>Proyectos Activos</CardTitle>
-              <div className="p-2 rounded-lg" style={{ backgroundColor: '#2AD4D2' }}>
-                <FolderOpen className="h-4 w-4" style={{ color: '#2D3E3D' }} />
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4" suppressHydrationWarning>
-              <div className="text-2xl font-bold" style={{ color: '#2AD4D2' }}>{metrics.activeProjects}</div>
-              <p className="text-xs text-slate-500">
-                de {metrics.totalProjects} proyectos totales
-              </p>
-            </CardContent>
-          </Card>
-
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {/* Licitaciones Activas - Mint */}
           <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader
@@ -465,24 +264,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Eficiencia */}
-          <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader
-              className="flex justify-between pb-2"
-              style={{ background: 'linear-gradient(to right, rgba(45, 62, 61, 0.1), rgba(45, 62, 61, 0.2))' }}
-            >
-              <CardTitle className="text-sm font-semibold" style={{ color: '#2D3E3D' }}>Eficiencia</CardTitle>
-              <div className="p-2 rounded-lg" style={{ backgroundColor: '#2D3E3D' }}>
-                <TrendingUp className="h-4 w-4 text-white" />
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4" suppressHydrationWarning>
-              <div className="text-2xl font-bold" style={{ color: '#2D3E3D' }}>
-                {metrics.totalProjects > 0 ? Math.round((metrics.activeProjects / metrics.totalProjects) * 100) : 0}%
-              </div>
-              <p className="text-xs text-slate-500">Proyectos activos</p>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Sourcing Plan del Año */}
@@ -559,36 +340,6 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {/* Próximos Hitos */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Próximos Hitos</CardTitle>
-            <CardDescription>Hitos importantes que se aproximan en los próximos días</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {metrics.upcomingMilestones.length > 0 ? (
-                metrics.upcomingMilestones.map((milestone) => (
-                  <div key={milestone.id} className="flex items-center space-x-4">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium">{milestone.milestone}</p>
-                      <p className="text-xs text-muted-foreground">{milestone.project}</p>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {new Date(milestone.dueDate).toLocaleDateString('es-ES')}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No hay hitos próximos
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Gráfico de gastos por categoría */}
@@ -610,36 +361,10 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Tendencia mensual */}
           <MonthlyTrendChart
-            data={isMockup ? mockChartData.monthlyTrend : []}
+            data={[]}
             title="Tendencia Mensual"
             description="Evolución de gastos y ahorros por mes"
           />
-
-          {/* Evolución de proyectos */}
-          <ProjectEvolutionChart
-            data={isMockup ? mockChartData.projectEvolution : []}
-            title="Evolución de Proyectos"
-            description="Cantidad de proyectos por estado a lo largo del tiempo"
-          />
-        </div>
-
-        {/* Gráfico de ahorros por proyecto */}
-        <div className="grid grid-cols-1 gap-6">
-          {(() => {
-            const savingsData = isMockup
-              ? mockChartData.savingsByProject
-              : generateSavingsData(metrics.recentProjects).length > 0
-                ? generateSavingsData(metrics.recentProjects)
-                : mockChartData.savingsByProject
-
-            return (
-              <SavingsByProjectChart
-                data={savingsData}
-                title="Ahorros por Proyecto"
-                description="Comparación entre presupuesto asignado y ahorros generados"
-              />
-            )
-          })()}
         </div>
       </div>
     </MainLayout>

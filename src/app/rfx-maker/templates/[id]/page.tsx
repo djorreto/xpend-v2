@@ -423,9 +423,9 @@ BASES ADMINISTRATIVAS
             <ul className="space-y-1 text-sm text-blue-800">
               <li>• Define variables con formato: {'{{'} nombre_variable {'}}'}</li>
               <li>• Cada variable debe tener una definición correspondiente abajo</li>
-              <li>• El "field_key" debe coincidir exactamente con el nombre en la plantilla</li>
+              <li>• El &quot;field_key&quot; debe coincidir exactamente con el nombre en la plantilla</li>
               <li>• Las variables se reemplazan automáticamente en cada proyecto</li>
-              <li>• Puedes agrupar variables relacionadas usando el campo "Grupo"</li>
+              <li>• Puedes agrupar variables relacionadas usando el campo &quot;Grupo&quot;</li>
             </ul>
           </CardContent>
         </Card>

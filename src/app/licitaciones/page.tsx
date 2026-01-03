@@ -20,13 +20,12 @@ import {
   TrendingDown,
   TrendingUp
 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
-import { useVersion } from '@/contexts/version-context'
-import { mockLicitacionesData } from '@/lib/mock-data'
 import type { Licitacion } from '@/types'
 
 const statusColors = {
@@ -60,46 +59,37 @@ const categoryLabels = {
   construction_project: 'Proyecto de construcción'
 }
 
+type PlanLink = {
+  plan_id: string
+  licitacion_id: string
+  plan?: {
+    id: string
+    title: string | null
+    plan_year: number | null
+    quarter: string | null
+  }
+}
+
 export default function LicitacionesPage() {
   const supabase = supabaseBrowser()
-  const { isMockup } = useVersion()
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<any>(null)
   const [licitaciones, setLicitaciones] = useState<Licitacion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [planLinks, setPlanLinks] = useState<Record<string, PlanLink[]>>({})
   const router = useRouter()
   const { addToast } = useToast()
 
   useEffect(() => {
     loadLicitaciones()
-  }, [isMockup])
+  }, [])
 
   const loadLicitaciones = async () => {
     try {
       setLoading(true)
       setError(null)
-
-      // Si Supabase no está configurado, usar modo mockup
-      const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-      if (isMockup || !isSupabaseConfigured) {
-        // Use mock data
-        setUser({
-          name: 'Juan Pérez',
-          email: 'juan.perez@empresa.com',
-          role: 'admin'
-        })
-        setCompany({
-          id: 'company-1',
-          name: 'Perico los Palotes S.A.',
-          industry: 'Tecnología'
-        })
-        setLicitaciones(mockLicitacionesData as Licitacion[])
-        setLoading(false)
-        return
-      }
 
       // 1) Asegurar que la sesión esté hidratada
       let { data: { session } } = await supabase.auth.getSession()
@@ -150,6 +140,23 @@ export default function LicitacionesPage() {
 
         if (licitacionesError) throw licitacionesError
         setLicitaciones(licitacionesData || [])
+
+        // Cargar asociaciones con iniciativas para chips
+        const licIds = (licitacionesData || []).map(l => l.id)
+        if (licIds.length) {
+          const { data: links } = await supabase
+            .from('sourcing_plan_licitaciones')
+            .select('plan_id, licitacion_id, plan:sourcing_plans(id, title, plan_year, quarter)')
+            .in('licitacion_id', licIds)
+          const grouped: Record<string, PlanLink[]> = {}
+          ;(links || []).forEach(link => {
+            if (!grouped[link.licitacion_id]) grouped[link.licitacion_id] = []
+            grouped[link.licitacion_id].push(link as PlanLink)
+          })
+          setPlanLinks(grouped)
+        } else {
+          setPlanLinks({})
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar licitaciones')
@@ -272,6 +279,7 @@ export default function LicitacionesPage() {
                     <th className="text-right p-4 font-medium">Adjudicado</th>
                     <th className="text-right p-4 font-medium">Ahorro</th>
                     <th className="text-left p-4 font-medium">Fechas</th>
+                    <th className="text-center p-4 font-medium">Iniciativas</th>
                     <th className="text-center p-4 font-medium">Acciones</th>
                   </tr>
                 </thead>
@@ -295,6 +303,19 @@ export default function LicitacionesPage() {
                               {licitacion.description}
                             </div>
                           )}
+                          {/* Chips de iniciativas */}
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {(planLinks[licitacion.id] || []).map(link => (
+                              <Badge
+                                key={link.plan_id}
+                                variant="outline"
+                                className="text-xs cursor-pointer"
+                                onClick={() => router.push(`/sourcing-plan/${link.plan_id}`)}
+                              >
+                                {link.plan?.title || link.plan_id} • {link.plan?.plan_year}-{link.plan?.quarter}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                       </td>
 
@@ -384,6 +405,9 @@ export default function LicitacionesPage() {
                           <span className="text-muted-foreground">-</span>
                         )}
                       </td>
+                      <td className="p-4 text-center">
+                        <Badge variant="outline">{(planLinks[licitacion.id] || []).length}</Badge>
+                      </td>
 
                       {/* Acciones */}
                       <td className="p-4">
@@ -402,15 +426,13 @@ export default function LicitacionesPage() {
                           >
                             <Edit className="h-3 w-3" />
                           </Button>
-                          {!isMockup && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteLicitacion(licitacion.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteLicitacion(licitacion.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
                       </td>
                     </tr>

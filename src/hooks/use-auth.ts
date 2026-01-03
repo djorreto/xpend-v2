@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { User } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { supabaseBrowser } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 interface AuthUser extends User {
@@ -17,6 +17,8 @@ export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  // Avoid recreating the client on every render
+  const supabase = useMemo(() => supabaseBrowser(), [])
 
   useEffect(() => {
     // Get initial session
@@ -43,7 +45,7 @@ export function useAuth() {
     )
 
     return () => subscription.unsubscribe()
-  }, [router])
+  }, [router, supabase])
 
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({

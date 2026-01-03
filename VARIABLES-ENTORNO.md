@@ -44,8 +44,7 @@ GROQ_API_KEY
 **Dónde obtenerlo:** https://console.groq.com/keys → Create API Key
 **Para qué se usa:**
 
-- Juan Xpendo (chat AI)
-- Sourcing Intelligence (clasificación automática)
+- Clasificación y generación de contenido (Sourcing Intelligence)
 - RFx Maker (generación de base técnica)
 
 ---

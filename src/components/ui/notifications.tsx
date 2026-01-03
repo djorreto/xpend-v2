@@ -10,7 +10,6 @@ import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { supabaseBrowser } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { useVersion } from '@/contexts/version-context'
 
 interface Notification {
   id: string
@@ -31,36 +30,6 @@ interface DbNotification {
   read: boolean
   created_at: string
 }
-
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'warning',
-    title: 'Hito próximo a vencer',
-    message: 'El hito "Análisis de Requerimientos" del proyecto "Modernización IT" vence en 2 días',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    read: false,
-    actionUrl: '/projects/1'
-  },
-  {
-    id: '2',
-    type: 'info',
-    title: 'Nueva licitación publicada',
-    message: 'Se ha publicado la licitación "Suministro de Equipos de Oficina" con fecha límite 15/01/2025',
-    timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    read: false,
-    actionUrl: '/licitaciones/1'
-  },
-  {
-    id: '3',
-    type: 'success',
-    title: 'Proyecto completado',
-    message: 'El proyecto "Optimización de Proveedores" ha sido marcado como completado',
-    timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-    read: true,
-    actionUrl: '/projects/2'
-  }
-]
 
 const notificationIcons = {
   info: Info,
@@ -83,7 +52,6 @@ interface NotificationsDropdownProps {
 export function NotificationsDropdown({ className }: NotificationsDropdownProps) {
   const supabase = supabaseBrowser()
   const router = useRouter()
-  const { isMockup } = useVersion()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -92,13 +60,6 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
 
   const loadNotifications = async () => {
     try {
-      // En modo mockup, usar datos mock
-      if (isMockup) {
-        setNotifications(mockNotifications)
-        setLoading(false)
-        return
-      }
-
       // Cargar notificaciones reales de Supabase
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) {
@@ -141,45 +102,28 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
   useEffect(() => {
     loadNotifications()
 
-    // Si no está en modo mockup, suscribirse a cambios en tiempo real
-    if (!isMockup) {
-      const channel = supabase
-        .channel('notifications')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'notifications',
-          },
-          (payload) => {
-            console.log('🔔 Notification change:', payload)
-            // Recargar notificaciones cuando hay cambios
-            loadNotifications()
-          }
-        )
-        .subscribe()
+    const channel = supabase
+      .channel('notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+        },
+        () => {
+          loadNotifications()
+        }
+      )
+      .subscribe()
 
-      return () => {
-        supabase.removeChannel(channel)
-      }
+    return () => {
+      supabase.removeChannel(channel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMockup])
+  }, [])
 
   const markAsRead = async (id: string) => {
-    if (isMockup) {
-      // En modo mockup, solo actualizar localmente
-      setNotifications(prev =>
-        prev.map(notification =>
-          notification.id === id
-            ? { ...notification, read: true }
-            : notification
-        )
-      )
-      return
-    }
-
     try {
       const { error } = await supabase.rpc('mark_notification_as_read', {
         p_notification_id: id
@@ -201,14 +145,6 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
   }
 
   const markAllAsRead = async () => {
-    if (isMockup) {
-      // En modo mockup, solo actualizar localmente
-      setNotifications(prev =>
-        prev.map(notification => ({ ...notification, read: true }))
-      )
-      return
-    }
-
     try {
       const { error } = await supabase.rpc('mark_all_notifications_as_read')
 
@@ -224,12 +160,6 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
   }
 
   const deleteNotification = async (id: string) => {
-    if (isMockup) {
-      // En modo mockup, solo actualizar localmente
-      setNotifications(prev => prev.filter(n => n.id !== id))
-      return
-    }
-
     try {
       const { error } = await supabase.rpc('delete_notification', {
         p_notification_id: id

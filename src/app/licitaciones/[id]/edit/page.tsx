@@ -145,6 +145,20 @@ export default function EditLicitacionPage() {
         if (!suppliersError && suppliersData) {
           setSuppliers(suppliersData)
         }
+
+      // Load sourcing plans (para asociar licitaciones)
+      const currentYear = new Date().getFullYear()
+      const { data: plansData, error: plansError } = await supabase
+        .from('sourcing_plans')
+        .select('id, title, plan_year, quarter, status, initiative_type')
+        .eq('company_id', profile.company_id)
+        .gte('plan_year', currentYear - 1)
+        .order('plan_year', { ascending: false })
+        .order('quarter', { ascending: true })
+
+      if (!plansError && plansData) {
+        setSourcingPlans(plansData)
+      }
       }
 
       // Fetch licitacion data
@@ -165,6 +179,15 @@ export default function EditLicitacionPage() {
 
       if (!licitacionSuppliersError && licitacionSuppliersData) {
         setSelectedSuppliers(licitacionSuppliersData.map(ls => ls.supplier_id))
+      }
+
+      // Load linked sourcing plans
+      const { data: planLinks } = await supabase
+        .from('sourcing_plan_licitaciones')
+        .select('plan_id')
+        .eq('licitacion_id', licitacionId)
+      if (planLinks) {
+        setSelectedPlans(planLinks.map(p => p.plan_id))
       }
 
       // Populate form with existing data
@@ -338,6 +361,20 @@ export default function EditLicitacionPage() {
         }
       }
 
+      // actualizar enlaces N:M: borrar y reinsertar
+      await supabase
+        .from('sourcing_plan_licitaciones')
+        .delete()
+        .eq('licitacion_id', licitacionId)
+
+      if (selectedPlans.length) {
+        const links = selectedPlans.map(planId => ({
+          plan_id: planId,
+          licitacion_id: licitacionId
+        }))
+        await supabase.from('sourcing_plan_licitaciones').insert(links)
+      }
+
       addToast({
         type: 'success',
         title: 'Licitación actualizada',
@@ -473,6 +510,57 @@ export default function EditLicitacionPage() {
                       <SelectItem value="construction_project">Proyecto de construcción</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Asociar a iniciativas del Sourcing Plan */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Iniciativas del Sourcing Plan</CardTitle>
+              <CardDescription>Selecciona una o varias iniciativas asociadas (opcional).</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Iniciativas</Label>
+                <div className="flex flex-col gap-2">
+                  <div className="grid gap-2">
+                    {sourcingPlans.map(plan => {
+                      const isSelected = selectedPlans.includes(plan.id)
+                      return (
+                        <button
+                          type="button"
+                          key={plan.id}
+                          className={cn(
+                            'flex items-center justify-between rounded-lg border px-3 py-2 text-left transition',
+                            isSelected ? 'border-primary bg-primary/5' : 'border-muted'
+                          )}
+                          onClick={() => {
+                            setSelectedPlans(prev =>
+                              isSelected ? prev.filter(id => id !== plan.id) : [...prev, plan.id]
+                            )
+                          }}
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-sm font-semibold">{plan.title}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {plan.plan_year} - {plan.quarter} • {plan.initiative_type}
+                            </span>
+                          </div>
+                          <div
+                            className={cn(
+                              'h-2 w-2 rounded-full',
+                              isSelected ? 'bg-primary' : 'bg-muted-foreground/40'
+                            )}
+                          />
+                        </button>
+                      )
+                    })}
+                    {sourcingPlans.length === 0 && (
+                      <p className="text-sm text-muted-foreground">No hay iniciativas disponibles.</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>

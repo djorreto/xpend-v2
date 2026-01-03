@@ -115,7 +115,7 @@ export async function generateAnaResponse(userMessage: string, conversationHisto
       system: ANA_SYSTEM_PROMPT,
       prompt: `${conversationHistory}\n\nUsuario: ${userMessage}\n\nANA:`,
       temperature: 0.7,
-      maxTokens: 800, // Reducido para respuestas más concisas
+      maxOutputTokens: 800, // Reducido para respuestas más concisas
     })
 
     return text
@@ -135,7 +135,7 @@ export async function streamAnaResponse(userMessage: string, conversationHistory
       system: ANA_SYSTEM_PROMPT,
       prompt: `${conversationHistory}\n\nUsuario: ${userMessage}\n\nANA:`,
       temperature: 0.7,
-      maxTokens: 800, // Reducido para respuestas más concisas
+      maxOutputTokens: 800, // Reducido para respuestas más concisas
     })
 
     return result
@@ -190,7 +190,7 @@ RESPONDE EN ESTE FORMATO:
       system: ANA_SYSTEM_PROMPT,
       prompt,
       temperature: 0.5, // Más determinístico para análisis
-      maxTokens: 1200, // Más conciso
+      maxOutputTokens: 1200, // Más conciso
     })
 
     return text

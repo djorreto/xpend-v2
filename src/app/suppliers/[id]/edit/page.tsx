@@ -10,9 +10,9 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { 
-  ArrowLeft, 
-  Save, 
+import {
+  ArrowLeft,
+  Save,
   Building2,
   User,
   Mail,
@@ -20,12 +20,10 @@ import {
   Globe,
   FileText
 } from 'lucide-react'
-import { useVersion } from '@/contexts/version-context'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
-import { mockSuppliersData } from '@/lib/mock-data'
 import type { Supplier, UpdateSupplierData, ServiceType } from '@/types'
 
 const serviceTypeLabels: Record<ServiceType, string> = {
@@ -43,7 +41,6 @@ const serviceTypeLabels: Record<ServiceType, string> = {
 export default function EditSupplierPage() {
   const router = useRouter()
   const params = useParams()
-  const { isMockup } = useVersion()
   const { addToast } = useToast()
 
   const [user, setUser] = useState<any>(null)
@@ -63,24 +60,9 @@ export default function EditSupplierPage() {
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        if (isMockup) {
-          // Use demo data in mockup mode
-          setUser({
-            id: '550e8400-e29b-41d4-a716-446655440001',
-            name: 'Usuario Demo',
-            email: 'demo@xpend.cl',
-            role: 'admin'
-          })
-          setCompany({
-            id: '550e8400-e29b-41d4-a716-446655440000',
-            name: 'Xpend'
-          })
-          return
-        }
-
         // In functional mode, load real user data
         const supabase = supabaseBrowser()
-        
+
         // Get current user
         const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
         if (userError || !authUser) {
@@ -126,44 +108,19 @@ export default function EditSupplierPage() {
     }
 
     loadUserData()
-  }, [isMockup])
+  }, [])
 
   useEffect(() => {
     loadSupplier()
-  }, [supplierId, isMockup])
+  }, [supplierId])
 
   const loadSupplier = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      if (isMockup) {
-        // Find supplier in mock data
-        const foundSupplier = mockSuppliersData.find(s => s.id === supplierId)
-        if (!foundSupplier) {
-          throw new Error('Proveedor no encontrado')
-        }
-
-        setSupplier(foundSupplier as Supplier)
-        setFormData({
-          fantasy_name: foundSupplier.fantasy_name,
-          legal_name: foundSupplier.legal_name,
-          rut: foundSupplier.rut,
-          service_type: foundSupplier.service_type as ServiceType,
-          contact_name: foundSupplier.contact_name || '',
-          contact_email: foundSupplier.contact_email || '',
-          contact_phone: foundSupplier.contact_phone || '',
-          website: foundSupplier.website || '',
-          comments: foundSupplier.comments || '',
-          is_active: foundSupplier.is_active
-        })
-        setNdaSigned(foundSupplier.nda_signed)
-        return
-      }
-
-      // Functional mode: load from Supabase
       const supabase = supabaseBrowser()
-      
+
       const { data: supplierData, error: supplierError } = await supabase
         .from('suppliers')
         .select('*')
@@ -276,18 +233,6 @@ export default function EditSupplierPage() {
     setSaving(true)
 
     try {
-      // Mockup mode: simulate update
-      if (isMockup) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        addToast({
-          type: 'success',
-          title: 'Proveedor actualizado',
-          message: 'El proveedor ha sido actualizado correctamente (modo demo)'
-        })
-        router.push(`/suppliers/${supplierId}`)
-        return
-      }
-
       // Functional mode: update in Supabase
       const supabase = supabaseBrowser()
 
@@ -303,7 +248,7 @@ export default function EditSupplierPage() {
       if (ndaFile) {
         const fileExt = ndaFile.name.split('.').pop()
         const fileName = `${supplierId}-nda.${fileExt}`
-        
+
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('supplier-documents')
           .upload(fileName, ndaFile, { upsert: true })

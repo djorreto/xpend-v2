@@ -277,7 +277,7 @@ export default function LearningRulesPage() {
                         </div>
                         <div className="space-y-1">
                           <p className="font-medium">
-                            Patrón: <span className="text-muted-foreground">"{rule.pattern}"</span>
+                            Patrón: <span className="text-muted-foreground">&quot;{rule.pattern}&quot;</span>
                           </p>
                           <p className="text-sm">
                             Categoría: <Badge variant="outline">{rule.category}</Badge>

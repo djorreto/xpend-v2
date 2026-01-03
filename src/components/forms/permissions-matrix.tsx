@@ -49,12 +49,6 @@ const defaultPermissions: Permission[] = [
   { id: 'licitaciones_edit', name: 'Editar Licitaciones', description: 'Modificar licitaciones existentes', category: 'Licitaciones' },
   { id: 'licitaciones_delete', name: 'Eliminar Licitaciones', description: 'Eliminar licitaciones', category: 'Licitaciones' },
 
-  // Proyectos
-  { id: 'projects_view', name: 'Ver Proyectos', description: 'Ver lista de proyectos', category: 'Proyectos' },
-  { id: 'projects_create', name: 'Crear Proyectos', description: 'Crear nuevos proyectos', category: 'Proyectos' },
-  { id: 'projects_edit', name: 'Editar Proyectos', description: 'Modificar proyectos existentes', category: 'Proyectos' },
-  { id: 'projects_delete', name: 'Eliminar Proyectos', description: 'Eliminar proyectos', category: 'Proyectos' },
-
   // Proveedores
   { id: 'suppliers_view', name: 'Ver Proveedores', description: 'Ver lista de proveedores', category: 'Proveedores' },
   { id: 'suppliers_create', name: 'Crear Proveedores', description: 'Crear nuevos proveedores', category: 'Proveedores' },
@@ -83,7 +77,6 @@ const defaultRolePermissions: Record<string, string[]> = {
     'dashboard_view',
     'sourcing_plan_view', 'sourcing_plan_create', 'sourcing_plan_edit', 'sourcing_plan_export',
     'licitaciones_view', 'licitaciones_create', 'licitaciones_edit',
-    'projects_view', 'projects_create', 'projects_edit',
     'suppliers_view', 'suppliers_create', 'suppliers_edit',
     'reports_view', 'reports_export',
     'users_view', 'users_create', 'users_edit',
@@ -93,7 +86,6 @@ const defaultRolePermissions: Record<string, string[]> = {
     'dashboard_view',
     'sourcing_plan_view', 'sourcing_plan_create', 'sourcing_plan_edit',
     'licitaciones_view', 'licitaciones_create', 'licitaciones_edit',
-    'projects_view', 'projects_create', 'projects_edit',
     'suppliers_view', 'suppliers_create', 'suppliers_edit',
     'reports_view', 'reports_export'
   ],
@@ -101,15 +93,27 @@ const defaultRolePermissions: Record<string, string[]> = {
     'dashboard_view',
     'sourcing_plan_view',
     'licitaciones_view',
-    'projects_view',
     'suppliers_view',
     'reports_view'
   ]
 }
 
+const defaultRolePermissionsMap: Record<string, Record<string, boolean>> = Object.fromEntries(
+  Object.entries(defaultRolePermissions).map(([role, perms]) => [
+    role,
+    perms.reduce(
+      (acc, perm) => {
+        acc[perm] = true
+        return acc
+      },
+      {} as Record<string, boolean>
+    )
+  ])
+)
+
 export function PermissionsMatrix({ companyId }: PermissionsMatrixProps) {
   const [permissions, setPermissions] = useState<Permission[]>(defaultPermissions)
-  const [rolePermissions, setRolePermissions] = useState<Record<string, Record<string, boolean>>>({})
+  const [rolePermissions, setRolePermissions] = useState<Record<string, Record<string, boolean>>>(defaultRolePermissionsMap)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const { addToast } = useToast()
@@ -151,14 +155,14 @@ export function PermissionsMatrix({ companyId }: PermissionsMatrixProps) {
         })
       } else {
         // Usar permisos por defecto
-        currentRolePermissions = defaultRolePermissions
+        currentRolePermissions = defaultRolePermissionsMap
       }
 
       setRolePermissions(currentRolePermissions)
     } catch (err) {
       console.error('Error loading permissions:', err)
       // Usar permisos por defecto en caso de error
-      setRolePermissions(defaultRolePermissions)
+      setRolePermissions(defaultRolePermissionsMap)
     } finally {
       setLoading(false)
     }
@@ -222,7 +226,7 @@ export function PermissionsMatrix({ companyId }: PermissionsMatrixProps) {
   }
 
   const getCategories = () => {
-    const categories = [...new Set(permissions.map(p => p.category))]
+    const categories = Array.from(new Set(permissions.map(p => p.category)))
     return categories.sort()
   }
 

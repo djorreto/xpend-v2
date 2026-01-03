@@ -289,7 +289,7 @@ export default function UploadPage() {
                     <li>Los campos con <strong>*</strong> son obligatorios (Descripción y Monto)</li>
                     <li>Verifica que cada campo esté mapeado a la columna correcta de tu Excel</li>
                     <li>Si algo está mal, usa el dropdown para cambiar la columna</li>
-                    <li>Los campos opcionales puedes dejarlos en "Sin mapear"</li>
+                    <li>Los campos opcionales puedes dejarlos en &quot;Sin mapear&quot;</li>
                   </ul>
                 </div>
               </div>

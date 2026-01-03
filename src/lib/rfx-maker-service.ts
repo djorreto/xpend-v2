@@ -1,5 +1,5 @@
 // Service for RFx Maker operations
-import { supabaseBrowser } from './supabase-client'
+import { supabaseBrowser } from '@/lib/supabase'
 import type {
   RfxProject,
   RfxTemplate,

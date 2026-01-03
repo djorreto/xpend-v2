@@ -12,16 +12,6 @@ const nextConfig = {
       },
     ],
   },
-
-  // 👇 Agregamos esto para que Vercel no falle por ESLint en build
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  
-  // 👇 Ignorar errores de TypeScript en build (para deployment rápido)
-  typescript: {
-    ignoreBuildErrors: true,
-  },
 }
 
 module.exports = nextConfig

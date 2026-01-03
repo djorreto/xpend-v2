@@ -24,17 +24,19 @@ import {
   X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { VersionSelector } from '@/components/ui/version-selector'
+import { Receipt } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Sourcing Intelligence', href: '/sourcing-intelligence', icon: Brain },
   { name: 'Sourcing Plan', href: '/sourcing-plan', icon: Target },
   { name: 'RFx Maker', href: '/rfx-maker', icon: FileEdit },
-  { name: 'Proyectos', href: '/projects', icon: FolderOpen },
   { name: 'Licitaciones', href: '/licitaciones', icon: Gavel },
   { name: 'Proveedores', href: '/suppliers', icon: Truck },
   { name: 'Spend Analysis', href: '/spend', icon: TrendingUp },
   { name: 'Reportes', href: '/reports', icon: BarChart3 },
+  { name: 'Facturas', href: '/invoices', icon: Receipt },
   { name: 'Usuarios', href: '/users', icon: Users },
   { name: 'Configuración', href: '/settings', icon: Settings },
 ]
@@ -116,25 +118,8 @@ export function Sidebar({ companyName, userRole, mobileMenuOpen = false, onClose
         suppressHydrationWarning
       >
         {!collapsed && (
-          <div className="flex items-center space-x-3 min-w-0">
-            <div
-              className="p-2 rounded-lg shadow-sm flex-shrink-0"
-              style={{ backgroundColor: '#2AD4D2' }}
-            >
-              <Building2 className="h-6 w-6" style={{ color: '#2D3E3D' }} />
-            </div>
-            <div className="min-w-0 flex-1 overflow-hidden" suppressHydrationWarning>
-              <h1
-                className={cn(
-                  "text-sm font-bold text-white leading-tight line-clamp-2",
-                  !effectiveCompanyName && "h-5 w-32 bg-white/10 rounded animate-pulse"
-                )}
-                title={effectiveCompanyName || ''}
-                suppressHydrationWarning
-              >
-                {effectiveCompanyName || '\u00A0'}
-              </h1>
-            </div>
+          <div className="flex-1 mr-2">
+            <VersionSelector tone="sidebar" fullWidth />
           </div>
         )}
         {/* Mobile: Close button, Desktop: Collapse button */}

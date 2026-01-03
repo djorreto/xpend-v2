@@ -14,6 +14,12 @@ const workSans = Work_Sans({
 export const metadata: Metadata = {
   title: 'Xpend - Del control operativo a la gestión estratégica del procurement',
   description: 'Xpend potencia el Procurement Performance conectando gasto, planificación y ejecución. Del control operativo a la gestión estratégica del procurement.',
+  icons: [
+    { rel: 'icon', url: '/favicon.svg' },
+    { rel: 'apple-touch-icon', url: '/favicon.svg' }
+  ],
+  themeColor: '#F7D047',
+  applicationName: 'Xpend',
   robots: {
     index: false,
     follow: false,
