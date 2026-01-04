@@ -345,6 +345,9 @@ export default function UsersPage() {
                   ...selectedUser,
                   role: selectedUser.role || 'user',
                   avatar_url: selectedUser.avatar_url || '',
+                  phone: selectedUser.phone || '',
+                  position: selectedUser.position || '',
+                  department: selectedUser.department || '',
                   company_roles: selectedUser.company_roles || []
                 }
               : null
