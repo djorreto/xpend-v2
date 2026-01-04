@@ -143,7 +143,14 @@ export default function UsersPage() {
           .order('created_at', { ascending: false })
 
         if (usersError) throw usersError
-        setUsers(usersData || [])
+        const normalized = (usersData || []).map(u => ({
+          ...u,
+          company_roles: (u.company_roles || []).map((cr: any) => ({
+            role: cr.role,
+            company: Array.isArray(cr.company) ? cr.company[0] : cr.company
+          }))
+        }))
+        setUsers(normalized)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar usuarios')
