@@ -587,24 +587,49 @@ export default function NewLicitacionPage() {
                 </div>
               </div>
 
-              {/* Sourcing Plan */}
-              <div className="space-y-2">
-                <Label htmlFor="sourcing_plan_id">Iniciativa del Sourcing Plan (Opcional)</Label>
-                <Select value={formData.sourcing_plan_id} onValueChange={(value) => handleInputChange('sourcing_plan_id', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona una iniciativa del plan..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sin asociar</SelectItem>
-                    {sourcingPlans.map((plan) => (
-                      <SelectItem key={plan.id} value={plan.id}>
-                        {plan.title} ({plan.plan_year} {plan.quarter})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Sourcing Plan (multi) */}
+              <div className="space-y-3">
+                <Label>Iniciativas del Sourcing Plan (opcional, puedes elegir varias)</Label>
+                <div className="grid gap-2">
+                  {sourcingPlans.map(plan => {
+                    const isSelected = selectedPlans.includes(plan.id)
+                    return (
+                      <button
+                        type="button"
+                        key={plan.id}
+                        className={cn(
+                          'flex items-center justify-between rounded-lg border px-3 py-2 text-left transition',
+                          isSelected ? 'border-primary bg-primary/5' : 'border-muted'
+                        )}
+                        onClick={() => {
+                          setSelectedPlans(prev =>
+                            isSelected ? prev.filter(id => id !== plan.id) : [...prev, plan.id]
+                          )
+                        }}
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold">{plan.title}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {plan.plan_year} - {plan.quarter} • {plan.initiative_type}
+                          </span>
+                        </div>
+                        <div
+                          className={cn(
+                            'h-2 w-2 rounded-full',
+                            isSelected ? 'bg-primary' : 'bg-muted-foreground/40'
+                          )}
+                        />
+                      </button>
+                    )
+                  })}
+                  {sourcingPlans.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No hay iniciativas disponibles. Crea iniciativas en Sourcing Plan.
+                    </p>
+                  )}
+                </div>
                 <p className="text-sm text-muted-foreground">
-                  Vincula esta licitación con una iniciativa del Sourcing Plan para seguimiento de ahorros
+                  Vincula esta licitación con iniciativas del Sourcing Plan para seguimiento de ahorros.
                 </p>
               </div>
             </CardContent>
