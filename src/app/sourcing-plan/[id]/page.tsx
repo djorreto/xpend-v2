@@ -152,7 +152,15 @@ export default function SourcingPlanDetailPage() {
           `)
           .eq('plan_id', planId)
 
-        setLinkedLicitaciones((linkData || []) as SPLLink[])
+        const normalizedLinks: SPLLink[] = (linkData || []).map(link => {
+          const licInfo = Array.isArray(link.licitacion) ? link.licitacion[0] : link.licitacion
+          return {
+            plan_id: link.plan_id,
+            licitacion_id: link.licitacion_id,
+            licitacion: licInfo
+          }
+        })
+        setLinkedLicitaciones(normalizedLinks)
 
         // Calcular total de facturas de las licitaciones vinculadas
         const licIds = (linkData || []).map(l => l.licitacion_id)
