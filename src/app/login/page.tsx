@@ -113,6 +113,7 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            autoComplete="username"
           />
 
           <input
@@ -122,6 +123,7 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            autoComplete="current-password"
           />
 
           <button
@@ -133,6 +135,10 @@ export default function LoginPage() {
           </button>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
+
+          <p className="text-sm text-center">
+            <a href="/reset-password" className="underline">¿Olvidaste tu contraseña?</a>
+          </p>
 
           {/* Botón temporal para crear usuario de prueba */}
           <button

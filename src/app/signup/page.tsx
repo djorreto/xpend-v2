@@ -6,10 +6,11 @@ import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Building2, Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Building2, Mail, Lock, User, Eye, EyeOff, Loader2, ShieldCheck, Tag } from 'lucide-react'
 import { supabaseBrowser } from '@/lib/supabase'
 import { useToast } from '@/components/ui/toast'
 import { Logo } from '@/components/ui/logo'
+import { isValidRut, formatRut } from '@/lib/rut-utils'
 
 export default function SignupPage() {
   const supabase = supabaseBrowser()
@@ -17,7 +18,9 @@ export default function SignupPage() {
     email: '',
     password: '',
     fullName: '',
-    companyName: ''
+    companyName: '',
+    companyRut: '',
+    companyCategory: ''
   })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -40,11 +43,43 @@ export default function SignupPage() {
     setLoading(true)
 
     try {
-      // First, create the company
+      const rutClean = formData.companyRut.trim()
+      if (!isValidRut(rutClean)) {
+        addToast({ type: 'error', title: 'RUT inválido', message: 'Formato esperado 12345678-9' })
+        setLoading(false)
+        return
+      }
+
+      // Buscar si existe empresa con este RUT
+      const { data: existing, error: findError } = await supabase
+        .from('companies')
+        .select('id, name, tax_id')
+        .eq('tax_id', rutClean)
+        .single()
+
+      if (findError && findError.code !== 'PGRST116') {
+        addToast({ type: 'error', title: 'Error', message: 'No se pudo validar el RUT' })
+        setLoading(false)
+        return
+      }
+
+      if (existing?.id) {
+        addToast({
+          type: 'error',
+          title: 'Empresa ya existe',
+          message: 'Por favor contactar al administrador de la empresa.'
+        })
+        setLoading(false)
+        return
+      }
+
+      // Crear la empresa
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .insert({
           name: formData.companyName,
+          tax_id: rutClean,
+          category: formData.companyCategory || 'Sin categoría',
           description: `Empresa de ${formData.fullName}`,
           settings: {
             timezone: 'America/Mexico_City',
@@ -164,6 +199,25 @@ export default function SignupPage() {
               </div>
 
               <div className="space-y-2">
+                <label htmlFor="companyCategory" className="text-sm font-medium">
+                  Categoría de la Empresa
+                </label>
+                <div className="relative">
+                  <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="companyCategory"
+                    type="text"
+                    placeholder="Industria o categoría"
+                    value={formData.companyCategory}
+                    onChange={(e) => handleInputChange('companyCategory', e.target.value)}
+                    className="pl-10"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <label htmlFor="companyName" className="text-sm font-medium">
                   Nombre de la Empresa
                 </label>
@@ -179,6 +233,30 @@ export default function SignupPage() {
                     required
                     disabled={loading}
                   />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="companyRut" className="text-sm font-medium">
+                  RUT de la Empresa
+                </label>
+                <div className="relative">
+                  <ShieldCheck className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="companyRut"
+                    type="text"
+                    placeholder="12345678-9"
+                    value={formData.companyRut}
+                    onChange={(e) => handleInputChange('companyRut', e.target.value)}
+                    className="pl-10"
+                    required
+                    disabled={loading}
+                  />
+                  {formData.companyRut && isValidRut(formData.companyRut) && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Formato: {formatRut(formData.companyRut)}
+                    </p>
+                  )}
                 </div>
               </div>
 

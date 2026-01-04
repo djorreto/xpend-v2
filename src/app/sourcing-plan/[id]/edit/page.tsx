@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ArrowLeft, Save, Trash2 } from 'lucide-react'
+import { useVersion } from '@/contexts/version-context'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
@@ -21,6 +22,7 @@ export default function EditSourcingPlanPage() {
   const router = useRouter()
   const params = useParams()
   const planId = params.id as string
+  const { isMockup } = useVersion()
   const { addToast } = useToast()
 
   const [user, setUser] = useState<any>(null)
@@ -49,12 +51,50 @@ export default function EditSourcingPlanPage() {
 
   useEffect(() => {
     loadPlan()
-  }, [planId])
+  }, [planId, isMockup])
 
   const loadPlan = async () => {
     try {
       setLoading(true)
       setError(null)
+
+      const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      if (isMockup || !isSupabaseConfigured) {
+        // Modo mockup
+        setUser({
+          name: 'Usuario Demo',
+          email: 'demo@xpend.cl',
+          role: 'admin'
+        })
+        setCompany({
+          name: 'Xpend Demo',
+          id: 'company-1'
+        })
+
+        const mockPlan = mockSourcingPlansData.find(p => p.id === planId)
+        if (!mockPlan) throw new Error('Iniciativa no encontrada')
+
+        setFormData({
+          plan_year: mockPlan.plan_year,
+          quarter: mockPlan.quarter as any,
+          title: mockPlan.title,
+          description: mockPlan.description || '',
+          category: mockPlan.category || '',
+          initiative_type: mockPlan.initiative_type as any,
+          estimated_spend: mockPlan.estimated_spend.toString(),
+          actual_spend: mockPlan.actual_spend?.toString() || '',
+          currency: mockPlan.currency,
+          projected_savings_percentage: mockPlan.projected_savings_percentage?.toString() || '',
+          actual_savings_percentage: mockPlan.actual_savings_percentage?.toString() || '',
+          status: mockPlan.status as any,
+          is_spot: mockPlan.is_spot,
+          notes: mockPlan.notes || ''
+        })
+
+        setLoading(false)
+        return
+      }
 
       // Modo funcional con Supabase
       const supabase = supabaseBrowser()
@@ -161,6 +201,22 @@ export default function EditSourcingPlanPage() {
       const actualSavingsAmount = actualSavingsPercentage && actualSpend
         ? (actualSpend * actualSavingsPercentage) / 100
         : null
+
+      const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      if (isMockup || !isSupabaseConfigured) {
+        // Modo mockup - simular guardado
+        await new Promise(resolve => setTimeout(resolve, 1000))
+
+        addToast({
+          type: 'success',
+          title: 'Iniciativa actualizada',
+          message: `${formData.title} se actualizó exitosamente`
+        })
+
+        router.push(`/sourcing-plan/${planId}`)
+        return
+      }
 
       // Modo funcional con Supabase
       const supabase = supabaseBrowser()

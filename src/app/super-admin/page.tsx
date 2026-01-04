@@ -37,15 +37,17 @@ import {
 import { supabaseBrowser } from '@/lib/supabase'
 import { useToast } from '@/components/ui/toast'
 import { LoadingSpinner } from '@/components/ui/loading'
+import { formatRut, cleanRut, isValidRut } from '@/lib/rut-utils'
 
 interface Company {
   id: string
   name: string
-  industry: string
+  industry?: string | null
   tax_id: string
   is_active?: boolean
   created_at: string
   users_count?: number
+  category?: string | null
 }
 
 interface SuperAdminUser {
@@ -55,6 +57,7 @@ interface SuperAdminUser {
   role: string
   company_id: string
   company_name?: string
+  company_tax_id?: string | null
   is_active?: boolean
   must_change_password: boolean
   created_at: string
@@ -72,6 +75,15 @@ export default function SuperAdminPage() {
   const [searchCompany, setSearchCompany] = useState('')
   const [searchUser, setSearchUser] = useState('')
   const [activeTab, setActiveTab] = useState('companies')
+  const [taxIdStatus, setTaxIdStatus] = useState<{ type: 'error' | 'success' | null; message: string }>({ type: null, message: '' })
+
+  const buildHyphenRut = (cleaned: string) => {
+    if (!cleaned) return ''
+    if (cleaned.length < 2) return cleaned
+    const body = cleaned.slice(0, -1)
+    const dv = cleaned.slice(-1)
+    return `${body}-${dv}`
+  }
 
   // Modal states for company editing
   const [editCompanyModalOpen, setEditCompanyModalOpen] = useState(false)
@@ -80,6 +92,7 @@ export default function SuperAdminPage() {
     name: '',
     industry: '',
     tax_id: '',
+    category: ''
   })
 
   // Form states for new company
@@ -87,6 +100,7 @@ export default function SuperAdminPage() {
     name: '',
     industry: '',
     tax_id: '',
+    category: ''
   })
 
   // Modal states for user editing
@@ -111,6 +125,44 @@ export default function SuperAdminPage() {
   useEffect(() => {
     checkSuperAdminAccess()
   }, [])
+
+  // Validación en vivo del RUT de nueva empresa (form create)
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      const raw = newCompany.tax_id
+      if (!raw) {
+        if (!cancelled) setTaxIdStatus({ type: null, message: '' })
+        return
+      }
+      const cleaned = cleanRut(raw)
+      if (!isValidRut(cleaned)) {
+        if (!cancelled) setTaxIdStatus({ type: 'error', message: 'RUT inválido' })
+        return
+      }
+      const cleanedWithHyphen = buildHyphenRut(cleaned)
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id')
+        .or(`tax_id.eq.${cleaned},tax_id.eq.${cleanedWithHyphen}`)
+        .maybeSingle()
+      if (cancelled) return
+      if (error) {
+        setTaxIdStatus({ type: 'error', message: 'Error al validar RUT' })
+        return
+      }
+      if (data) {
+        setTaxIdStatus({ type: 'error', message: 'Este RUT ya está registrado' })
+      } else {
+        setTaxIdStatus({ type: 'success', message: 'RUT válido y disponible' })
+      }
+    }
+    const t = setTimeout(run, 300)
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [newCompany.tax_id, supabase])
 
   const checkSuperAdminAccess = async () => {
     try {
@@ -174,9 +226,8 @@ export default function SuperAdminPage() {
               .select(`
                 id,
                 name,
-                industry,
                 tax_id,
-                is_active,
+                category,
                 created_at
               `)
               .order('created_at', { ascending: false })
@@ -226,45 +277,32 @@ export default function SuperAdminPage() {
 
   const loadUsers = async () => {
     try {
-            const { data, error } = await supabase
-              .from('profiles')
-              .select(`
-                id,
-                email,
-                full_name,
-                role,
-                company_id,
-                is_active,
-                must_change_password,
-                created_at
-              `)
-              .order('created_at', { ascending: false })
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          email,
+          full_name,
+          role,
+          company_id,
+          must_change_password,
+          created_at,
+          companies (
+            name,
+            tax_id
+          )
+        `)
+        .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      // Get company names
-      const usersWithCompany = await Promise.all(
-        (data || []).map(async (user) => {
-          if (user.company_id) {
-            const { data: company } = await supabase
-              .from('companies')
-              .select('name')
-              .eq('id', user.company_id)
-              .single()
+      const usersWithCompany = (data || []).map(user => ({
+        ...user,
+        company_name: (user as any).companies?.name || 'Sin empresa',
+        company_tax_id: (user as any).companies?.tax_id || null
+      }))
 
-            return {
-              ...user,
-              company_name: company?.name || 'Sin empresa'
-            }
-          }
-          return {
-            ...user,
-            company_name: 'Sin empresa'
-          }
-        })
-      )
-
-      setUsers(usersWithCompany)
+      setUsers(usersWithCompany as any)
     } catch (error) {
       console.error('Error loading users:', error)
       addToast({
@@ -278,12 +316,36 @@ export default function SuperAdminPage() {
   const handleCreateCompany = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      // Validar RUT
+      const cleanedTaxId = cleanRut(newCompany.tax_id || '')
+      if (!cleanedTaxId || !isValidRut(cleanedTaxId)) {
+        addToast({ type: 'error', title: 'RUT inválido', message: 'Ingresa un RUT válido' })
+        return
+      }
+
+      const cleanedWithHyphen = buildHyphenRut(cleanedTaxId)
+
+      // Chequear duplicado
+      const { data: existing, error: existingError } = await supabase
+        .from('companies')
+        .select('id')
+        .or(`tax_id.eq.${cleanedTaxId},tax_id.eq.${cleanedWithHyphen}`)
+        .maybeSingle()
+
+      if (existingError) throw existingError
+      if (existing) {
+        addToast({ type: 'error', title: 'RUT duplicado', message: 'Ya existe una empresa con este RUT.' })
+        return
+      }
+
+      // Insertar (industria opcional, no guardamos si la columna no existe en DB)
       const { error } = await supabase
         .from('companies')
         .insert({
           name: newCompany.name,
-          industry: newCompany.industry,
-          tax_id: newCompany.tax_id,
+          tax_id: cleanedTaxId,
+          category: newCompany.category || null,
+          industry: newCompany.industry || null,
         })
 
       if (error) throw error
@@ -295,7 +357,7 @@ export default function SuperAdminPage() {
       })
 
       // Reset form
-      setNewCompany({ name: '', industry: '', tax_id: '' })
+      setNewCompany({ name: '', industry: '', tax_id: '', category: '' })
       await loadCompanies()
     } catch (error) {
       console.error('Error creating company:', error)
@@ -313,6 +375,7 @@ export default function SuperAdminPage() {
       name: company.name,
       industry: company.industry,
       tax_id: company.tax_id,
+      category: company.category || '',
     })
     setEditCompanyModalOpen(true)
   }
@@ -322,12 +385,34 @@ export default function SuperAdminPage() {
     if (!selectedCompany) return
 
     try {
+      const cleanedTaxId = cleanRut(editCompanyForm.tax_id || '')
+      if (!cleanedTaxId || !isValidRut(cleanedTaxId)) {
+        addToast({ type: 'error', title: 'RUT inválido', message: 'Ingresa un RUT válido' })
+        return
+      }
+
+      const cleanedWithHyphen = buildHyphenRut(cleanedTaxId)
+
+      // Validar duplicado (excluyendo la misma empresa)
+      const { data: existing, error: existingError } = await supabase
+        .from('companies')
+        .select('id')
+        .or(`tax_id.eq.${cleanedTaxId},tax_id.eq.${cleanedWithHyphen}`)
+        .neq('id', selectedCompany.id)
+        .maybeSingle()
+
+      if (existingError) throw existingError
+      if (existing) {
+        addToast({ type: 'error', title: 'RUT duplicado', message: 'Ya existe otra empresa con este RUT.' })
+        return
+      }
+
       const { error } = await supabase
         .from('companies')
         .update({
           name: editCompanyForm.name,
-          industry: editCompanyForm.industry,
-          tax_id: editCompanyForm.tax_id,
+          tax_id: cleanedTaxId,
+          category: editCompanyForm.category || null,
         })
         .eq('id', selectedCompany.id)
 
@@ -341,7 +426,7 @@ export default function SuperAdminPage() {
 
       setEditCompanyModalOpen(false)
       setSelectedCompany(null)
-      setEditCompanyForm({ name: '', industry: '', tax_id: '' })
+      setEditCompanyForm({ name: '', industry: '', tax_id: '', category: '' })
       await loadCompanies()
     } catch (error) {
       console.error('Error updating company:', error)
@@ -515,83 +600,6 @@ export default function SuperAdminPage() {
     }
   }
 
-  const handleToggleCompanyStatus = async (companyId: string, companyName: string, currentStatus: boolean) => {
-    const action = currentStatus ? 'inhabilitar' : 'habilitar'
-    const actionCaps = currentStatus ? 'Inhabilitar' : 'Habilitar'
-
-    if (!confirm(`¿Estás seguro de ${action} la empresa "${companyName}"? ${currentStatus ? 'Los usuarios de esta empresa no podrán acceder a Xpend.' : 'Los usuarios activos de esta empresa podrán acceder nuevamente.'}`)) {
-      return
-    }
-
-    try {
-      const { error } = await supabase
-        .from('companies')
-        .update({ is_active: !currentStatus })
-        .eq('id', companyId)
-
-      if (error) throw error
-
-      addToast({
-        type: 'success',
-        title: `Empresa ${currentStatus ? 'inhabilitada' : 'habilitada'}`,
-        message: `La empresa ${companyName} ha sido ${currentStatus ? 'inhabilitada' : 'habilitada'} correctamente`
-      })
-
-      await loadCompanies()
-    } catch (error) {
-      console.error('Error toggling company status:', error)
-      addToast({
-        type: 'error',
-        title: 'Error',
-        message: `No se pudo ${action} la empresa`
-      })
-    }
-  }
-
-  const handleToggleUserStatus = async (userId: string, userName: string, currentStatus: boolean) => {
-    // Verificar si el usuario intenta inhabilitarse a sí mismo
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-
-    if (currentUser?.id === userId && currentStatus) {
-      addToast({
-        type: 'error',
-        title: 'Acción no permitida',
-        message: 'No puedes inhabilitarte a ti mismo'
-      })
-      return
-    }
-
-    const action = currentStatus ? 'inhabilitar' : 'habilitar'
-
-    if (!confirm(`¿Estás seguro de ${action} al usuario "${userName}"? ${currentStatus ? 'Este usuario no podrá acceder a Xpend.' : 'Este usuario podrá acceder nuevamente a Xpend.'}`)) {
-      return
-    }
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_active: !currentStatus })
-        .eq('id', userId)
-
-      if (error) throw error
-
-      addToast({
-        type: 'success',
-        title: `Usuario ${currentStatus ? 'inhabilitado' : 'habilitado'}`,
-        message: `El usuario ${userName} ha sido ${currentStatus ? 'inhabilitado' : 'habilitado'} correctamente`
-      })
-
-      await loadUsers()
-    } catch (error) {
-      console.error('Error toggling user status:', error)
-      addToast({
-        type: 'error',
-        title: 'Error',
-        message: `No se pudo ${action} el usuario`
-      })
-    }
-  }
-
   const handleDeleteCompany = async (companyId: string, companyName: string) => {
     if (!confirm(`¿Estás seguro de eliminar la empresa "${companyName}"? Esta acción eliminará todos los datos asociados.`)) {
       return
@@ -622,16 +630,27 @@ export default function SuperAdminPage() {
     }
   }
 
-  const filteredCompanies = companies.filter(company =>
-    company.name.toLowerCase().includes(searchCompany.toLowerCase()) ||
-    company.industry?.toLowerCase().includes(searchCompany.toLowerCase())
-  )
+  const filteredCompanies = companies.filter(company => {
+    const q = searchCompany.toLowerCase()
+    const rutFmt = company.tax_id ? formatRut(company.tax_id).toLowerCase() : ''
+    return (
+      company.name.toLowerCase().includes(q) ||
+      company.industry?.toLowerCase().includes(q) ||
+      (company.tax_id && company.tax_id.toLowerCase().includes(q)) ||
+      rutFmt.includes(q)
+    )
+  })
 
-  const filteredUsers = users.filter(user =>
-    user.email?.toLowerCase().includes(searchUser.toLowerCase()) ||
-    user.full_name?.toLowerCase().includes(searchUser.toLowerCase()) ||
-    user.company_name?.toLowerCase().includes(searchUser.toLowerCase())
-  )
+  const filteredUsers = users.filter(user => {
+    const q = searchUser.toLowerCase()
+    const rutFmt = user.company_tax_id ? formatRut(user.company_tax_id).toLowerCase() : ''
+    return (
+      user.email?.toLowerCase().includes(q) ||
+      user.full_name?.toLowerCase().includes(q) ||
+      user.company_name?.toLowerCase().includes(q) ||
+      rutFmt.includes(q)
+    )
+  })
 
   if (loading) {
     return (
@@ -689,13 +708,13 @@ export default function SuperAdminPage() {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="company-industry">Industria</Label>
+                          <Label htmlFor="company-industry">Industria (opcional)</Label>
                           <Select
                             value={newCompany.industry}
                             onValueChange={(value) => setNewCompany({ ...newCompany, industry: value })}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Selecciona una industria..." />
+                              <SelectValue placeholder="Selecciona una industria (opcional)" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="Tecnología">Tecnología</SelectItem>
@@ -728,6 +747,11 @@ export default function SuperAdminPage() {
                             placeholder="Ej: 76.123.456-7"
                             required
                           />
+                          {taxIdStatus.message && (
+                            <p className={`text-xs mt-1 ${taxIdStatus.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+                              {taxIdStatus.message}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <Button type="submit">
@@ -757,25 +781,14 @@ export default function SuperAdminPage() {
                   {filteredCompanies.map((company) => (
                     <div
                       key={company.id}
-                      className={`flex items-center justify-between p-4 border rounded-lg ${company.is_active === false ? 'bg-muted/50' : ''}`}
+                      className="flex items-center justify-between p-4 border rounded-lg"
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold">{company.name}</h3>
-                          {company.is_active !== false ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Activa
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-                              <Ban className="h-3 w-3 mr-1" />
-                              Inactiva
-                            </span>
-                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {company.industry} • RUT: {company.tax_id}
+                          {company.industry} • RUT: {company.tax_id ? formatRut(company.tax_id) : 'Sin RUT'}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {company.users_count || 0} usuarios
@@ -788,14 +801,6 @@ export default function SuperAdminPage() {
                           onClick={() => handleEditCompany(company)}
                         >
                           <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleToggleCompanyStatus(company.id, company.name, company.is_active !== false)}
-                          className={company.is_active !== false ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'}
-                        >
-                          {company.is_active !== false ? <Ban className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
                         </Button>
                         <Button
                           variant="outline"
@@ -925,22 +930,11 @@ export default function SuperAdminPage() {
                   {filteredUsers.map((user) => (
                     <div
                       key={user.id}
-                      className={`flex items-center justify-between p-4 border rounded-lg ${user.is_active === false ? 'bg-muted/50' : ''}`}
+                      className="flex items-center justify-between p-4 border rounded-lg"
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold">{user.full_name || user.email}</h3>
-                          {user.is_active !== false ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Activo
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-                              <Ban className="h-3 w-3 mr-1" />
-                              Inactivo
-                            </span>
-                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {user.email} • {user.role}
@@ -963,22 +957,6 @@ export default function SuperAdminPage() {
                           title="Editar usuario"
                         >
                           <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleToggleUserStatus(user.id, user.full_name || user.email, user.is_active !== false)}
-                          disabled={user.id === currentUserId && user.is_active !== false}
-                          className={user.is_active !== false ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'}
-                          title={
-                            user.id === currentUserId && user.is_active !== false
-                              ? 'No puedes inhabilitarte a ti mismo'
-                              : user.is_active !== false
-                                ? 'Inhabilitar usuario'
-                                : 'Habilitar usuario'
-                          }
-                        >
-                          {user.is_active !== false ? <Ban className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
                         </Button>
                       </div>
                     </div>

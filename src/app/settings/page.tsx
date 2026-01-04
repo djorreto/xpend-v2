@@ -20,7 +20,8 @@ import {
   Briefcase,
   Plus,
   Edit,
-  Trash2
+  Trash2,
+  Lock
 } from 'lucide-react'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
@@ -76,6 +77,8 @@ export default function SettingsPage() {
   const [departments, setDepartments] = useState<any[]>([])
   const [newDepartmentName, setNewDepartmentName] = useState('')
   const [editingDepartment, setEditingDepartment] = useState<any>(null)
+  const [passwordForm, setPasswordForm] = useState({ next: '', confirm: '' })
+  const [passwordLoading, setPasswordLoading] = useState(false)
   const { addToast } = useToast()
 
   useEffect(() => {
@@ -161,6 +164,32 @@ export default function SettingsPage() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleChangePassword = async () => {
+    if (!passwordForm.next || passwordForm.next.length < 6) {
+      addToast({ type: 'error', title: 'Error', message: 'La nueva contraseña debe tener al menos 6 caracteres' })
+      return
+    }
+    if (passwordForm.next !== passwordForm.confirm) {
+      addToast({ type: 'error', title: 'Error', message: 'Las contraseñas no coinciden' })
+      return
+    }
+    try {
+      setPasswordLoading(true)
+      const { error } = await supabase.auth.updateUser({ password: passwordForm.next })
+      if (error) throw error
+      addToast({ type: 'success', title: 'Contraseña actualizada', message: 'Inicia sesión nuevamente con tu nueva contraseña' })
+      setPasswordForm({ next: '', confirm: '' })
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: err instanceof Error ? err.message : 'No se pudo actualizar la contraseña'
+      })
+    } finally {
+      setPasswordLoading(false)
     }
   }
 
@@ -474,6 +503,59 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Change Password */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Lock className="h-5 w-5" />
+              <span>Cambiar contraseña</span>
+            </CardTitle>
+            <CardDescription>
+              Actualiza tu contraseña. Debe tener al menos 6 caracteres.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-pass">Nueva contraseña</Label>
+                <Input
+                  id="new-pass"
+                  type="password"
+                  value={passwordForm.next}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, next: e.target.value }))}
+                  autoComplete="new-password"
+                  minLength={6}
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-pass">Confirmar contraseña</Label>
+                <Input
+                  id="confirm-pass"
+                  type="password"
+                  value={passwordForm.confirm}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, confirm: e.target.value }))}
+                  autoComplete="new-password"
+                  minLength={6}
+                  placeholder="Repite la nueva contraseña"
+                />
+              </div>
+            </div>
+            <Button onClick={handleChangePassword} disabled={passwordLoading}>
+              {passwordLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Actualizando...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Guardar nueva contraseña
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
         {/* User Settings */}
         <Card>
           <CardHeader>

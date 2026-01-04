@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { supabaseBrowser } from '@/lib/supabase'
-import { X, Upload, User, Mail, Shield, Save } from 'lucide-react'
+import { X, Upload, User, Mail, Shield, Save, Plus, Trash, ShieldAlert } from 'lucide-react'
 
 interface UserEditModalProps {
   isOpen: boolean
@@ -23,8 +23,11 @@ interface UserEditModalProps {
     phone?: string
     position?: string
     department?: string
+    company_roles?: { role: string; company: { id: string; name: string } | null }[]
+    company_id?: string | null
   } | null
   onSave: (updatedUser: any) => void
+  isSuperAdminCurrent?: boolean
 }
 
 const roleLabels = {
@@ -34,7 +37,7 @@ const roleLabels = {
   viewer: 'Visualizador'
 }
 
-export function UserEditModal({ isOpen, onClose, user, onSave }: UserEditModalProps) {
+export function UserEditModal({ isOpen, onClose, user, onSave, isSuperAdminCurrent = false }: UserEditModalProps) {
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -46,6 +49,11 @@ export function UserEditModal({ isOpen, onClose, user, onSave }: UserEditModalPr
   })
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [companyRoles, setCompanyRoles] = useState<{ company_id: string; company_name: string; role: string }[]>([])
+  const [allCompanies, setAllCompanies] = useState<{ id: string; name: string }[]>([])
+  const [newCompanyId, setNewCompanyId] = useState<string>('')
+  const [newCompanyRole, setNewCompanyRole] = useState<string>('viewer')
+  const [superAdmin, setSuperAdmin] = useState(false)
   const { addToast } = useToast()
   const supabase = supabaseBrowser()
 
@@ -60,8 +68,23 @@ export function UserEditModal({ isOpen, onClose, user, onSave }: UserEditModalPr
         department: user.department || '',
         avatar_url: user.avatar_url || ''
       })
+      setSuperAdmin(user.role === 'super_admin')
+      const mapped = (user.company_roles || []).map(cr => ({
+        company_id: cr.company?.id || '',
+        company_name: cr.company?.name || 'Sin nombre',
+        role: cr.role
+      }))
+      setCompanyRoles(mapped)
     }
   }, [user])
+
+  useEffect(() => {
+    const loadCompanies = async () => {
+      const { data } = await supabase.from('companies').select('id,name').order('name')
+      if (data) setAllCompanies(data)
+    }
+    if (isOpen) loadCompanies()
+  }, [isOpen, supabase])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,11 +94,13 @@ export function UserEditModal({ isOpen, onClose, user, onSave }: UserEditModalPr
     try {
       setLoading(true)
 
+      const newProfileRole = superAdmin ? 'super_admin' : null
+
       const { data, error } = await supabase
         .from('profiles')
         .update({
           full_name: formData.full_name || null,
-          role: formData.role,
+          role: newProfileRole,
           phone: formData.phone || null,
           position: formData.position || null,
           department: formData.department || null,
@@ -91,14 +116,36 @@ export function UserEditModal({ isOpen, onClose, user, onSave }: UserEditModalPr
         throw error
       }
 
+      // Sincronizar roles por empresa: limpiar y volver a insertar
+      const rows = companyRoles.map(cr => ({
+        user_id: user.id,
+        company_id: cr.company_id,
+        role: cr.role
+      }))
+
+      const { error: delError } = await supabase
+        .from('company_user_roles')
+        .delete()
+        .eq('user_id', user.id)
+      if (delError) throw delError
+
+      if (rows.length > 0) {
+        const { error: insError } = await supabase.from('company_user_roles').insert(rows)
+        if (insError) throw insError
+      }
+
       onSave({
         ...user,
         full_name: formData.full_name,
-        role: formData.role,
+        role: newProfileRole || 'user',
         phone: formData.phone,
         position: formData.position,
         department: formData.department,
-        avatar_url: formData.avatar_url
+        avatar_url: formData.avatar_url,
+        company_roles: companyRoles.map(cr => ({
+          role: cr.role,
+          company: { id: cr.company_id, name: cr.company_name }
+        }))
       })
 
       addToast({
@@ -170,6 +217,26 @@ export function UserEditModal({ isOpen, onClose, user, onSave }: UserEditModalPr
     } finally {
       setUploading(false)
     }
+  }
+
+  const handleAddCompanyRole = () => {
+    if (!newCompanyId || !newCompanyRole) return
+    const companyName = allCompanies.find(c => c.id === newCompanyId)?.name || 'Empresa'
+    setCompanyRoles(prev => {
+      const exists = prev.some(p => p.company_id === newCompanyId)
+      if (exists) {
+        return prev.map(p => p.company_id === newCompanyId ? { ...p, role: newCompanyRole, company_name: companyName } : p)
+      }
+      return [...prev, { company_id: newCompanyId, role: newCompanyRole, company_name: companyName }]
+    })
+    setNewCompanyId('')
+    setNewCompanyRole('viewer')
+    addToast({ type: 'success', title: 'Asignación agregada', message: 'Rol por empresa pendiente de guardar' })
+  }
+
+  const handleRemoveCompanyRole = (companyId: string) => {
+    setCompanyRoles(prev => prev.filter(p => p.company_id !== companyId))
+    addToast({ type: 'success', title: 'Asignación eliminada', message: 'Quitar empresa pendiente de guardar' })
   }
 
   if (!isOpen || !user) return null
@@ -250,21 +317,31 @@ export function UserEditModal({ isOpen, onClose, user, onSave }: UserEditModalPr
             </div>
           </div>
 
-          {/* Role and Position */}
+          {/* Rol global (solo toggle super admin) y cargo */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="role">Rol</Label>
-              <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un rol" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="manager">Gerente</SelectItem>
-                  <SelectItem value="analyst">Analista</SelectItem>
-                  <SelectItem value="viewer">Visualizador</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Rol global</Label>
+              <div className="border rounded-md p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">¿Es super admin?</p>
+                    <p className="text-xs text-muted-foreground">Solo visible para super admins</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={superAdmin}
+                    disabled={!isSuperAdminCurrent}
+                    onChange={(e) => setSuperAdmin(e.target.checked)}
+                    className="h-5 w-5"
+                  />
+                </div>
+                {!isSuperAdminCurrent && (
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <ShieldAlert className="h-3 w-3" />
+                    Solo un super admin puede cambiar esto.
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -275,6 +352,99 @@ export function UserEditModal({ isOpen, onClose, user, onSave }: UserEditModalPr
                 onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
                 placeholder="Ej: Jefe de Compras"
               />
+            </div>
+          </div>
+
+          {/* Roles por empresa */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Roles por empresa</p>
+                <p className="text-xs text-muted-foreground">Asigna o ajusta el rol del usuario en cada empresa</p>
+              </div>
+            </div>
+
+            <div className="border rounded-md p-3 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div>
+                  <Label>Empresa</Label>
+                  <Select value={newCompanyId} onValueChange={setNewCompanyId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona empresa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allCompanies.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Rol</Label>
+                  <Select value={newCompanyRole} onValueChange={setNewCompanyRole}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona rol" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="manager">Gerente</SelectItem>
+                      <SelectItem value="analyst">Analista</SelectItem>
+                      <SelectItem value="viewer">Visualizador</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end">
+                  <Button type="button" onClick={handleAddCompanyRole} className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Asignar
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {companyRoles.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Sin empresas asignadas.</p>
+                )}
+                {companyRoles.map((cr) => (
+                  <div key={cr.company_id} className="flex items-center justify-between border rounded-md px-3 py-2">
+                    <div>
+                      <p className="text-sm font-medium">{cr.company_name}</p>
+                      <p className="text-xs text-muted-foreground">{roleLabels[cr.role as keyof typeof roleLabels] || cr.role}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={cr.role}
+                        onValueChange={(value) =>
+                          setCompanyRoles((prev) =>
+                            prev.map((p) => (p.company_id === cr.company_id ? { ...p, role: value } : p))
+                          )
+                        }
+                        onCloseAutoFocus={(e) => e.preventDefault()}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Administrador</SelectItem>
+                          <SelectItem value="manager">Gerente</SelectItem>
+                          <SelectItem value="analyst">Analista</SelectItem>
+                          <SelectItem value="viewer">Visualizador</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleRemoveCompanyRole(cr.company_id)}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

@@ -20,7 +20,7 @@ import {
   TrendingDown,
   TrendingUp,
   Plus,
-  LinkIcon
+  LinkIcon,
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabaseBrowser } from '@/lib/supabase'
@@ -37,7 +37,7 @@ const statusColors = {
   published: 'bg-cyan-100 text-cyan-800',
   evaluation: 'bg-yellow-100 text-yellow-800',
   awarded: 'bg-purple-100 text-purple-800',
-  contract_signed: 'bg-green-100 text-green-800'
+  contract_signed: 'bg-green-100 text-green-800',
 }
 
 const statusLabels = {
@@ -46,26 +46,26 @@ const statusLabels = {
   published: 'Publicada',
   evaluation: 'Evaluación',
   awarded: 'Adjudicada',
-  contract_signed: 'Contrato firmado'
+  contract_signed: 'Contrato firmado',
 }
 
 const typeLabels = {
   RFP: 'RFP (Request for Proposal)',
   RFQ: 'RFQ (Request for Quotation)',
-  RFI: 'RFI (Request for Information)'
+  RFI: 'RFI (Request for Information)',
 }
 
 const categoryLabels = {
   recurring_service: 'Servicio recurrente',
   non_recurring_service: 'Servicio no recurrente',
   improvement_project: 'Proyecto de mejora',
-  construction_project: 'Proyecto de construcción'
+  construction_project: 'Proyecto de construcción',
 }
 
 const baselineSourceLabels = {
   historical: 'Línea base histórica',
   budget: 'Presupuesto',
-  other: 'Otro'
+  other: 'Otro',
 }
 
 export default function LicitacionDetailPage() {
@@ -88,7 +88,7 @@ export default function LicitacionDetailPage() {
     category: '',
     description: '',
     invoice_date: '',
-    provider: ''
+    provider: '',
   })
 
   useEffect(() => {
@@ -105,7 +105,10 @@ export default function LicitacionDetailPage() {
       const supabase = supabaseBrowser()
 
       // Get current user
-      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
+      const {
+        data: { user: authUser },
+        error: userError,
+      } = await supabase.auth.getUser()
       if (userError || !authUser) {
         throw new Error('Usuario no autenticado')
       }
@@ -124,7 +127,7 @@ export default function LicitacionDetailPage() {
       setUser({
         name: profile.full_name || authUser.email,
         email: authUser.email,
-        role: profile.role
+        role: profile.role,
       })
 
       // Get company info
@@ -143,24 +146,28 @@ export default function LicitacionDetailPage() {
       // Fetch licitacion details with relations
       const { data, error: licitacionError } = await supabase
         .from('licitaciones')
-        .select(`
+        .select(
+          `
           *,
           department:departments(id, name),
           responsible_user:profiles!responsible_user_id(id, full_name, email),
           created_by_user:profiles!created_by(id, full_name, email)
-        `)
+        `
+        )
         .eq('id', licitacionId)
         .single()
 
       if (licitacionError) throw licitacionError
       if (!data) throw new Error('Licitación no encontrada')
 
-        setLicitacion(data)
+      setLicitacion(data)
 
       // Load linked sourcing plans (N:M)
       const { data: links } = await supabase
         .from('sourcing_plan_licitaciones')
-        .select('plan_id, contribution_baseline, contribution_savings, plan:sourcing_plans(id, title, plan_year, quarter)')
+        .select(
+          'plan_id, contribution_baseline, contribution_savings, plan:sourcing_plans(id, title, plan_year, quarter)'
+        )
         .eq('licitacion_id', licitacionId)
       setLinkedPlans(
         (links || []).map(link => {
@@ -171,7 +178,7 @@ export default function LicitacionDetailPage() {
             plan_year: planInfo?.plan_year,
             quarter: planInfo?.quarter,
             contribution_baseline: link.contribution_baseline,
-            contribution_savings: link.contribution_savings
+            contribution_savings: link.contribution_savings,
           }
         })
       )
@@ -188,7 +195,7 @@ export default function LicitacionDetailPage() {
       addToast({
         type: 'error',
         title: 'Error',
-        message: 'No se pudo cargar la licitación'
+        message: 'No se pudo cargar la licitación',
       })
     } finally {
       setLoading(false)
@@ -202,24 +209,21 @@ export default function LicitacionDetailPage() {
 
     try {
       const supabase = supabaseBrowser()
-      const { error } = await supabase
-        .from('licitaciones')
-        .delete()
-        .eq('id', licitacionId)
+      const { error } = await supabase.from('licitaciones').delete().eq('id', licitacionId)
 
       if (error) throw error
 
       addToast({
         type: 'success',
         title: 'Licitación eliminada',
-        message: 'La licitación ha sido eliminada correctamente'
+        message: 'La licitación ha sido eliminada correctamente',
       })
       router.push('/licitaciones')
     } catch (err) {
       addToast({
         type: 'error',
         title: 'Error',
-        message: 'No se pudo eliminar la licitación'
+        message: 'No se pudo eliminar la licitación',
       })
     }
   }
@@ -248,7 +252,7 @@ export default function LicitacionDetailPage() {
       addToast({
         type: 'error',
         title: 'Error',
-        message: 'No se pudo descargar el documento'
+        message: 'No se pudo descargar el documento',
       })
     }
   }
@@ -262,31 +266,29 @@ export default function LicitacionDetailPage() {
       addToast({
         type: 'error',
         title: 'Error',
-        message: 'Monto y licitación son obligatorios'
+        message: 'Monto y licitación son obligatorios',
       })
       return
     }
     setSavingInvoice(true)
     try {
       const supabase = supabaseBrowser()
-      const { error } = await supabase
-        .from('service_invoices')
-        .insert({
-          licitacion_id: licitacion.id,
-          company_id: company.id,
-          amount: parseFloat(invoiceForm.amount),
-          currency: invoiceForm.currency,
-          category: invoiceForm.category || null,
-          description: invoiceForm.description || null,
-          invoice_date: invoiceForm.invoice_date || null,
-          provider: invoiceForm.provider || null,
-          created_by: user?.id || null
-        })
+      const { error } = await supabase.from('service_invoices').insert({
+        licitacion_id: licitacion.id,
+        company_id: company.id,
+        amount: parseFloat(invoiceForm.amount),
+        currency: invoiceForm.currency,
+        category: invoiceForm.category || null,
+        description: invoiceForm.description || null,
+        invoice_date: invoiceForm.invoice_date || null,
+        provider: invoiceForm.provider || null,
+        created_by: user?.id || null,
+      })
       if (error) throw error
       addToast({
         type: 'success',
         title: 'Factura añadida',
-        message: 'El gasto se registró correctamente'
+        message: 'El gasto se registró correctamente',
       })
       await loadLicitacionDetails()
       setInvoiceForm({
@@ -295,13 +297,13 @@ export default function LicitacionDetailPage() {
         category: '',
         description: '',
         invoice_date: '',
-        provider: ''
+        provider: '',
       })
     } catch (err) {
       addToast({
         type: 'error',
         title: 'Error',
-        message: err instanceof Error ? err.message : 'No se pudo guardar la factura'
+        message: err instanceof Error ? err.message : 'No se pudo guardar la factura',
       })
     } finally {
       setSavingInvoice(false)
@@ -351,22 +353,23 @@ export default function LicitacionDetailPage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <div className="flex items-center gap-3 mb-1">
-                <span className="text-sm font-mono text-muted-foreground">{licitacion.id}</span>
+              <div className="mb-1 flex items-center gap-3">
+                <span className="font-mono text-sm text-muted-foreground">{licitacion.id}</span>
                 {licitacion.type && (
-                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800">
+                  <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800">
                     {licitacion.type}
                   </span>
                 )}
               </div>
               <h1 className="text-3xl font-bold tracking-tight">{licitacion.name}</h1>
-              <p className="text-muted-foreground">
-                {licitacion.description || 'Sin descripción'}
-              </p>
+              <p className="text-muted-foreground">{licitacion.description || 'Sin descripción'}</p>
             </div>
           </div>
           <div className="flex space-x-2">
-            <Button variant="outline" onClick={() => router.push(`/licitaciones/${licitacionId}/edit`)}>
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/licitaciones/${licitacionId}/edit`)}
+            >
               <Edit className="mr-2 h-4 w-4" />
               Editar
             </Button>
@@ -388,14 +391,21 @@ export default function LicitacionDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {linkedPlans.map(plan => (
-                <div key={plan.plan_id} className="flex items-center justify-between rounded-lg border px-3 py-2">
+                <div
+                  key={plan.plan_id}
+                  className="flex items-center justify-between rounded-lg border px-3 py-2"
+                >
                   <div className="flex flex-col">
                     <span className="text-sm font-semibold">{plan.title || plan.plan_id}</span>
                     <span className="text-xs text-muted-foreground">
                       {plan.plan_year} - {plan.quarter}
                     </span>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => router.push(`/sourcing-plan/${plan.plan_id}`)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => router.push(`/sourcing-plan/${plan.plan_id}`)}
+                  >
                     Ver iniciativa
                   </Button>
                 </div>
@@ -412,11 +422,13 @@ export default function LicitacionDetailPage() {
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[licitacion.status as keyof typeof statusColors]}`}>
+              <span
+                className={`rounded-full px-2 py-1 text-xs font-medium ${statusColors[licitacion.status as keyof typeof statusColors]}`}
+              >
                 {statusLabels[licitacion.status as keyof typeof statusLabels]}
               </span>
               {licitacion.category && (
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="mt-2 text-xs text-muted-foreground">
                   {categoryLabels[licitacion.category as keyof typeof categoryLabels]}
                 </p>
               )}
@@ -430,12 +442,18 @@ export default function LicitacionDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {licitacion.baseline_amount ? formatCurrency(licitacion.baseline_amount, licitacion.baseline_currency) : 'N/A'}
+                {licitacion.baseline_amount
+                  ? formatCurrency(licitacion.baseline_amount, licitacion.baseline_currency)
+                  : 'N/A'}
               </div>
               {licitacion.baseline_source && (
-              <p className="text-xs text-muted-foreground">
-                  {baselineSourceLabels[licitacion.baseline_source as keyof typeof baselineSourceLabels]}
-              </p>
+                <p className="text-xs text-muted-foreground">
+                  {
+                    baselineSourceLabels[
+                      licitacion.baseline_source as keyof typeof baselineSourceLabels
+                    ]
+                  }
+                </p>
               )}
             </CardContent>
           </Card>
@@ -449,9 +467,7 @@ export default function LicitacionDetailPage() {
               <div className="text-2xl font-bold">
                 {formatCurrency(invoicesTotal, licitacion.baseline_currency)}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Suma de facturas registradas
-              </p>
+              <p className="text-xs text-muted-foreground">Suma de facturas registradas</p>
             </CardContent>
           </Card>
 
@@ -462,15 +478,27 @@ export default function LicitacionDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {licitacion.awarded_amount ? formatCurrency(licitacion.awarded_amount, licitacion.baseline_currency) : 'N/A'}
+                {licitacion.awarded_amount
+                  ? formatCurrency(licitacion.awarded_amount, licitacion.baseline_currency)
+                  : 'N/A'}
               </div>
               <p className="text-xs text-muted-foreground">
-                {licitacion.award_date ? `Adjudicado el ${formatDate(licitacion.award_date)}` : 'Pendiente'}
+                {licitacion.award_date
+                  ? `Adjudicado el ${formatDate(licitacion.award_date)}`
+                  : 'Pendiente'}
               </p>
             </CardContent>
           </Card>
 
-          <Card className={licitacion.savings_amount && licitacion.savings_amount > 0 ? 'border-green-200' : licitacion.savings_amount && licitacion.savings_amount < 0 ? 'border-red-200' : ''}>
+          <Card
+            className={
+              licitacion.savings_amount && licitacion.savings_amount > 0
+                ? 'border-green-200'
+                : licitacion.savings_amount && licitacion.savings_amount < 0
+                  ? 'border-red-200'
+                  : ''
+            }
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Ahorro</CardTitle>
               {licitacion.savings_amount && licitacion.savings_amount > 0 ? (
@@ -484,18 +512,35 @@ export default function LicitacionDetailPage() {
             <CardContent>
               {licitacion.savings_amount !== undefined && licitacion.savings_amount !== null ? (
                 <>
-                  <div className={`text-2xl font-bold ${
-                    licitacion.savings_amount > 0 ? 'text-green-600' : licitacion.savings_amount < 0 ? 'text-red-600' : ''
-                  }`}>
-                    {formatCurrency(Math.abs(licitacion.savings_amount), licitacion.baseline_currency)}
-              </div>
-                  {licitacion.savings_percentage !== undefined && licitacion.savings_percentage !== null && (
-                    <p className={`text-xs font-medium ${
-                      licitacion.savings_amount > 0 ? 'text-green-600' : licitacion.savings_amount < 0 ? 'text-red-600' : 'text-muted-foreground'
-                    }`}>
-                      {Math.abs(licitacion.savings_percentage).toFixed(2)}% {licitacion.savings_amount > 0 ? 'ahorro' : 'sobrecosto'}
-                    </p>
-                  )}
+                  <div
+                    className={`text-2xl font-bold ${
+                      licitacion.savings_amount > 0
+                        ? 'text-green-600'
+                        : licitacion.savings_amount < 0
+                          ? 'text-red-600'
+                          : ''
+                    }`}
+                  >
+                    {formatCurrency(
+                      Math.abs(licitacion.savings_amount),
+                      licitacion.baseline_currency
+                    )}
+                  </div>
+                  {licitacion.savings_percentage !== undefined &&
+                    licitacion.savings_percentage !== null && (
+                      <p
+                        className={`text-xs font-medium ${
+                          licitacion.savings_amount > 0
+                            ? 'text-green-600'
+                            : licitacion.savings_amount < 0
+                              ? 'text-red-600'
+                              : 'text-muted-foreground'
+                        }`}
+                      >
+                        {Math.abs(licitacion.savings_percentage).toFixed(2)}%{' '}
+                        {licitacion.savings_amount > 0 ? 'ahorro' : 'sobrecosto'}
+                      </p>
+                    )}
                 </>
               ) : (
                 <div className="text-2xl font-bold text-muted-foreground">N/A</div>
@@ -518,58 +563,71 @@ export default function LicitacionDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Información General</CardTitle>
-                <CardDescription>
-                  Detalles básicos de la licitación
-                </CardDescription>
+                <CardDescription>Detalles básicos de la licitación</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div>
-                    <h4 className="font-medium mb-2">ID de Licitación</h4>
-                    <p className="text-muted-foreground font-mono">{licitacion.id}</p>
+                    <h4 className="mb-2 font-medium">ID de Licitación</h4>
+                    <p className="font-mono text-muted-foreground">{licitacion.id}</p>
                   </div>
                   <div>
-                    <h4 className="font-medium mb-2">Estado</h4>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[licitacion.status as keyof typeof statusColors]}`}>
+                    <h4 className="mb-2 font-medium">Estado</h4>
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs font-medium ${statusColors[licitacion.status as keyof typeof statusColors]}`}
+                    >
                       {statusLabels[licitacion.status as keyof typeof statusLabels]}
                     </span>
                   </div>
                   {licitacion.type && (
-                  <div>
-                      <h4 className="font-medium mb-2">Tipo</h4>
-                      <p className="text-muted-foreground">{typeLabels[licitacion.type as keyof typeof typeLabels]}</p>
-                  </div>
+                    <div>
+                      <h4 className="mb-2 font-medium">Tipo</h4>
+                      <p className="text-muted-foreground">
+                        {typeLabels[licitacion.type as keyof typeof typeLabels]}
+                      </p>
+                    </div>
                   )}
                   {licitacion.category && (
-                  <div>
-                      <h4 className="font-medium mb-2">Categoría</h4>
-                      <p className="text-muted-foreground">{categoryLabels[licitacion.category as keyof typeof categoryLabels]}</p>
-                  </div>
+                    <div>
+                      <h4 className="mb-2 font-medium">Categoría</h4>
+                      <p className="text-muted-foreground">
+                        {categoryLabels[licitacion.category as keyof typeof categoryLabels]}
+                      </p>
+                    </div>
                   )}
                   <div>
-                    <h4 className="font-medium mb-2">Baseline</h4>
+                    <h4 className="mb-2 font-medium">Baseline</h4>
                     <p className="text-muted-foreground">
-                      {licitacion.baseline_amount ? formatCurrency(licitacion.baseline_amount, licitacion.baseline_currency) : 'No especificado'}
+                      {licitacion.baseline_amount
+                        ? formatCurrency(licitacion.baseline_amount, licitacion.baseline_currency)
+                        : 'No especificado'}
                     </p>
                     {licitacion.baseline_source && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Fuente: {baselineSourceLabels[licitacion.baseline_source as keyof typeof baselineSourceLabels]}
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Fuente:{' '}
+                        {
+                          baselineSourceLabels[
+                            licitacion.baseline_source as keyof typeof baselineSourceLabels
+                          ]
+                        }
                       </p>
                     )}
                   </div>
                   {licitacion.awarded_amount && (
-                  <div>
-                      <h4 className="font-medium mb-2">Monto Adjudicado</h4>
-                    <p className="text-muted-foreground">
+                    <div>
+                      <h4 className="mb-2 font-medium">Monto Adjudicado</h4>
+                      <p className="text-muted-foreground">
                         {formatCurrency(licitacion.awarded_amount, licitacion.baseline_currency)}
-                    </p>
-                  </div>
+                      </p>
+                    </div>
                   )}
                 </div>
                 {licitacion.description && (
                   <div>
-                    <h4 className="font-medium mb-2">Descripción</h4>
-                    <p className="text-muted-foreground whitespace-pre-wrap">{licitacion.description}</p>
+                    <h4 className="mb-2 font-medium">Descripción</h4>
+                    <p className="whitespace-pre-wrap text-muted-foreground">
+                      {licitacion.description}
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -580,71 +638,95 @@ export default function LicitacionDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Cronograma del Proceso</CardTitle>
-                <CardDescription>
-                  Fechas importantes de la licitación
-                </CardDescription>
+                <CardDescription>Fechas importantes de la licitación</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {licitacion.request_date && (
-                    <div className="flex items-center justify-between py-2 border-b">
+                    <div className="flex items-center justify-between border-b py-2">
                       <span className="font-medium">Fecha de solicitud</span>
-                      <span className="text-muted-foreground">{formatDate(licitacion.request_date)}</span>
+                      <span className="text-muted-foreground">
+                        {formatDate(licitacion.request_date)}
+                      </span>
                     </div>
                   )}
                   {licitacion.publication_date && (
-                    <div className="flex items-center justify-between py-2 border-b">
+                    <div className="flex items-center justify-between border-b py-2">
                       <span className="font-medium">Fecha de Publicación</span>
-                      <span className="text-muted-foreground">{formatDate(licitacion.publication_date)}</span>
+                      <span className="text-muted-foreground">
+                        {formatDate(licitacion.publication_date)}
+                      </span>
                     </div>
                   )}
                   {licitacion.questions_date && (
-                    <div className="flex items-center justify-between py-2 border-b">
+                    <div className="flex items-center justify-between border-b py-2">
                       <span className="font-medium">Fecha de Preguntas</span>
-                      <span className="text-muted-foreground">{formatDate(licitacion.questions_date)}</span>
+                      <span className="text-muted-foreground">
+                        {formatDate(licitacion.questions_date)}
+                      </span>
                     </div>
                   )}
                   {licitacion.answers_date && (
-                    <div className="flex items-center justify-between py-2 border-b">
+                    <div className="flex items-center justify-between border-b py-2">
                       <span className="font-medium">Fecha de Respuestas</span>
-                      <span className="text-muted-foreground">{formatDate(licitacion.answers_date)}</span>
+                      <span className="text-muted-foreground">
+                        {formatDate(licitacion.answers_date)}
+                      </span>
                     </div>
                   )}
                   {licitacion.proposal_reception_date && (
-                    <div className="flex items-center justify-between py-2 border-b">
+                    <div className="flex items-center justify-between border-b py-2">
                       <span className="font-medium">Fecha de recepción de propuestas</span>
-                      <span className="text-muted-foreground">{formatDate(licitacion.proposal_reception_date)}</span>
+                      <span className="text-muted-foreground">
+                        {formatDate(licitacion.proposal_reception_date)}
+                      </span>
                     </div>
                   )}
                   {licitacion.proposal_closing_date && (
-                    <div className="flex items-center justify-between py-2 border-b">
+                    <div className="flex items-center justify-between border-b py-2">
                       <span className="font-medium">Fecha de cierre de propuestas</span>
-                      <span className="text-muted-foreground">{formatDate(licitacion.proposal_closing_date)}</span>
+                      <span className="text-muted-foreground">
+                        {formatDate(licitacion.proposal_closing_date)}
+                      </span>
                     </div>
                   )}
                   {licitacion.committee_date && (
-                    <div className="flex items-center justify-between py-2 border-b">
+                    <div className="flex items-center justify-between border-b py-2">
                       <span className="font-medium">Fecha de Comité / Informe</span>
-                      <span className="text-muted-foreground">{formatDate(licitacion.committee_date)}</span>
+                      <span className="text-muted-foreground">
+                        {formatDate(licitacion.committee_date)}
+                      </span>
                     </div>
                   )}
                   {licitacion.award_date && (
-                    <div className="flex items-center justify-between py-2 border-b">
+                    <div className="flex items-center justify-between border-b py-2">
                       <span className="font-medium">Fecha de Adjudicación</span>
-                      <span className="text-muted-foreground">{formatDate(licitacion.award_date)}</span>
+                      <span className="text-muted-foreground">
+                        {formatDate(licitacion.award_date)}
+                      </span>
                     </div>
                   )}
                   {licitacion.contract_signature_date && (
-                    <div className="flex items-center justify-between py-2 border-b">
+                    <div className="flex items-center justify-between border-b py-2">
                       <span className="font-medium">Fecha de firma de contrato</span>
-                      <span className="text-muted-foreground">{formatDate(licitacion.contract_signature_date)}</span>
+                      <span className="text-muted-foreground">
+                        {formatDate(licitacion.contract_signature_date)}
+                      </span>
                     </div>
                   )}
-                  {!licitacion.request_date && !licitacion.publication_date && !licitacion.questions_date &&
-                   !licitacion.answers_date && !licitacion.proposal_reception_date && !licitacion.proposal_closing_date &&
-                   !licitacion.committee_date && !licitacion.award_date && !licitacion.contract_signature_date && (
-                    <p className="text-muted-foreground text-center py-4">No se han especificado fechas del proceso.</p>
-                  )}
+                  {!licitacion.request_date &&
+                    !licitacion.publication_date &&
+                    !licitacion.questions_date &&
+                    !licitacion.answers_date &&
+                    !licitacion.proposal_reception_date &&
+                    !licitacion.proposal_closing_date &&
+                    !licitacion.committee_date &&
+                    !licitacion.award_date &&
+                    !licitacion.contract_signature_date && (
+                      <p className="py-4 text-center text-muted-foreground">
+                        No se han especificado fechas del proceso.
+                      </p>
+                    )}
                 </div>
               </CardContent>
             </Card>
@@ -654,14 +736,12 @@ export default function LicitacionDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Equipo y Responsables</CardTitle>
-                <CardDescription>
-                  Información del equipo asignado a la licitación
-                </CardDescription>
+                <CardDescription>Información del equipo asignado a la licitación</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {licitacion.department && (
                   <div className="flex items-start space-x-4">
-                    <Building2 className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <Building2 className="mt-0.5 h-5 w-5 text-muted-foreground" />
                     <div>
                       <h4 className="font-medium">Gerencia</h4>
                       <p className="text-muted-foreground">{licitacion.department.name}</p>
@@ -670,32 +750,40 @@ export default function LicitacionDetailPage() {
                 )}
                 {licitacion.responsible_user && (
                   <div className="flex items-start space-x-4">
-                    <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <User className="mt-0.5 h-5 w-5 text-muted-foreground" />
                     <div>
                       <h4 className="font-medium">Solicitante Responsable</h4>
                       <p className="text-muted-foreground">
                         {licitacion.responsible_user.full_name || licitacion.responsible_user.email}
                       </p>
-                      {licitacion.responsible_user.email && licitacion.responsible_user.full_name && (
-                        <p className="text-sm text-muted-foreground">{licitacion.responsible_user.email}</p>
-                      )}
+                      {licitacion.responsible_user.email &&
+                        licitacion.responsible_user.full_name && (
+                          <p className="text-sm text-muted-foreground">
+                            {licitacion.responsible_user.email}
+                          </p>
+                        )}
                     </div>
                   </div>
                 )}
                 {(licitacion as any).created_by_user && (
                   <div className="flex items-start space-x-4">
-                    <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <User className="mt-0.5 h-5 w-5 text-muted-foreground" />
                     <div>
                       <h4 className="font-medium">Creado por</h4>
                       <p className="text-muted-foreground">
-                        {(licitacion as any).created_by_user.full_name || (licitacion as any).created_by_user.email}
+                        {(licitacion as any).created_by_user.full_name ||
+                          (licitacion as any).created_by_user.email}
                       </p>
-                      <p className="text-xs text-muted-foreground">{formatDate(licitacion.created_at)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(licitacion.created_at)}
+                      </p>
                     </div>
                   </div>
                 )}
                 {!licitacion.department && !licitacion.responsible_user && (
-                  <p className="text-muted-foreground text-center py-4">No se ha asignado equipo a esta licitación.</p>
+                  <p className="py-4 text-center text-muted-foreground">
+                    No se ha asignado equipo a esta licitación.
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -705,13 +793,11 @@ export default function LicitacionDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Documentos y Enlaces</CardTitle>
-                <CardDescription>
-                  Bases de licitación y documentación relacionada
-                </CardDescription>
+                <CardDescription>Bases de licitación y documentación relacionada</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {licitacion.tender_document_path && (
-                  <div className="p-4 border rounded-lg">
+                  <div className="rounded-lg border p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <FileText className="h-5 w-5 text-muted-foreground" />
@@ -728,35 +814,37 @@ export default function LicitacionDetailPage() {
                         </div>
                       </div>
                       <Button variant="outline" size="sm" onClick={downloadTenderDocument}>
-                        <Download className="h-4 w-4 mr-2" />
+                        <Download className="mr-2 h-4 w-4" />
                         Descargar
                       </Button>
                     </div>
                   </div>
                 )}
                 {licitacion.tender_link && (
-                  <div className="p-4 border rounded-lg">
+                  <div className="rounded-lg border p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <ExternalLink className="h-5 w-5 text-muted-foreground" />
                         <div>
                           <h4 className="font-medium">Enlace a bases y anexos</h4>
-                          <p className="text-sm text-muted-foreground break-all">
+                          <p className="break-all text-sm text-muted-foreground">
                             {licitacion.tender_link}
                           </p>
                         </div>
                       </div>
                       <Button variant="outline" size="sm" asChild>
                         <a href={licitacion.tender_link} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-4 w-4 mr-2" />
+                          <ExternalLink className="mr-2 h-4 w-4" />
                           Abrir
                         </a>
                       </Button>
-                  </div>
+                    </div>
                   </div>
                 )}
                 {!licitacion.tender_document_path && !licitacion.tender_link && (
-                  <p className="text-muted-foreground text-center py-4">No se han cargado documentos para esta licitación.</p>
+                  <p className="py-4 text-center text-muted-foreground">
+                    No se han cargado documentos para esta licitación.
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -766,17 +854,19 @@ export default function LicitacionDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Facturas / Gastos de servicio</CardTitle>
-                <CardDescription>Registra y visualiza facturas asociadas a esta licitación</CardDescription>
+                <CardDescription>
+                  Registra y visualiza facturas asociadas a esta licitación
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Monto</label>
                     <Input
                       type="number"
                       step="0.01"
                       value={invoiceForm.amount}
-                      onChange={(e) => handleInvoiceChange('amount', e.target.value)}
+                      onChange={e => handleInvoiceChange('amount', e.target.value)}
                       placeholder="1000000"
                     />
                   </div>
@@ -784,7 +874,7 @@ export default function LicitacionDetailPage() {
                     <label className="text-sm font-medium">Moneda</label>
                     <Input
                       value={invoiceForm.currency}
-                      onChange={(e) => handleInvoiceChange('currency', e.target.value)}
+                      onChange={e => handleInvoiceChange('currency', e.target.value)}
                       placeholder="CLP"
                     />
                   </div>
@@ -792,7 +882,7 @@ export default function LicitacionDetailPage() {
                     <label className="text-sm font-medium">Categoría</label>
                     <Input
                       value={invoiceForm.category}
-                      onChange={(e) => handleInvoiceChange('category', e.target.value)}
+                      onChange={e => handleInvoiceChange('category', e.target.value)}
                       placeholder="Categoría de gasto"
                     />
                   </div>
@@ -800,7 +890,7 @@ export default function LicitacionDetailPage() {
                     <label className="text-sm font-medium">Proveedor</label>
                     <Input
                       value={invoiceForm.provider}
-                      onChange={(e) => handleInvoiceChange('provider', e.target.value)}
+                      onChange={e => handleInvoiceChange('provider', e.target.value)}
                       placeholder="Nombre del proveedor"
                     />
                   </div>
@@ -809,14 +899,14 @@ export default function LicitacionDetailPage() {
                     <Input
                       type="date"
                       value={invoiceForm.invoice_date}
-                      onChange={(e) => handleInvoiceChange('invoice_date', e.target.value)}
+                      onChange={e => handleInvoiceChange('invoice_date', e.target.value)}
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-sm font-medium">Descripción</label>
                     <Textarea
                       value={invoiceForm.description}
-                      onChange={(e) => handleInvoiceChange('description', e.target.value)}
+                      onChange={e => handleInvoiceChange('description', e.target.value)}
                       placeholder="Detalle del gasto"
                     />
                   </div>
@@ -828,11 +918,15 @@ export default function LicitacionDetailPage() {
                   </Button>
                 </div>
 
-                <div className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
+                <div className="rounded-lg border p-4">
+                  <div className="mb-3 flex items-center justify-between">
                     <h4 className="text-sm font-semibold">Facturas registradas</h4>
                     <div className="text-sm text-muted-foreground">
-                      Total: {formatCurrency(invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0), invoiceForm.currency)}
+                      Total:{' '}
+                      {formatCurrency(
+                        invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0),
+                        invoiceForm.currency
+                      )}
                     </div>
                   </div>
                   {invoices.length === 0 ? (
@@ -840,14 +934,31 @@ export default function LicitacionDetailPage() {
                   ) : (
                     <div className="space-y-2">
                       {invoices.map(inv => (
-                        <div key={inv.id} className="flex items-center justify-between rounded-lg border px-3 py-2">
+                        <div
+                          key={inv.id}
+                          className="flex items-center justify-between rounded-lg border px-3 py-2"
+                        >
                           <div className="flex flex-col text-sm">
-                            <span className="font-semibold">{formatCurrency(inv.amount, inv.currency || licitacion.baseline_currency)}</span>
-                            <span className="text-muted-foreground">
-                              {inv.invoice_date ? formatDate(inv.invoice_date) : 'Sin fecha'} • {inv.provider || 'Sin proveedor'}
+                            <span className="font-semibold">
+                              {formatCurrency(
+                                inv.amount,
+                                inv.currency || licitacion.baseline_currency
+                              )}
                             </span>
-                            {inv.category && <span className="text-muted-foreground text-xs">Cat: {inv.category}</span>}
-                            {inv.description && <span className="text-muted-foreground text-xs">{inv.description}</span>}
+                            <span className="text-muted-foreground">
+                              {inv.invoice_date ? formatDate(inv.invoice_date) : 'Sin fecha'} •{' '}
+                              {inv.provider || 'Sin proveedor'}
+                            </span>
+                            {inv.category && (
+                              <span className="text-xs text-muted-foreground">
+                                Cat: {inv.category}
+                              </span>
+                            )}
+                            {inv.description && (
+                              <span className="text-xs text-muted-foreground">
+                                {inv.description}
+                              </span>
+                            )}
                           </div>
                         </div>
                       ))}

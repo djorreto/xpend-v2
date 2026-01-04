@@ -24,26 +24,36 @@ import { useToast } from '@/components/ui/toast'
 import { UserEditModal } from '@/components/forms/user-edit-modal'
 import { UserInviteModal } from '@/components/forms/user-invite-modal'
 
-interface UserProfile {
-  id: string
-  email: string
-  full_name: string | null
+interface CompanyRole {
   role: string
-  created_at: string
-  updated_at: string
-  companies: {
+  company: {
+    id: string
     name: string
   } | null
 }
 
-const roleColors = {
+interface UserProfile {
+  id: string
+  email: string
+  full_name: string | null
+  role: string | null
+  created_at: string
+  updated_at?: string
+  phone?: string | null
+  position?: string | null
+  department?: string | null
+  avatar_url?: string | null
+  company_roles: CompanyRole[]
+}
+
+const roleColors: Record<string, string> = {
   admin: 'bg-red-100 text-red-800',
   manager: 'bg-blue-100 text-blue-800',
   analyst: 'bg-green-100 text-green-800',
   viewer: 'bg-gray-100 text-gray-800'
 }
 
-const roleLabels = {
+const roleLabels: Record<string, string> = {
   admin: 'Administrador',
   manager: 'Gerente',
   analyst: 'Analista',
@@ -114,10 +124,22 @@ export default function UsersPage() {
         const { data: usersData, error: usersError } = await supabase
           .from('profiles')
           .select(`
-            *,
-            companies(name)
+            id,
+            email,
+            full_name,
+            role,
+            created_at,
+            updated_at,
+            phone,
+            position,
+            department,
+            avatar_url,
+            company_roles:company_user_roles!inner(
+              role,
+              company:companies(id,name)
+            )
           `)
-          .eq('company_id', profile.company_id)
+          .eq('company_roles.company_id', profile.company_id)
           .order('created_at', { ascending: false })
 
         if (usersError) throw usersError
@@ -216,7 +238,10 @@ export default function UsersPage() {
 
         {/* Users Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredUsers.map((userProfile) => (
+          {filteredUsers.map((userProfile) => {
+            const currentCompanyRole = userProfile.company_roles?.[0]?.role
+            const currentCompanyName = userProfile.company_roles?.[0]?.company?.name
+            return (
             <Card key={userProfile.id} className="hover:shadow-md transition-shadow" suppressHydrationWarning>
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -237,8 +262,8 @@ export default function UsersPage() {
               <CardContent className="space-y-4">
                 {/* Role */}
                 <div className="flex items-center justify-between" suppressHydrationWarning>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${roleColors[userProfile.role as keyof typeof roleColors]}`}>
-                    {roleLabels[userProfile.role as keyof typeof roleLabels]}
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${roleColors[currentCompanyRole || 'viewer'] || 'bg-gray-100 text-gray-800'}`}>
+                    {roleLabels[currentCompanyRole || 'viewer'] || currentCompanyRole || 'Sin rol'}
                   </span>
                   <span className="text-sm text-muted-foreground">
                     {formatDate(userProfile.created_at)}
@@ -249,7 +274,7 @@ export default function UsersPage() {
                 <div className="flex items-center space-x-2 text-sm" suppressHydrationWarning>
                   <Shield className="h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">
-                    {userProfile.companies?.name || 'Sin empresa'}
+                    {currentCompanyName || 'Sin empresa'}
                   </span>
                 </div>
 
@@ -267,7 +292,7 @@ export default function UsersPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
 
         {/* Empty State */}
@@ -309,14 +334,16 @@ export default function UsersPage() {
           }}
           user={selectedUser}
           onSave={handleUserUpdated}
+          isSuperAdminCurrent={user?.role === 'super_admin'}
         />
 
-        <UserInviteModal
-          isOpen={inviteModalOpen}
-          onClose={() => setInviteModalOpen(false)}
-          companyId={company?.id}
-          onUserCreated={handleUserCreated}
-        />
+      <UserInviteModal
+        isOpen={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
+        companyId={company?.id}
+        companyName={company?.name}
+        onUserCreated={handleUserCreated}
+      />
       </div>
     </MainLayout>
   )

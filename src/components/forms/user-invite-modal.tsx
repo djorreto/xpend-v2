@@ -8,27 +8,56 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { supabaseBrowser } from '@/lib/supabase'
-import { UserPlus, Mail, Save } from 'lucide-react'
+import { UserPlus, Mail, Save, ShieldCheck, Tag, Building2, Loader2 } from 'lucide-react'
+import { isValidRut, formatRut, cleanRut } from '@/lib/rut-utils'
 
 interface UserInviteModalProps {
   isOpen: boolean
   onClose: () => void
-  companyId: string
+  companyId?: string // si no viene, lo asigna el super admin
   onUserCreated: (newUser: any) => void
+  companyName?: string
 }
 
-export function UserInviteModal({ isOpen, onClose, companyId, onUserCreated }: UserInviteModalProps) {
+interface CompanyOption {
+  id: string
+  name: string
+  tax_id: string | null
+  category: string | null
+}
+
+export function UserInviteModal({ isOpen, onClose, companyId, companyName, onUserCreated }: UserInviteModalProps) {
   const [formData, setFormData] = useState({
     email: '',
     full_name: '',
     role: 'viewer',
     position: '',
     department: '',
-    phone: ''
+    phone: '',
+    company_id: companyId || '',
+    newCompanyName: '',
+    newCompanyRut: '',
+    newCompanyCategory: ''
   })
+  const [companies, setCompanies] = useState<CompanyOption[]>([])
   const [loading, setLoading] = useState(false)
   const { addToast } = useToast()
   const supabase = supabaseBrowser()
+
+  const isSuperAdmin = !companyId
+
+  const loadCompanies = async () => {
+    const { data, error } = await supabase
+      .from('companies')
+      .select('id, name, tax_id, category')
+      .order('name', { ascending: true })
+    if (!error && data) setCompanies(data)
+  }
+
+  // Pre-cargar empresas si es super admin
+  if (isSuperAdmin && companies.length === 0) {
+    loadCompanies()
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,6 +73,44 @@ export function UserInviteModal({ isOpen, onClose, companyId, onUserCreated }: U
 
     try {
       setLoading(true)
+
+      let targetCompanyId = companyId || formData.company_id
+
+      // Si es super admin y no seleccionó empresa, intenta crear nueva
+      if (!targetCompanyId) {
+        const rut = formData.newCompanyRut.trim()
+        if (!isValidRut(rut)) {
+          addToast({ type: 'error', title: 'RUT inválido', message: 'Formato esperado 12345678-9' })
+          setLoading(false)
+          return
+        }
+
+        // Verificar duplicado
+        const { data: existing, error: findError } = await supabase
+          .from('companies')
+          .select('id')
+          .eq('tax_id', cleanRut(rut))
+          .single()
+        if (existing?.id) {
+          addToast({ type: 'error', title: 'Empresa ya existe', message: 'RUT duplicado' })
+          setLoading(false)
+          return
+        }
+
+        // Crear empresa nueva
+        const { data: newCo, error: coError } = await supabase
+          .from('companies')
+          .insert({
+            name: formData.newCompanyName,
+            tax_id: cleanRut(rut),
+            category: formData.newCompanyCategory || 'Sin categoría'
+          })
+          .select()
+          .single()
+
+        if (coError || !newCo) throw coError
+        targetCompanyId = newCo.id
+      }
 
       // Crear el usuario en Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -64,8 +131,8 @@ export function UserInviteModal({ isOpen, onClose, companyId, onUserCreated }: U
             id: authData.user.id,
             email: formData.email,
             full_name: formData.full_name || null,
-            role: formData.role,
-            company_id: companyId,
+            role: null, // rol global (solo super_admin); usamos roles por empresa
+            company_id: targetCompanyId,
             position: formData.position || null,
             department: formData.department || null,
             phone: formData.phone || null,
@@ -77,7 +144,23 @@ export function UserInviteModal({ isOpen, onClose, companyId, onUserCreated }: U
 
         if (profileError) throw profileError
 
-        onUserCreated(profileData)
+        // Insertar rol por empresa
+        const { error: roleError } = await supabase.from('company_user_roles').insert({
+          user_id: profileData.id,
+          company_id: targetCompanyId,
+          role: formData.role
+        })
+        if (roleError) throw roleError
+
+        onUserCreated({
+          ...profileData,
+          company_roles: [
+            {
+              role: formData.role,
+              company: { id: targetCompanyId, name: companies.find(c => c.id === targetCompanyId)?.name || companyName || '' }
+            }
+          ]
+        })
 
         addToast({
           type: 'success',
@@ -92,7 +175,11 @@ export function UserInviteModal({ isOpen, onClose, companyId, onUserCreated }: U
           role: 'viewer',
           position: '',
           department: '',
-          phone: ''
+          phone: '',
+          company_id: companyId || '',
+          newCompanyName: '',
+          newCompanyRut: '',
+          newCompanyCategory: ''
         })
 
         onClose()
@@ -151,6 +238,70 @@ export function UserInviteModal({ isOpen, onClose, companyId, onUserCreated }: U
             />
           </div>
 
+          {isSuperAdmin && (
+            <div className="space-y-4 border rounded-lg p-3">
+          <p className="text-sm font-medium">Empresa destino</p>
+              <div className="space-y-2">
+                <Label>Selecciona empresa existente</Label>
+                <Select
+                  value={formData.company_id}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, company_id: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map(co => (
+                      <SelectItem key={co.id} value={co.id}>
+                        {co.name} {co.tax_id ? `(${formatRut(co.tax_id)})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <p className="text-xs text-muted-foreground">O crea una empresa nueva:</p>
+              <div className="space-y-2">
+                <Label>Nombre empresa</Label>
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={formData.newCompanyName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, newCompanyName: e.target.value }))}
+                    placeholder="Nueva empresa"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>RUT</Label>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={formData.newCompanyRut}
+                    onChange={(e) => setFormData(prev => ({ ...prev, newCompanyRut: e.target.value }))}
+                    placeholder="12345678-9"
+                  />
+                </div>
+                {formData.newCompanyRut && isValidRut(formData.newCompanyRut) && (
+                  <p className="text-xs text-muted-foreground">
+                    Formato: {formatRut(formData.newCompanyRut)}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Categoría</Label>
+                <div className="flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={formData.newCompanyCategory}
+                    onChange={(e) => setFormData(prev => ({ ...prev, newCompanyCategory: e.target.value }))}
+                    placeholder="Categoría/Industria"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Rol */}
           <div className="space-y-2">
             <Label htmlFor="role">Rol</Label>
@@ -207,7 +358,10 @@ export function UserInviteModal({ isOpen, onClose, companyId, onUserCreated }: U
             </Button>
             <Button type="submit" disabled={loading}>
               {loading ? (
-                <>Creando...</>
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creando...
+                </>
               ) : (
                 <>
                   <Save className="mr-2 h-4 w-4" />

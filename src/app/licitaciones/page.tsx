@@ -18,7 +18,7 @@ import {
   Trash2,
   FileText,
   TrendingDown,
-  TrendingUp
+  TrendingUp,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate } from '@/lib/utils'
@@ -34,7 +34,7 @@ const statusColors = {
   published: 'bg-cyan-100 text-cyan-800',
   evaluation: 'bg-yellow-100 text-yellow-800',
   awarded: 'bg-purple-100 text-purple-800',
-  contract_signed: 'bg-green-100 text-green-800'
+  contract_signed: 'bg-green-100 text-green-800',
 }
 
 const statusLabels = {
@@ -43,20 +43,20 @@ const statusLabels = {
   published: 'Publicada',
   evaluation: 'Evaluación',
   awarded: 'Adjudicada',
-  contract_signed: 'Contrato firmado'
+  contract_signed: 'Contrato firmado',
 }
 
 const typeLabels = {
   RFP: 'RFP',
   RFQ: 'RFQ',
-  RFI: 'RFI'
+  RFI: 'RFI',
 }
 
 const categoryLabels = {
   recurring_service: 'Servicio recurrente',
   non_recurring_service: 'Servicio no recurrente',
   improvement_project: 'Proyecto de mejora',
-  construction_project: 'Proyecto de construcción'
+  construction_project: 'Proyecto de construcción',
 }
 
 type PlanLink = {
@@ -92,10 +92,14 @@ export default function LicitacionesPage() {
       setError(null)
 
       // 1) Asegurar que la sesión esté hidratada
-      let { data: { session } } = await supabase.auth.getSession()
+      let {
+        data: { session },
+      } = await supabase.auth.getSession()
       if (!session?.user?.id) {
         await new Promise(r => setTimeout(r, 150))
-        ;({ data: { session } } = await supabase.auth.getSession())
+        ;({
+          data: { session },
+        } = await supabase.auth.getSession())
       }
       const authUser = session?.user
       if (!authUser) throw new Error('Usuario no autenticado')
@@ -112,7 +116,7 @@ export default function LicitacionesPage() {
       setUser({
         name: profile.full_name || authUser.email,
         email: authUser.email,
-        role: profile.role
+        role: profile.role,
       })
 
       // Get company info
@@ -130,11 +134,13 @@ export default function LicitacionesPage() {
         // Load licitaciones with department and responsible user
         const { data: licitacionesData, error: licitacionesError } = await supabase
           .from('licitaciones')
-          .select(`
+          .select(
+            `
             *,
             department:departments(id, name),
             responsible_user:profiles!responsible_user_id(id, full_name, email)
-          `)
+          `
+          )
           .eq('company_id', profile.company_id)
           .order('created_at', { ascending: false })
 
@@ -155,7 +161,7 @@ export default function LicitacionesPage() {
             grouped[link.licitacion_id].push({
               plan_id: link.plan_id,
               licitacion_id: link.licitacion_id,
-              plan: planInfo
+              plan: planInfo,
             } as PlanLink)
           })
           setPlanLinks(grouped)
@@ -168,7 +174,7 @@ export default function LicitacionesPage() {
       addToast({
         type: 'error',
         title: 'Error',
-        message: 'No se pudieron cargar las licitaciones'
+        message: 'No se pudieron cargar las licitaciones',
       })
     } finally {
       setLoading(false)
@@ -181,10 +187,7 @@ export default function LicitacionesPage() {
     }
 
     try {
-      const { error } = await supabase
-        .from('licitaciones')
-        .delete()
-        .eq('id', licitacionId)
+      const { error } = await supabase.from('licitaciones').delete().eq('id', licitacionId)
 
       if (error) throw error
 
@@ -192,21 +195,23 @@ export default function LicitacionesPage() {
       addToast({
         type: 'success',
         title: 'Licitación eliminada',
-        message: 'La licitación ha sido eliminada correctamente'
+        message: 'La licitación ha sido eliminada correctamente',
       })
     } catch (err) {
       addToast({
         type: 'error',
         title: 'Error',
-        message: 'No se pudo eliminar la licitación'
+        message: 'No se pudo eliminar la licitación',
       })
     }
   }
 
-  const filteredLicitaciones = licitaciones.filter(licitacion =>
-    licitacion.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (licitacion.description && licitacion.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    licitacion.id.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredLicitaciones = licitaciones.filter(
+    licitacion =>
+      licitacion.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (licitacion.description &&
+        licitacion.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      licitacion.id.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   if (loading) {
@@ -257,7 +262,7 @@ export default function LicitacionesPage() {
                     placeholder="Buscar por ID, nombre o descripción..."
                     className="pl-10"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={e => setSearchQuery(e.target.value)}
                   />
                 </div>
               </div>
@@ -276,48 +281,54 @@ export default function LicitacionesPage() {
               <table className="w-full">
                 <thead className="border-b bg-muted/50">
                   <tr>
-                    <th className="text-left p-4 font-medium">ID / Nombre</th>
-                    <th className="text-left p-4 font-medium">Estado</th>
-                    <th className="text-left p-4 font-medium">Tipo</th>
-                    <th className="text-left p-4 font-medium">Categoría</th>
-                    <th className="text-right p-4 font-medium">Baseline</th>
-                    <th className="text-right p-4 font-medium">Adjudicado</th>
-                    <th className="text-right p-4 font-medium">Ahorro</th>
-                    <th className="text-left p-4 font-medium">Fechas</th>
-                    <th className="text-center p-4 font-medium">Iniciativas</th>
-                    <th className="text-center p-4 font-medium">Acciones</th>
+                    <th className="p-4 text-left font-medium">ID / Nombre</th>
+                    <th className="p-4 text-left font-medium">Estado</th>
+                    <th className="p-4 text-left font-medium">Tipo</th>
+                    <th className="p-4 text-left font-medium">Categoría</th>
+                    <th className="p-4 text-right font-medium">Baseline</th>
+                    <th className="p-4 text-right font-medium">Adjudicado</th>
+                    <th className="p-4 text-right font-medium">Ahorro</th>
+                    <th className="p-4 text-left font-medium">Fechas</th>
+                    <th className="p-4 text-center font-medium">Iniciativas</th>
+                    <th className="p-4 text-center font-medium">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredLicitaciones.map((licitacion) => (
-                    <tr key={licitacion.id} className="border-b hover:bg-muted/30 transition-colors">
+                  {filteredLicitaciones.map(licitacion => (
+                    <tr
+                      key={licitacion.id}
+                      className="border-b transition-colors hover:bg-muted/30"
+                    >
                       {/* ID / Nombre */}
                       <td className="p-4">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-mono text-muted-foreground">{licitacion.id}</span>
+                            <span className="font-mono text-xs text-muted-foreground">
+                              {licitacion.id}
+                            </span>
                             {licitacion.type && (
-                              <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800">
+                              <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800">
                                 {typeLabels[licitacion.type as keyof typeof typeLabels]}
                               </span>
                             )}
                           </div>
                           <div className="font-medium">{licitacion.name}</div>
                           {licitacion.description && (
-                            <div className="text-sm text-muted-foreground line-clamp-1">
+                            <div className="line-clamp-1 text-sm text-muted-foreground">
                               {licitacion.description}
                             </div>
                           )}
                           {/* Chips de iniciativas */}
-                          <div className="flex flex-wrap gap-2 mt-1">
+                          <div className="mt-1 flex flex-wrap gap-2">
                             {(planLinks[licitacion.id] || []).map(link => (
                               <Badge
                                 key={link.plan_id}
                                 variant="outline"
-                                className="text-xs cursor-pointer"
+                                className="cursor-pointer text-xs"
                                 onClick={() => router.push(`/sourcing-plan/${link.plan_id}`)}
                               >
-                                {link.plan?.title || link.plan_id} • {link.plan?.plan_year}-{link.plan?.quarter}
+                                {link.plan?.title || link.plan_id} • {link.plan?.plan_year}-
+                                {link.plan?.quarter}
                               </Badge>
                             ))}
                           </div>
@@ -326,7 +337,9 @@ export default function LicitacionesPage() {
 
                       {/* Estado */}
                       <td className="p-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[licitacion.status as keyof typeof statusColors]}`}>
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs font-medium ${statusColors[licitacion.status as keyof typeof statusColors]}`}
+                        >
                           {statusLabels[licitacion.status as keyof typeof statusLabels]}
                         </span>
                       </td>
@@ -353,7 +366,10 @@ export default function LicitacionesPage() {
                       <td className="p-4 text-right">
                         {licitacion.baseline_amount ? (
                           <span className="font-medium">
-                            {formatCurrency(licitacion.baseline_amount, licitacion.baseline_currency)}
+                            {formatCurrency(
+                              licitacion.baseline_amount,
+                              licitacion.baseline_currency
+                            )}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
@@ -364,7 +380,10 @@ export default function LicitacionesPage() {
                       <td className="p-4 text-right">
                         {licitacion.awarded_amount ? (
                           <span className="font-medium">
-                            {formatCurrency(licitacion.awarded_amount, licitacion.baseline_currency)}
+                            {formatCurrency(
+                              licitacion.awarded_amount,
+                              licitacion.baseline_currency
+                            )}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
@@ -373,20 +392,29 @@ export default function LicitacionesPage() {
 
                       {/* Ahorro */}
                       <td className="p-4 text-right">
-                        {licitacion.savings_amount !== undefined && licitacion.savings_amount !== null ? (
-                          <div className={`flex items-center justify-end gap-1 ${
-                            licitacion.savings_amount > 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
+                        {licitacion.savings_amount !== undefined &&
+                        licitacion.savings_amount !== null ? (
+                          <div
+                            className={`flex items-center justify-end gap-1 ${
+                              licitacion.savings_amount > 0 ? 'text-green-600' : 'text-red-600'
+                            }`}
+                          >
                             {licitacion.savings_amount > 0 ? (
                               <TrendingDown className="h-3 w-3" />
                             ) : (
                               <TrendingUp className="h-3 w-3" />
                             )}
                             <span className="font-semibold">
-                              {formatCurrency(Math.abs(licitacion.savings_amount), licitacion.baseline_currency)}
-                              {licitacion.savings_percentage !== undefined && licitacion.savings_percentage !== null && (
-                                <span className="ml-1 text-xs">({Math.abs(licitacion.savings_percentage).toFixed(1)}%)</span>
+                              {formatCurrency(
+                                Math.abs(licitacion.savings_amount),
+                                licitacion.baseline_currency
                               )}
+                              {licitacion.savings_percentage !== undefined &&
+                                licitacion.savings_percentage !== null && (
+                                  <span className="ml-1 text-xs">
+                                    ({Math.abs(licitacion.savings_percentage).toFixed(1)}%)
+                                  </span>
+                                )}
                             </span>
                           </div>
                         ) : (
@@ -396,11 +424,12 @@ export default function LicitacionesPage() {
 
                       {/* Fechas */}
                       <td className="p-4">
-                        {(licitacion.publication_date || licitacion.proposal_closing_date) ? (
+                        {licitacion.publication_date || licitacion.proposal_closing_date ? (
                           <div className="flex items-center space-x-1 text-sm">
                             <Calendar className="h-3 w-3 text-muted-foreground" />
                             <span className="text-muted-foreground">
-                              {licitacion.publication_date && formatDate(licitacion.publication_date)}
+                              {licitacion.publication_date &&
+                                formatDate(licitacion.publication_date)}
                               {licitacion.proposal_closing_date && (
                                 <> - {formatDate(licitacion.proposal_closing_date)}</>
                               )}
@@ -452,9 +481,9 @@ export default function LicitacionesPage() {
         {filteredLicitaciones.length === 0 && licitaciones.length === 0 && (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <Gavel className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No hay licitaciones</h3>
-              <p className="text-muted-foreground text-center mb-4">
+              <Gavel className="mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="mb-2 text-lg font-semibold">No hay licitaciones</h3>
+              <p className="mb-4 text-center text-muted-foreground">
                 Comienza creando tu primera licitación
               </p>
               <Button onClick={() => router.push('/licitaciones/new')}>
@@ -469,9 +498,9 @@ export default function LicitacionesPage() {
         {filteredLicitaciones.length === 0 && licitaciones.length > 0 && (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <Search className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No se encontraron licitaciones</h3>
-              <p className="text-muted-foreground text-center mb-4">
+              <Search className="mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="mb-2 text-lg font-semibold">No se encontraron licitaciones</h3>
+              <p className="mb-4 text-center text-muted-foreground">
                 Intenta con otros términos de búsqueda
               </p>
             </CardContent>
