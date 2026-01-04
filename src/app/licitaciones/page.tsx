@@ -151,7 +151,12 @@ export default function LicitacionesPage() {
           const grouped: Record<string, PlanLink[]> = {}
           ;(links || []).forEach(link => {
             if (!grouped[link.licitacion_id]) grouped[link.licitacion_id] = []
-            grouped[link.licitacion_id].push(link as PlanLink)
+            const planInfo = Array.isArray(link.plan) ? link.plan[0] : link.plan
+            grouped[link.licitacion_id].push({
+              plan_id: link.plan_id,
+              licitacion_id: link.licitacion_id,
+              plan: planInfo
+            } as PlanLink)
           })
           setPlanLinks(grouped)
         } else {
