@@ -373,7 +373,7 @@ export default function SuperAdminPage() {
     setSelectedCompany(company)
     setEditCompanyForm({
       name: company.name,
-      industry: company.industry,
+      industry: company.industry || '',
       tax_id: company.tax_id,
       category: company.category || '',
     })
