@@ -33,6 +33,8 @@ export default function EditLicitacionPage() {
   const [departments, setDepartments] = useState<Department[]>([])
   const [suppliers, setSuppliers] = useState<any[]>([])
   const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([])
+  const [sourcingPlans, setSourcingPlans] = useState<any[]>([])
+  const [selectedPlans, setSelectedPlans] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
