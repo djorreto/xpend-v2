@@ -163,14 +163,17 @@ export default function LicitacionDetailPage() {
         .select('plan_id, contribution_baseline, contribution_savings, plan:sourcing_plans(id, title, plan_year, quarter)')
         .eq('licitacion_id', licitacionId)
       setLinkedPlans(
-        (links || []).map(link => ({
-          plan_id: link.plan_id,
-          title: link.plan?.title,
-          plan_year: link.plan?.plan_year,
-          quarter: link.plan?.quarter,
-          contribution_baseline: link.contribution_baseline,
-          contribution_savings: link.contribution_savings
-        }))
+        (links || []).map(link => {
+          const planInfo = Array.isArray(link.plan) ? link.plan[0] : link.plan
+          return {
+            plan_id: link.plan_id,
+            title: planInfo?.title,
+            plan_year: planInfo?.plan_year,
+            quarter: planInfo?.quarter,
+            contribution_baseline: link.contribution_baseline,
+            contribution_savings: link.contribution_savings
+          }
+        })
       )
 
       // Load service invoices for this licitacion
