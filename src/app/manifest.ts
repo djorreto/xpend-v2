@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Xpend: control de gasto y procurement estratégico.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#F7D047',
-    theme_color: '#F7D047',
+    background_color: '#2BE7AE',
+    theme_color: '#2BE7AE',
     icons: [
       {
         src: '/favicon.svg',

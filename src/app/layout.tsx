@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     { rel: 'icon', url: '/favicon.svg' },
     { rel: 'apple-touch-icon', url: '/favicon.svg' }
   ],
-  themeColor: '#F7D047',
+  themeColor: '#2BE7AE',
   applicationName: 'Xpend',
   robots: {
     index: false,

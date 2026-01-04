@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Xpend">
-  <rect width="256" height="256" rx="48" fill="#F7D047"/>
+  <rect width="256" height="256" rx="48" fill="#2BE7AE"/>
   <path fill="#0F172A" d="M70 70h36l22 32 22-32h36l-40 58 42 58h-36l-24-34-24 34H70l42-58-40-58Z"/>
 </svg>
 
