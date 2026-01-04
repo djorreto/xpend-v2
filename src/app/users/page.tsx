@@ -339,7 +339,15 @@ export default function UsersPage() {
             setEditModalOpen(false)
             setSelectedUser(null)
           }}
-          user={selectedUser}
+          user={
+            selectedUser
+              ? {
+                  ...selectedUser,
+                  role: selectedUser.role || 'user',
+                  company_roles: selectedUser.company_roles || []
+                }
+              : null
+          }
           onSave={handleUserUpdated}
           isSuperAdminCurrent={user?.role === 'super_admin'}
         />
