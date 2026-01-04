@@ -421,7 +421,6 @@ export function UserEditModal({ isOpen, onClose, user, onSave, isSuperAdminCurre
                             prev.map((p) => (p.company_id === cr.company_id ? { ...p, role: value } : p))
                           )
                         }
-                        onCloseAutoFocus={(e) => e.preventDefault()}
                       >
                         <SelectTrigger className="w-32">
                           <SelectValue />
