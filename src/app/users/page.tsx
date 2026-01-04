@@ -344,6 +344,7 @@ export default function UsersPage() {
               ? {
                   ...selectedUser,
                   role: selectedUser.role || 'user',
+                  avatar_url: selectedUser.avatar_url || '',
                   company_roles: selectedUser.company_roles || []
                 }
               : null
