@@ -13,7 +13,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [creatingUser, setCreatingUser] = useState(false);
 
   // Si ya hay sesión, redirige al dashboard
   useEffect(() => {
@@ -57,41 +56,6 @@ export default function LoginPage() {
       setError(err instanceof Error ? err.message : 'Error inesperado al hacer login');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const createTestUser = async () => {
-    setCreatingUser(true);
-    setError(null);
-
-    try {
-      console.log('Creando usuario de prueba...');
-
-      const { data, error } = await supabase.auth.signUp({
-        email: 'test@xpend.cl',
-        password: 'test123456',
-        options: {
-          data: {
-            full_name: 'Usuario de Prueba',
-            role: 'admin'
-          }
-        }
-      });
-
-      if (error) {
-        console.error('Error creando usuario:', error);
-        setError(`Error: ${error.message}`);
-      } else {
-        console.log('Usuario creado exitosamente:', data);
-        setEmail('test@xpend.cl');
-        setPassword('test123456');
-        setError('Usuario de prueba creado. Puedes hacer login con test@xpend.cl / test123456');
-      }
-    } catch (err) {
-      console.error('Error:', err);
-      setError(err instanceof Error ? err.message : 'Error inesperado al crear usuario');
-    } finally {
-      setCreatingUser(false);
     }
   };
 
@@ -139,16 +103,6 @@ export default function LoginPage() {
           <p className="text-sm text-center">
             <a href="/reset-password" className="underline">¿Olvidaste tu contraseña?</a>
           </p>
-
-          {/* Botón temporal para crear usuario de prueba */}
-          <button
-            type="button"
-            onClick={createTestUser}
-            disabled={creatingUser}
-            className="w-full bg-blue-500 text-white rounded p-2 text-sm"
-          >
-            {creatingUser ? 'Creando...' : 'Crear Usuario de Prueba'}
-          </button>
 
           <p className="text-sm text-center">
             ¿Aún no tienes cuenta? <a href="/signup" className="underline">Crear cuenta</a>
