@@ -39,6 +39,7 @@ const navigationBase = [
   { name: 'Licitaciones', href: '/licitaciones', icon: Gavel },
   { name: 'Sala de Ofertas', href: '/sala', icon: Scale },
   { name: 'Proveedores', href: '/suppliers', icon: Truck },
+  { name: 'Contratos', href: '/contratos', icon: FileText },
   { name: 'Spend Analysis', href: '/spend', icon: TrendingUp },
   { name: 'Reportes', href: '/reports', icon: BarChart3 },
   { name: 'Usuarios', href: '/users', icon: Users },
@@ -50,7 +51,7 @@ const invoicesNavItem = { name: 'Facturas', href: '/invoices', icon: Receipt }
 const NAV_GROUPS = [
   { label: 'Hoy', hrefs: ['/dashboard', '/comite'] },
   { label: 'Estrategia', hrefs: ['/sourcing-intelligence', '/spend', '/sourcing-plan', '/rfx-maker'] },
-  { label: 'Compra', hrefs: ['/licitaciones', '/sala', '/suppliers', '/invoices'] },
+  { label: 'Compra', hrefs: ['/licitaciones', '/sala', '/suppliers', '/contratos', '/invoices'] },
   { label: 'Lectura', hrefs: ['/reports'] },
   { label: 'Cuenta', hrefs: ['/users', '/settings', '/super-admin'] },
 ]

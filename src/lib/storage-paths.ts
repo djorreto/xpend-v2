@@ -43,6 +43,17 @@ export function offerFilePath(
   return `${companyId}/ofertas/${eventId}/${supplierId}/${timestamp}-anexo${extension(fileName)}`
 }
 
+export function contractFilePath(
+  companyId: string,
+  contractId: string,
+  fileName: string,
+  timestamp = Date.now()
+) {
+  assertCompanyId(companyId)
+  assertSegment(contractId, 'El contrato')
+  return `${companyId}/contratos/${contractId}/${timestamp}-contrato${extension(fileName)}`
+}
+
 export function supplierNdaPath(
   companyId: string,
   supplierId: string,
