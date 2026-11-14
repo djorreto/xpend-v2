@@ -378,7 +378,7 @@ export default function ContratoPage() {
                     <div className="space-y-2">
                       <Textarea value={returnNote} onChange={event => setReturnNote(event.target.value)} placeholder="Observación para devolver esta versión" />
                       {legalRequired && <Textarea value={legalNote} onChange={event => setLegalNote(event.target.value)} placeholder="Nota de revisión legal" />}
-                      {contract.award_id && (
+                      {Boolean(contract.award_id) && (
                         <Textarea value={variance} onChange={event => setVariance(event.target.value)} placeholder="Si el monto, la moneda o el proveedor ya no coinciden con la adjudicación, explica la diferencia." />
                       )}
                       <div className="flex gap-2">

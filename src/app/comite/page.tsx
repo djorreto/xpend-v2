@@ -87,7 +87,7 @@ export default function ComitePage() {
 
     const planRows = plans.data || []
     const planIds = planRows.map(plan => plan.id)
-    const linkRows: { plan_id: string; savings_amount: number | null; currency: string | null }[] = []
+    const linkRows: { plan_id: string; savings_amount: number | null; currency: string | null; awarded?: boolean }[] = []
     if (planIds.length) {
       const { data: links } = await supabase
         .from('sourcing_plan_licitaciones')

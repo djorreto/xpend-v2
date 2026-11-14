@@ -115,6 +115,7 @@ export interface Licitacion {
   status: LicitacionStatus
   type?: LicitacionType
   category?: LicitacionCategory
+  category_label?: string
 
   // Baseline y montos
   baseline_currency: string

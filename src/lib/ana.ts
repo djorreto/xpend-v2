@@ -1,5 +1,7 @@
 import { extractContractSignals } from './contract-extract.ts'
 
+export type AnaMode = 'data' | 'document' | 'draft' | 'refused' | 'model_required'
+
 export type AnaEvidence = {
   source: string
   label: string
@@ -326,7 +328,7 @@ function documentAnswer(context: AnaContext, pack: AnaPack, question: string): A
       return [
         ...signals.fields.map(field => ({ source: item.document.name, label: field.fieldKey, quote: field.quote, value: field.value })),
         ...signals.findings.map(finding => ({ source: item.document.name, label: finding.kind, quote: finding.quote })),
-      ]
+      ] as AnaEvidence[]
     })
     if (!evidence.length) {
       return base(context, 'document', `No pude verificar cláusulas en el texto de ${context.label}. No completé el resumen.${ignored ? ' Ignoré instrucciones insertadas en el documento.' : ''}`)
