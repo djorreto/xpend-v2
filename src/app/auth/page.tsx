@@ -153,9 +153,9 @@ export default function AuthPage() {
                       Recordarme
                     </span>
                   </label>
-                  <Button variant="link" className="p-0 h-auto text-sm">
+                  <a href="/reset-password" className="text-sm text-primary">
                     ¿Olvidaste tu contraseña?
-                  </Button>
+                  </a>
                 </div>
               )}
 

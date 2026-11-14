@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs } from '@/components/ui/tabs'
 import { useRouter } from 'next/navigation'
@@ -30,6 +30,14 @@ import { RfxParamsViewer } from '@/components/forms/rfx-params-viewer'
 import { RfxVersionsModal } from '@/components/forms/rfx-versions-modal'
 import { RfxComments } from '@/components/forms/rfx-comments'
 import { RichTextEditor } from '@/components/forms/rich-text-editor'
+import { RfxQuickAdminForm } from '@/components/forms/rfx-quick-admin'
+import { RfxSectionBases } from '@/components/forms/rfx-section-bases'
+import { RfxServiceSheets } from '@/components/forms/rfx-service-sheets'
+import { DossierThread } from '@/components/dossier-thread'
+import { composeBases, saveDossier } from '@/lib/dossier-store'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import type { RfxWizardQuestion } from '@/types/rfx-maker'
 
 interface Props {
   params: { id: string }
@@ -48,6 +56,13 @@ export default function RfxProjectPage({ params }: Props) {
   const [showVersionsModal, setShowVersionsModal] = useState(false)
   const [isEditingTechnical, setIsEditingTechnical] = useState(false)
   const [technicalContent, setTechnicalContent] = useState('')
+  const [adminBaseContent, setAdminBaseContent] = useState('')
+  const [techQuestions, setTechQuestions] = useState<RfxWizardQuestion[]>([])
+  const [adminQuestions, setAdminQuestions] = useState<RfxWizardQuestion[]>([])
+  const [techAnswers, setTechAnswers] = useState<Record<string, string>>({})
+  const [adminAnswers, setAdminAnswers] = useState<Record<string, string>>({})
+  const [loadingWizardQuestions, setLoadingWizardQuestions] = useState(false)
+  const wizardStarted = useRef(false)
 
   useEffect(() => {
     loadProject()
@@ -57,6 +72,130 @@ export default function RfxProjectPage({ params }: Props) {
     if (project?.technical_base_content) {
       setTechnicalContent(project.technical_base_content)
     }
+    const admin = (project?.project_context as { administrative_base_content?: string } | null)?.administrative_base_content
+    if (admin) setAdminBaseContent(admin)
+  }, [project])
+
+  useEffect(() => {
+    if (!project?.project_context) return
+    const ctx = project.project_context as Record<string, unknown>
+    const wizard = ctx.wizard as
+      | {
+          tech?: { id: string; question: string; answer?: string }[]
+          admin?: { id: string; question: string; answer?: string }[]
+        }
+      | undefined
+    const start = ctx.start as { document?: string } | undefined
+    if (start?.document === 'tecnica') setActiveTab('technical')
+    if (start?.document === 'administrativa') setActiveTab('admin')
+    if (!wizard) return
+    if (Array.isArray(wizard.tech) && wizard.tech.length > 0) {
+      setTechQuestions(wizard.tech.map((x) => ({ id: x.id, question: x.question })))
+      const ta: Record<string, string> = {}
+      wizard.tech.forEach((x) => {
+        if (x.answer) ta[x.id] = x.answer
+      })
+      setTechAnswers(ta)
+    }
+    if (Array.isArray(wizard.admin) && wizard.admin.length > 0) {
+      setAdminQuestions(wizard.admin.map((x) => ({ id: x.id, question: x.question })))
+      const aa: Record<string, string> = {}
+      wizard.admin.forEach((x) => {
+        if (x.answer) aa[x.id] = x.answer
+      })
+      setAdminAnswers(aa)
+    }
+  }, [project?.id])
+
+  const buildFollowUpFromState = () => {
+    const ft: Record<string, string> = {}
+    for (const q of techQuestions) {
+      const a = techAnswers[q.id]?.trim()
+      if (a) {
+        const label = q.question.length > 180 ? `${q.question.slice(0, 177)}…` : q.question
+        ft[label] = a
+      }
+    }
+    const fa: Record<string, string> = {}
+    for (const q of adminQuestions) {
+      const a = adminAnswers[q.id]?.trim()
+      if (a) {
+        const label = q.question.length > 180 ? `${q.question.slice(0, 177)}…` : q.question
+        fa[label] = a
+      }
+    }
+    return { ft, fa }
+  }
+
+  const downloadDocx = async () => {
+    if (!project) return
+    try {
+      const res = await fetch(
+        `/api/rfx-maker/download?project_id=${project.id}&format=docx`,
+        { credentials: 'include' }
+      )
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { error?: string }).error || res.statusText)
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const safe = String(project.project_code || 'rfx').replace(/[^\w.-]+/g, '_')
+      a.download = `${safe}_${project.rfx_type || 'RFx'}.docx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+      addToast({ type: 'success', title: 'Descarga', message: 'Documento Word generado' })
+    } catch (e) {
+      console.error(e)
+      addToast({
+        type: 'error',
+        title: 'Error al descargar',
+        message: e instanceof Error ? e.message : 'No se pudo generar el DOCX',
+      })
+    }
+  }
+
+  const fetchWizardQuestions = async () => {
+    if (!project) return
+    setLoadingWizardQuestions(true)
+    try {
+      const res = await fetch('/api/rfx-maker/wizard-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: project.id }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error || 'Error')
+      setTechQuestions(data.technical_questions || [])
+      setAdminQuestions(data.administrative_questions || [])
+      addToast({
+        type: 'success',
+        title: 'Preguntas listas',
+        message: 'Completa las respuestas y genera la base técnica',
+      })
+    } catch (e) {
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: e instanceof Error ? e.message : 'No se pudieron obtener preguntas',
+      })
+    } finally {
+      setLoadingWizardQuestions(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!project || wizardStarted.current) return
+    const ctx = project.project_context as { start?: { mode?: string }; wizard?: { tech?: unknown[]; admin?: unknown[] } } | null
+    if (ctx?.start?.mode !== 'agente') return
+    const pending = (ctx.wizard?.tech?.length || 0) + (ctx.wizard?.admin?.length || 0) === 0
+    if (!pending) return
+    wizardStarted.current = true
+    void fetchWizardQuestions()
   }, [project])
 
   const loadProject = async () => {
@@ -124,45 +263,87 @@ export default function RfxProjectPage({ params }: Props) {
 
     setIsGenerating(true)
     try {
-      const response = await fetch('/api/rfx-maker/generate-technical', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project_id: project.id,
-          admin_parameters: project.admin_parameters,
-          project_context: {
-            ...project.project_context,
-            rfx_type: project.rfx_type,
-            project_title: project.title,
-          },
-        }),
+      const { ft, fa } = buildFollowUpFromState()
+      const composed = composeBases({
+        title: project.title,
+        technical: techQuestions.map(q => ({ question: q.question, answer: techAnswers[q.id] || '' })),
+        administrative: adminQuestions.map(q => ({ question: q.question, answer: adminAnswers[q.id] || '' })),
       })
-
-      const data = await response.json()
-
-      if (!data.success) {
-        throw new Error(data.error || 'Error al generar base técnica')
+      let technical = composed.technical
+      try {
+        const response = await fetch('/api/rfx-maker/generate-technical', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            project_id: project.id,
+            admin_parameters: project.admin_parameters,
+            project_context: {
+              ...project.project_context,
+              rfx_type: project.rfx_type,
+              project_title: project.title,
+            },
+            follow_up_technical: Object.keys(ft).length ? ft : undefined,
+            follow_up_administrative: Object.keys(fa).length ? fa : undefined,
+          }),
+        })
+        const data = await response.json()
+        if (data.success && data.content) technical = data.content
+      } catch {
+        technical = composed.technical
       }
 
-      // Actualizar proyecto con base técnica generada
+      const wizard = {
+        tech: techQuestions.map((q) => ({
+          id: q.id,
+          question: q.question,
+          answer: techAnswers[q.id] || '',
+        })),
+        admin: adminQuestions.map((q) => ({
+          id: q.id,
+          question: q.question,
+          answer: adminAnswers[q.id] || '',
+        })),
+      }
+
       const supabase = supabaseBrowser()
+      const published = `${technical}\n\n${composed.administrative}`
+      const nextContext = {
+        ...(project.project_context || {}),
+        wizard,
+        administrative_base_content: composed.administrative,
+      }
       const { error } = await supabase
         .from('rfx_projects')
         .update({
-          technical_base_content: data.content,
+          technical_base_content: technical,
           technical_base_generated_at: new Date().toISOString(),
           technical_base_is_valid: true,
           technical_base_manually_edited: false,
+          project_context: nextContext,
         })
         .eq('id', project.id)
 
       if (error) throw error
+      const planId = (project.project_context as { sourcing_plan_id?: string } | null)?.sourcing_plan_id
+      if (project.company_id) {
+        await saveDossier(supabase, {
+          companyId: project.company_id,
+          sourcingPlanId: planId,
+          rfxProjectId: project.id,
+          title: project.title,
+          stage: 'bases',
+          basesText: published,
+        })
+      }
+      setAdminBaseContent(composed.administrative)
+      setTechnicalContent(technical)
 
       setProject({
         ...project,
-        technical_base_content: data.content,
+        technical_base_content: technical,
         technical_base_is_valid: true,
         technical_base_manually_edited: false,
+        project_context: nextContext,
       })
 
       addToast({
@@ -188,11 +369,14 @@ export default function RfxProjectPage({ params }: Props) {
     if (!project) return
 
     // Validaciones
-    if (newStatus === 'ready' && !project.technical_base_is_valid) {
+    const hasTechnicalDraft =
+      Boolean(project.technical_base_content && project.technical_base_content.trim().length > 80)
+
+    if (newStatus === 'ready' && !project.technical_base_is_valid && !hasTechnicalDraft) {
       addToast({
         type: 'error',
         title: 'No se puede marcar como listo',
-        message: 'Debes generar una base técnica válida primero'
+        message: 'Genera o escribe una base técnica con contenido suficiente antes de marcar listo',
       })
       return
     }
@@ -287,16 +471,33 @@ export default function RfxProjectPage({ params }: Props) {
         .update({
           technical_base_content: technicalContent,
           technical_base_manually_edited: true,
+          project_context: {
+            ...(project.project_context || {}),
+            administrative_base_content: adminBaseContent,
+          },
           updated_at: new Date().toISOString(),
         })
         .eq('id', project.id)
 
       if (error) throw error
+      const planId = (project.project_context as { sourcing_plan_id?: string } | null)?.sourcing_plan_id
+      await saveDossier(supabase, {
+        companyId: project.company_id,
+        sourcingPlanId: planId,
+        rfxProjectId: project.id,
+        title: project.title,
+        stage: 'bases',
+        basesText: `${technicalContent}\n\n${adminBaseContent}`,
+      })
 
       setProject({
         ...project,
         technical_base_content: technicalContent,
         technical_base_manually_edited: true,
+        project_context: {
+          ...(project.project_context || {}),
+          administrative_base_content: adminBaseContent,
+        },
       })
 
       setIsEditingTechnical(false)
@@ -350,6 +551,7 @@ export default function RfxProjectPage({ params }: Props) {
   return (
     <MainLayout>
       <div className="space-y-6">
+        <DossierThread match={{ companyId: project.company_id, rfxProjectId: project.id, sourcingPlanId: (project.project_context as { sourcing_plan_id?: string } | null)?.sourcing_plan_id }} />
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
@@ -386,8 +588,17 @@ export default function RfxProjectPage({ params }: Props) {
 
             <Button
               variant="outline"
-              onClick={() => window.open(`/api/rfx-maker/download?project_id=${project.id}&format=docx`, '_blank')}
+              onClick={() => {
+                const planId = (project.project_context as { sourcing_plan_id?: string } | null)?.sourcing_plan_id
+                const query = new URLSearchParams({ rfxId: project.id })
+                if (planId) query.set('planId', planId)
+                router.push(`/licitaciones/new?${query.toString()}`)
+              }}
             >
+              Seguir a licitación
+            </Button>
+
+            <Button variant="outline" onClick={downloadDocx}>
               <Download className="h-4 w-4 mr-2" />
               Descargar DOCX
             </Button>
@@ -428,10 +639,6 @@ export default function RfxProjectPage({ params }: Props) {
               </Button>
             )}
 
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Descargar
-            </Button>
           </div>
         </div>
 
@@ -469,6 +676,106 @@ export default function RfxProjectPage({ params }: Props) {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {((project.project_context as { start?: { mode?: string } } | null)?.start?.mode) === 'agente' && (
+        <Card className="border-teal-200/60 bg-teal-50/20">
+          <CardHeader>
+            <CardTitle>
+              {((project.project_context as { start?: { mode?: string; document?: string } } | null)?.start?.mode) === 'agente'
+                ? 'El agente pregunta hasta poder armar el documento'
+                : 'Llenado directo'}
+            </CardTitle>
+            <CardDescription>
+              {((project.project_context as { start?: { document?: string } } | null)?.start?.document) === 'administrativa'
+                ? 'Partiste por las bases administrativas. Las tablas de cotización y propuesta salen cuando exista la base técnica.'
+                : 'Partiste por las bases técnicas. Abajo están la cotización y la propuesta del mismo servicio.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={fetchWizardQuestions}
+              disabled={loadingWizardQuestions || !isEditable}
+            >
+              {loadingWizardQuestions ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generando preguntas…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  {techQuestions.length + adminQuestions.length > 0 ? 'Volver a preguntar' : 'Pedir preguntas'}
+                </>
+              )}
+            </Button>
+
+            {(techQuestions.length > 0 || adminQuestions.length > 0) && (
+              <div className="grid md:grid-cols-2 gap-6 pt-2">
+                {((project.project_context as { start?: { document?: string } } | null)?.start?.document) !== 'administrativa' && (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm text-gray-800">Aclaraciones técnicas</h4>
+                  {techQuestions.map((q) => (
+                    <div key={q.id}>
+                      <Label className="text-xs text-muted-foreground leading-snug">{q.question}</Label>
+                      <Textarea
+                        className="mt-1 min-h-[72px] text-sm"
+                        value={techAnswers[q.id] || ''}
+                        onChange={(e) =>
+                          setTechAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))
+                        }
+                        disabled={!isEditable}
+                      />
+                    </div>
+                  ))}
+                </div>
+                )}
+                {((project.project_context as { start?: { document?: string } } | null)?.start?.document) !== 'tecnica' && (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm text-gray-800">Aclaraciones administrativas</h4>
+                  {adminQuestions.map((q) => (
+                    <div key={q.id}>
+                      <Label className="text-xs text-muted-foreground leading-snug">{q.question}</Label>
+                      <Textarea
+                        className="mt-1 min-h-[72px] text-sm"
+                        value={adminAnswers[q.id] || ''}
+                        onChange={(e) =>
+                          setAdminAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))
+                        }
+                        disabled={!isEditable}
+                      />
+                    </div>
+                  ))}
+                </div>
+                )}
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground">
+              {((project.project_context as { start?: { mode?: string } } | null)?.start?.mode) === 'agente'
+                ? 'Al abrir el proyecto, las preguntas salen solas. Responde y después genera la base: las respuestas viajan con ella.'
+                : 'Si prefieres no usar preguntas, llena las secciones en la pestaña de abajo.'}
+            </p>
+          </CardContent>
+        </Card>
+        )}
+
+        {(
+          ((project.project_context as { start?: { document?: string } } | null)?.start?.document) !== 'administrativa'
+          || Boolean(project.technical_base_generated_at)
+          || /Alcance: (?!Por completar)/.test(project.technical_base_content || '')
+        ) ? (
+          <RfxServiceSheets
+            project={project}
+            disabled={!isEditable}
+            onSaved={(patch) => setProject({ ...project, ...patch })}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            La cotización y la propuesta técnica aparecen cuando la base técnica tenga alcance, requisitos y entregables.
+          </p>
         )}
 
         {/* Tabs */}
@@ -513,8 +820,21 @@ export default function RfxProjectPage({ params }: Props) {
             </div>
           </CardHeader>
           <CardContent>
-            {activeTab === 'admin' && (
+            {activeTab === 'admin' && project.project_context?.simple_bases && (
+              <RfxSectionBases
+                project={project}
+                disabled={!isEditable}
+                onSaved={(patch) => setProject({ ...project, ...patch })}
+              />
+            )}
+            {activeTab === 'admin' && !project.project_context?.simple_bases && (
               <div className="space-y-4">
+                <RfxQuickAdminForm
+                  key={project.admin_parameters_last_modified ?? project.id}
+                  initialParams={project.admin_parameters || {}}
+                  disabled={!isEditable}
+                  onApply={handleSaveParams}
+                />
                 {!isEditingParams ? (
                   <>
                     <div className="flex items-center justify-between mb-6">
@@ -692,6 +1012,12 @@ export default function RfxProjectPage({ params }: Props) {
                           value={technicalContent}
                           onChange={setTechnicalContent}
                           placeholder="Escribe la base técnica aquí... Puedes usar formato rico, listas, tablas, etc."
+                        />
+                        <label className="mt-4 block text-sm font-medium">Base administrativa</label>
+                        <textarea
+                          className="mt-1 min-h-[160px] w-full rounded-md border p-3 text-sm"
+                          value={adminBaseContent}
+                          onChange={event => setAdminBaseContent(event.target.value)}
                         />
                       </>
                     )}

@@ -29,7 +29,7 @@ export interface CompanySettings {
   features: string[]
 }
 
-export type UserRole = 'admin' | 'manager' | 'analyst' | 'viewer'
+export type UserRole = 'admin' | 'manager' | 'analyst' | 'viewer' | 'supplier'
 
 export interface Project {
   id: string
@@ -398,6 +398,7 @@ export interface SupplierStats {
 export interface SourcingPlan {
   id: string
   company_id: string
+  group_id?: string | null
 
   // Información de planificación
   plan_year: number
@@ -432,6 +433,9 @@ export interface SourcingPlan {
   actual_spend?: number
   actual_savings_amount?: number
   actual_savings_percentage?: number
+  licitaciones_count?: number
+  lic_baseline_sum?: number
+  lic_savings_sum?: number
 
   // Asociación con ejecución
   linked_licitacion_id?: string
@@ -501,6 +505,7 @@ export interface SourcingPlanFilters {
   responsible_user_id?: string
   is_spot?: boolean
   search?: string
+  group_id?: string
 }
 
 // Estadísticas del Sourcing Plan
@@ -568,7 +573,16 @@ export interface SIUpload {
   processed_rows: number
   status: SIUploadStatus
   column_mapping?: Record<string, string>
+  group_id?: string | null
+  country_code?: string | null
+  country_mixed?: boolean
+  tax_basis?: 'net' | 'gross'
+  tax_rate?: number | null
+  decisions_confirmed?: boolean
+  has_dates?: boolean
+  display_currency?: string | null
   error_message?: string
+  retain_until?: string
   created_at: string
   updated_at: string
 }
@@ -587,7 +601,10 @@ export interface SISpendLine {
   supplier_name?: string
   supplier_code?: string
   amount: number
+  amount_net?: number
   currency: string
+  country_code?: string | null
+  tax_rate_applied?: number | null
   cost_center?: string
   purchase_date?: string
 
@@ -600,8 +617,6 @@ export interface SISpendLine {
   reviewed_by?: string
   reviewed_at?: string
 
-  // Metadatos
-  raw_data?: Record<string, any>
   created_at: string
   updated_at: string
 }
@@ -643,11 +658,14 @@ export interface SILearningRule {
   updated_at: string
 }
 
-export type LearningRuleType = 'keyword' | 'supplier' | 'correction' | 'few_shot'
+export type LearningRuleType = 'keyword' | 'supplier' | 'correction' | 'few_shot' | 'taxonomy' | 'synonym'
 
 export interface SIProcurementPlan {
   id: string
-  upload_id: string
+  upload_id: string | null
+  group_id?: string | null
+  display_currency?: string | null
+  stale?: boolean
   company_id: string
   name: string
   plan_year: number

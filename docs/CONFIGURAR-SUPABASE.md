@@ -24,12 +24,15 @@ El login no funciona porque Supabase no está configurado. Necesitas crear un pr
 
 ### 3. Configurar Variables de Entorno
 1. En la raíz del proyecto, crea un archivo `.env.local`
-2. Agrega estas líneas:
+2. Agrega estas líneas (ajusta el puerto si `next dev` usa otro, p. ej. 3001):
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=tu_project_url_aqui
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key_aqui
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
+
+3. En Supabase: **Authentication** → **URL Configuration** → añade en **Redirect URLs** la misma base, p. ej. `http://localhost:3000/**` y deja **Site URL** en `http://localhost:3000` para desarrollo.
 
 ### 4. Configurar la Base de Datos
 1. En Supabase, ve a **SQL Editor**
@@ -43,12 +46,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key_aqui
 ## 🧪 Probar el Login
 
 ### Opción 1: Crear Usuario de Prueba
-1. Ve a `localhost:3002/login`
+1. Ve a [http://localhost:3000/login](http://localhost:3000/login) (puerto por defecto de `next dev`)
 2. Haz clic en "Crear Usuario de Prueba"
 3. Usa las credenciales: `test@spendora.com` / `test123456`
 
 ### Opción 2: Registro Manual
-1. Ve a `localhost:3002/signup`
+1. Ve a [http://localhost:3000/signup](http://localhost:3000/signup)
 2. Crea una cuenta nueva
 3. Haz login con tus credenciales
 

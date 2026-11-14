@@ -9,7 +9,7 @@ interface Version {
   id: string
   version_number: number
   snapshot_data: any
-  version_notes: string
+  change_description: string | null
   created_at: string
   created_by_user?: {
     full_name?: string
@@ -34,7 +34,9 @@ export function RfxVersionsModal({ projectId, onClose, onVersionRestored }: RfxV
 
   const loadVersions = async () => {
     try {
-      const response = await fetch(`/api/rfx-maker/version?project_id=${projectId}`)
+      const response = await fetch(`/api/rfx-maker/version?project_id=${projectId}`, {
+        credentials: 'include',
+      })
       const data = await response.json()
 
       if (data.success) {
@@ -56,6 +58,7 @@ export function RfxVersionsModal({ projectId, onClose, onVersionRestored }: RfxV
     try {
       const response = await fetch('/api/rfx-maker/version', {
         method: 'PUT',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           project_id: projectId,
@@ -120,8 +123,8 @@ export function RfxVersionsModal({ projectId, onClose, onVersionRestored }: RfxV
                         </span>
                       </div>
 
-                      {version.version_notes && (
-                        <p className="text-gray-700 mb-2">{version.version_notes}</p>
+                      {version.change_description && (
+                        <p className="text-gray-700 mb-2">{version.change_description}</p>
                       )}
 
                       {version.created_by_user && (

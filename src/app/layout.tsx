@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Work_Sans } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from '@/components/ui/toast'
@@ -11,6 +11,13 @@ const workSans = Work_Sans({
   variable: '--font-work-sans'
 })
 
+export const viewport: Viewport = {
+  themeColor: '#e7eeec',
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
+
 export const metadata: Metadata = {
   title: 'Xpend - Del control operativo a la gestión estratégica del procurement',
   description: 'Xpend potencia el Procurement Performance conectando gasto, planificación y ejecución. Del control operativo a la gestión estratégica del procurement.',
@@ -18,7 +25,6 @@ export const metadata: Metadata = {
     { rel: 'icon', url: '/favicon.svg' },
     { rel: 'apple-touch-icon', url: '/favicon.svg' }
   ],
-  themeColor: '#2BE7AE',
   applicationName: 'Xpend',
   robots: {
     index: false,

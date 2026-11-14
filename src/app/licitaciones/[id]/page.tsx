@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
+import { ExpedientePanel } from '@/components/expediente-panel'
+import { DossierThread } from '@/components/dossier-thread'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -368,6 +370,17 @@ export default function LicitacionDetailPage() {
           <div className="flex space-x-2">
             <Button
               variant="outline"
+              onClick={() => {
+                const planId = linkedPlans?.[0]?.plan_id
+                const query = new URLSearchParams({ licitacionId })
+                if (planId) query.set('planId', planId)
+                router.push(`/sala/new?${query.toString()}`)
+              }}
+            >
+              Abrir sala
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => router.push(`/licitaciones/${licitacionId}/edit`)}
             >
               <Edit className="mr-2 h-4 w-4" />
@@ -379,6 +392,9 @@ export default function LicitacionDetailPage() {
             </Button>
           </div>
         </div>
+
+        <DossierThread match={{ companyId: company?.id || '', licitacionId }} />
+        <ExpedientePanel licitacionId={licitacionId} name={licitacion.name || 'esta licitación'} />
 
         {/* Iniciativas vinculadas */}
         {linkedPlans.length > 0 && (

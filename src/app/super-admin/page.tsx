@@ -38,6 +38,7 @@ import { supabaseBrowser } from '@/lib/supabase'
 import { useToast } from '@/components/ui/toast'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { formatRut, cleanRut, isValidRut } from '@/lib/rut-utils'
+import { ModelVersionsAdmin } from '@/components/spend/model-versions-admin'
 
 interface Company {
   id: string
@@ -673,7 +674,7 @@ export default function SuperAdminPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="companies" className="flex items-center">
               <Building2 className="mr-2 h-4 w-4" />
               Empresas ({companies.length})
@@ -682,7 +683,14 @@ export default function SuperAdminPage() {
               <Users className="mr-2 h-4 w-4" />
               Usuarios ({users.length})
             </TabsTrigger>
+            <TabsTrigger value="model" className="flex items-center">
+              Modelo
+            </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="model" className="space-y-4">
+            <ModelVersionsAdmin />
+          </TabsContent>
 
           {/* Companies Tab */}
           <TabsContent value="companies" className="space-y-4">

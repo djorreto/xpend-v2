@@ -1,7 +1,9 @@
 // API para generar Base Técnica usando la IA existente de XPEND
-import { generateAnaResponse } from '@/lib/ai'
+import { generateRfxTechnicalBaseContent } from '@/lib/ai'
 import { NextRequest } from 'next/server'
 import type { GenerateTechnicalBaseRequest } from '@/types/rfx-maker'
+import { recordExternalAiCall, requireExternalAi } from '@/lib/spend-access'
+import { redactOutboundText } from '@/lib/spend-redaction'
 
 export const runtime = 'nodejs'
 
@@ -11,14 +13,52 @@ export const runtime = 'nodejs'
  */
 export async function POST(req: NextRequest) {
   try {
+    const access = await requireExternalAi('analyst')
+    if (!access.ok) return access.response
+
     const body: GenerateTechnicalBaseRequest = await req.json()
-    const { admin_parameters, project_context, force_regenerate = false } = body
+    const {
+      admin_parameters,
+      project_context,
+      follow_up_technical,
+      follow_up_administrative,
+      force_regenerate = false,
+    } = body
 
-    // Construir el prompt para generar la base técnica
-    const technicalPrompt = buildTechnicalBasePrompt(admin_parameters, project_context)
+    const technicalPrompt = buildTechnicalBasePrompt(admin_parameters, project_context, {
+      follow_up_technical,
+      follow_up_administrative,
+    })
+    const redacted = redactOutboundText(technicalPrompt)
+    if (redacted.blocked) {
+      await recordExternalAiCall(access.supabase, {
+        company_id: access.profile.company_id,
+        user_id: access.profile.id,
+        outcome: 'blocked',
+        block_reason: 'listado',
+        model: 'qwen/qwen3.8-27b',
+        payload_chars: technicalPrompt.length,
+      })
+      return new Response(JSON.stringify({ success: false, error: 'La base parece un listado de gasto. No se envió a la IA.' }), {
+        status: 422,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    const recorded = await recordExternalAiCall(access.supabase, {
+      company_id: access.profile.company_id,
+      user_id: access.profile.id,
+      outcome: 'sent',
+      model: 'qwen/qwen3.8-27b',
+      payload_chars: redacted.text.length,
+    })
+    if (!recorded) {
+      return new Response(JSON.stringify({ success: false, error: 'No se pudo registrar el envío. El texto no salió de Xpend.' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
 
-    // Usar la generación de texto SIN streaming (más simple y sin errores)
-    const generatedContent = await generateAnaResponse(technicalPrompt, '')
+    const generatedContent = await generateRfxTechnicalBaseContent(redacted.text)
 
     // Retornar el contenido generado
     return new Response(
@@ -53,7 +93,11 @@ export async function POST(req: NextRequest) {
  */
 function buildTechnicalBasePrompt(
   adminParameters: Record<string, any>,
-  projectContext: Record<string, any>
+  projectContext: Record<string, any>,
+  extras?: {
+    follow_up_technical?: Record<string, string>
+    follow_up_administrative?: Record<string, string>
+  }
 ): string {
   const {
     rfx_type = 'RFP',
@@ -90,6 +134,10 @@ Necesito que generes una Base Técnica completa para un proceso de ${rfx_type} c
 - Plazo de entrega: ${delivery_timeline || 'Por definir'}
 
 ${special_requirements.length > 0 ? `**REQUISITOS ESPECIALES:**\n${special_requirements.map((req: string) => `- ${req}`).join('\n')}` : ''}
+
+${formatFollowUps('ACLARATORIOS TÉCNICOS (respuestas del usuario)', extras?.follow_up_technical)}
+
+${formatFollowUps('ACLARATORIOS ADMINISTRATIVOS / COMERCIALES (respuestas del usuario)', extras?.follow_up_administrative)}
 
 **INSTRUCCIONES:**
 
@@ -154,5 +202,14 @@ Genera una Base Técnica profesional y completa siguiendo esta estructura:
 - Mantén consistencia con los parámetros administrativos de referencia
 
 Genera la Base Técnica ahora:`
+}
+
+function formatFollowUps(title: string, m?: Record<string, string>): string {
+  if (!m || Object.keys(m).length === 0) return ''
+  const lines = Object.entries(m)
+    .filter(([, v]) => v && String(v).trim())
+    .map(([k, v]) => `- **${k}:** ${String(v).trim()}`)
+  if (lines.length === 0) return ''
+  return `**${title}:**\n${lines.join('\n')}\n`
 }
 

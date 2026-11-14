@@ -73,7 +73,9 @@ export function VersionSelector({ tone = 'default', fullWidth = false }: Version
     }
 
     loadCompanies()
-  }, [addToast])
+    // addToast cambia de identidad al mostrar un aviso; no debe re-disparar esta carga.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const hasMultiple = companies.length > 1
 

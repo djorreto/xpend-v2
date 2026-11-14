@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,9 @@ import { CalendarIcon, ArrowLeft, Save, Loader2, Upload, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabaseBrowser } from '@/lib/supabase'
 import { useToast } from '@/components/ui/toast'
+import { awardSavings, statusGateMessage, syncPlanFromLicitacion } from '@/lib/procurement-flow'
+import { licitacionSeedFromPlan } from '@/lib/dossier'
+import { saveDossier } from '@/lib/dossier-store'
 import { licitacionDocumentPath } from '@/lib/storage-paths'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
@@ -62,11 +65,63 @@ export default function NewLicitacionPage() {
   })
 
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { addToast } = useToast()
 
   useEffect(() => {
     loadUserData()
   }, [])
+
+  useEffect(() => {
+    const planId = searchParams.get('planId')
+    if (planId) {
+      setSelectedPlans(prev => (prev.includes(planId) ? prev : [...prev, planId]))
+    }
+    const rfxId = searchParams.get('rfxId')
+    if (!planId && !rfxId) return
+    const supabaseClient = supabaseBrowser()
+    void (async () => {
+      if (planId) {
+        const { data } = await supabaseClient
+          .from('sourcing_plans')
+          .select('title, description, category, estimated_spend, currency, initiative_type, responsible_user_id')
+          .eq('id', planId)
+          .limit(1)
+        const plan = data?.[0]
+        if (plan) {
+          const seed = licitacionSeedFromPlan(plan)
+          setFormData(prev => ({
+            ...prev,
+            name: prev.name || seed.name,
+            description: prev.description || seed.description,
+            category: prev.category || seed.category,
+            baseline_amount: prev.baseline_amount || seed.baselineAmount,
+            baseline_currency: seed.currency,
+            baseline_source: prev.baseline_source || seed.source,
+            type: prev.type || seed.type,
+            responsible_user_id: prev.responsible_user_id || plan.responsible_user_id || '',
+          }))
+        }
+      }
+      if (rfxId) {
+        const { data } = await supabaseClient
+          .from('rfx_projects')
+          .select('title, description, project_context')
+          .eq('id', rfxId)
+          .limit(1)
+        const project = data?.[0]
+        if (project?.title) {
+          const linkedPlan = (project.project_context as { sourcing_plan_id?: string } | null)?.sourcing_plan_id
+          if (linkedPlan) setSelectedPlans(prev => (prev.includes(linkedPlan) ? prev : [...prev, linkedPlan]))
+          setFormData(prev => ({
+            ...prev,
+            name: prev.name || project.title,
+            description: prev.description || project.description || '',
+          }))
+        }
+      }
+    })()
+  }, [searchParams])
 
   const loadUserData = async () => {
     try {
@@ -221,6 +276,12 @@ export default function NewLicitacionPage() {
       return
     }
 
+    const gate = statusGateMessage(user.role, formData.status)
+    if (gate) {
+      addToast({ type: 'error', title: 'Falta aprobación', message: gate })
+      return
+    }
+
     setSaving(true)
     let uploadedTenderPath: string | null = null
     let licitacionCreated = false
@@ -246,6 +307,10 @@ export default function NewLicitacionPage() {
           baseline_amount: formData.baseline_amount ? parseFloat(formData.baseline_amount) : null,
           baseline_source: formData.baseline_source || null,
           awarded_amount: formData.awarded_amount ? parseFloat(formData.awarded_amount) : null,
+          ...awardSavings(
+            formData.baseline_amount ? parseFloat(formData.baseline_amount) : null,
+            formData.awarded_amount ? parseFloat(formData.awarded_amount) : null
+          ),
           department_id: formData.department_id || null,
           responsible_user_id: formData.responsible_user_id || null,
           request_date: formData.request_date ? format(formData.request_date, 'yyyy-MM-dd') : null,
@@ -277,7 +342,33 @@ export default function NewLicitacionPage() {
           licitacion_id: data.id
         }))
         await supabase.from('sourcing_plan_licitaciones').insert(links)
+        const planId = selectedPlans[0]
+        const { data: dossierRows } = await supabase
+          .from('procurement_dossiers')
+          .select('bases_text, currency, net_spend, title')
+          .eq('company_id', company.id)
+          .eq('sourcing_plan_id', planId)
+          .limit(1)
+        const dossier = dossierRows?.[0]
+        if (dossier?.bases_text) {
+          await supabase.from('licitaciones').update({
+            description: [formData.description, dossier.bases_text].filter(Boolean).join('\n\n').slice(0, 8000),
+          }).eq('id', data.id)
+        }
+        await saveDossier(supabase, {
+          companyId: company.id,
+          userId: user.id,
+          title: formData.name,
+          sourcingPlanId: planId,
+          licitacionId: data.id,
+          currency: formData.baseline_currency,
+          netSpend: formData.baseline_amount ? Number(formData.baseline_amount) : dossier?.net_spend,
+          basesText: dossier?.bases_text || null,
+          stage: 'licitacion',
+        })
       }
+
+      await syncPlanFromLicitacion(supabase, data.id, formData.status)
 
       addToast({
         type: 'success',

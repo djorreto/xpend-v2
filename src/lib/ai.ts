@@ -1,6 +1,7 @@
 // src/lib/ai.ts
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText, streamText } from 'ai'
+import type { RfxWizardQuestion } from '@/types/rfx-maker'
 
 // Función para obtener la API key (compatible con Edge Runtime)
 function getGroqApiKey() {
@@ -16,8 +17,9 @@ const groq = createOpenAI({
   baseURL: 'https://api.groq.com/openai/v1',
 })
 
-// Modelo recomendado: llama-3.3-70b-versatile (actualizado, rápido y potente)
-const model = groq('llama-3.3-70b-versatile')
+// llama-3.3-70b-versatile ya no está en la cuenta Groq (octubre 2026).
+// qwen3.8-27b es el modelo de texto que sí responde en esta key.
+const model = groq('qwen/qwen3.8-27b')
 
 /**
  * Contexto y personalidad de ANA
@@ -148,6 +150,107 @@ export async function streamAnaResponse(userMessage: string, conversationHistory
 // Mantener compatibilidad con código legacy
 export const generateJuanResponse = generateAnaResponse
 export const streamJuanResponse = streamAnaResponse
+
+const RFX_TECHNICAL_WRITER_SYSTEM = `Eres redactor senior de Bases Técnicas para procesos de licitación (RFP, RFQ, RFI) en entornos corporativos latinoamericanos.
+Debes producir documentación completa, estructurada y lista para publicar como anexo técnico.
+Usa Markdown: títulos con # ## ###, listas con guiones, tablas solo si aportan claridad.
+No seas breve: desarrolla cada sección con el detalle que un comité técnico necesita.
+No repitas verbatim bloques legales genéricos sin contenido; prioriza especificaciones accionables.`
+
+/**
+ * Genera Base Técnica larga (RFx). No usa el prompt corto de ANA chat.
+ */
+export async function generateRfxTechnicalBaseContent(fullPrompt: string): Promise<string> {
+  try {
+    const { text } = await generateText({
+      model,
+      system: RFX_TECHNICAL_WRITER_SYSTEM,
+      prompt: fullPrompt,
+      temperature: 0.35,
+      maxOutputTokens: 12_000,
+    })
+    return text
+  } catch (error) {
+    console.error('Error generating RFX technical base:', error)
+    throw new Error('No se pudo generar la base técnica. Verifica GROQ_API_KEY y límites del modelo.')
+  }
+}
+
+const RFX_WIZARD_JSON_SYSTEM = `Eres experto en licitaciones y bases RFx. Debes responder ÚNICAMENTE con un objeto JSON válido (UTF-8), sin texto antes ni después, sin bloques markdown.`
+
+/**
+ * Genera preguntas de aclaración para enriquecer bases técnicas y administrativas antes de redactar.
+ */
+export async function generateRfxWizardQuestions(input: {
+  rfx_type: string
+  project_title: string
+  description?: string
+  project_context: Record<string, unknown>
+  admin_parameters: Record<string, unknown>
+}): Promise<{
+  technical_questions: RfxWizardQuestion[]
+  administrative_questions: RfxWizardQuestion[]
+}> {
+  const prompt = `Analiza este proceso y propón entre 4 y 7 preguntas técnicas y entre 3 y 5 preguntas administrativas que falten para redactar bases sólidas.
+
+Proyecto:
+- Tipo: ${input.rfx_type}
+- Título: ${input.project_title}
+- Descripción: ${input.description || '—'}
+
+Contexto (JSON): ${JSON.stringify(input.project_context || {}, null, 0).slice(0, 6000)}
+Parámetros admin actuales (JSON): ${JSON.stringify(input.admin_parameters || {}, null, 0).slice(0, 6000)}
+
+Formato de salida EXACTO:
+{"technical_questions":[{"id":"t1","question":"..."}],"administrative_questions":[{"id":"a1","question":"..."}]}
+
+Reglas:
+- ids únicos, cortos (t1,t2 / a1,a2)
+- preguntas concretas, en español
+- no repitas lo ya explícito en contexto`
+
+  const { text } = await generateText({
+    model,
+    system: RFX_WIZARD_JSON_SYSTEM,
+    prompt,
+    temperature: 0.35,
+    maxOutputTokens: 2500,
+  })
+
+  const cleaned = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/```\s*$/i, '')
+    .trim()
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(cleaned)
+  } catch {
+    throw new Error('La IA no devolvió JSON válido para las preguntas. Intenta de nuevo.')
+  }
+
+  const o = parsed as Record<string, unknown>
+  const tq = Array.isArray(o.technical_questions) ? o.technical_questions : []
+  const aq = Array.isArray(o.administrative_questions) ? o.administrative_questions : []
+
+  const norm = (arr: unknown[]): RfxWizardQuestion[] =>
+    arr
+      .map((x, i) => {
+        if (!x || typeof x !== 'object') return null
+        const q = x as Record<string, unknown>
+        const id = String(q.id || `q${i}`)
+        const question = String(q.question || '').trim()
+        if (!question) return null
+        return { id, question }
+      })
+      .filter(Boolean) as RfxWizardQuestion[]
+
+  return {
+    technical_questions: norm(tq),
+    administrative_questions: norm(aq),
+  }
+}
 
 /**
  * Analiza un documento técnico (spec, RFP, TDR, etc.)

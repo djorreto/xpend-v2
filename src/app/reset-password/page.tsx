@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabaseBrowser } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -18,28 +18,101 @@ export default function ResetPasswordPage() {
   const [email, setEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const recoveryHandledRef = useRef(false)
 
   useEffect(() => {
-    // If the user arrives with a recovery session, switch to update mode
-    const type = searchParams.get('type')
-    const access_token = searchParams.get('access_token')
-    if (type === 'recovery' && access_token) {
+    // Supabase suele devolver tokens en el hash (#access_token=...) — useSearchParams no lee el hash.
+    const applySessionAndEnterUpdate = async (
+      access_token: string,
+      refresh_token: string
+    ) => {
+      const { error } = await supabase.auth.setSession({ access_token, refresh_token })
+      if (error) return false
       setMode('update')
+      if (typeof window !== 'undefined') {
+        window.history.replaceState(null, document.title, window.location.pathname + window.location.search)
+      }
+      return true
     }
-  }, [searchParams])
+
+    const run = async () => {
+      if (recoveryHandledRef.current) return
+
+      if (typeof window !== 'undefined' && window.location.hash.length > 1) {
+        const hashParams = new URLSearchParams(window.location.hash.slice(1))
+        const access_token = hashParams.get('access_token')
+        const refresh_token = hashParams.get('refresh_token')
+        const type = hashParams.get('type')
+        if (type === 'recovery' && access_token && refresh_token) {
+          const ok = await applySessionAndEnterUpdate(access_token, refresh_token)
+          if (ok) recoveryHandledRef.current = true
+          return
+        }
+      }
+
+      const type = searchParams.get('type')
+      const access_token = searchParams.get('access_token')
+      const refresh_token = searchParams.get('refresh_token')
+      if (type === 'recovery' && access_token && refresh_token) {
+        const ok = await applySessionAndEnterUpdate(access_token, refresh_token)
+        if (ok) recoveryHandledRef.current = true
+        return
+      }
+
+      const tokenHash = searchParams.get('token_hash')
+      const typeFromQuery = searchParams.get('type')
+      if (tokenHash && typeFromQuery === 'recovery') {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: 'recovery',
+        })
+        if (!error) {
+          recoveryHandledRef.current = true
+          setMode('update')
+          router.replace('/reset-password')
+        } else {
+          addToast({
+            type: 'error',
+            title: 'Enlace vencido',
+            message: 'Pide uno nuevo desde recuperar contraseña.',
+          })
+        }
+        return
+      }
+
+      const code = searchParams.get('code')
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        if (!error) {
+          recoveryHandledRef.current = true
+          setMode('update')
+          router.replace('/reset-password')
+        }
+      }
+    }
+
+    void run()
+  }, [router, searchParams, supabase])
 
   const handleSendLink = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email)
-      if (error) throw error
+      const custom = await fetch('/api/auth/send-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, kind: 'recovery' }),
+      })
+      const customBody = await custom.json().catch(() => ({}))
+      if (!custom.ok) {
+        throw new Error(customBody.error || 'No se pudo enviar el correo')
+      }
       addToast({
         type: 'success',
-        title: 'Correo enviado',
-        message: 'Revisa tu correo para continuar con el cambio de contraseña'
+        title: 'Revisa tu correo',
+        message: 'Si la cuenta existe, enviamos un enlace para crear una contraseña nueva.'
       })
-      router.push('/login')
+      return
     } catch (err) {
       addToast({
         type: 'error',
@@ -131,4 +204,5 @@ export default function ResetPasswordPage() {
     </div>
   )
 }
+
 

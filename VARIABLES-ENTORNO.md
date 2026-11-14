@@ -1,4 +1,4 @@
-# 🔐 Variables de Entorno - Xpend V2
+# 🔐 Variables de Entorno - Xpend V3
 
 ## 📋 TODAS LAS VARIABLES NECESARIAS
 
@@ -10,7 +10,7 @@ Copia y pega estas variables en Vercel (o tu plataforma de deployment):
 NEXT_PUBLIC_SUPABASE_URL
 ```
 
-**Valor:** `https://tu-proyecto.supabase.co`
+**Valor:** `https://vlyqrosqapwgzyovbqpg.supabase.co` (proyecto **XPEND V3** en Supabase)
 **Dónde obtenerlo:** Supabase Dashboard → Settings → API → Project URL
 
 ---
@@ -116,11 +116,14 @@ Antes de hacer deploy, verifica que tengas:
 Si quieres correr el proyecto localmente, crea un archivo `.env.local` en la raíz:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://vlyqrosqapwgzyovbqpg.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
 SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
 GROQ_API_KEY=gsk_tu-groq-key
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
+
+Usa el mismo host y puerto que muestre `next dev` (por defecto **3000**). En Supabase → **Authentication** → **URL Configuration**, **Site URL** y **Redirect URLs** deben coincidir con esa base (p. ej. `http://localhost:3000` y `http://localhost:3000/**`).
 
 ⚠️ **NUNCA subas el archivo `.env.local` a GitHub** (ya está en `.gitignore`)
 
@@ -146,5 +149,5 @@ R: Sí, en Vercel puedes especificar valores diferentes por ambiente.
 
 ---
 
-**📅 Última actualización:** 1 de Noviembre, 2025
+**📅 Última actualización:** 10 de abril de 2026
 **📧 Soporte:** Consulta la documentación en `/docs`

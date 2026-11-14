@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { hasRole, type Profile } from '@/lib/auth-helpers'
+import { SPEND_ROLE_DENIED } from '@/lib/spend-privacy'
+import { assessLines } from '@/lib/spend-aggregate'
+import { loadSpendFacts, viewFromRow } from '@/lib/spend-read'
 
 export const runtime = 'nodejs'
-export const maxDuration = 60
+export const maxDuration = 300
+
+type CategoryAgg = {
+  total_spend: number
+  suppliers: Set<string>
+  supplierSpend: Map<string, number>
+  lineCount: number
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,81 +28,135 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, company_id')
+      .select('id, company_id, role')
       .eq('id', session.user.id)
       .single()
 
-    if (!profile) {
+    if (!profile?.company_id) {
       return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
     }
 
-    // 2. Obtener datos de la solicitud
-    const { upload_id, plan_name, plan_year } = await request.json()
-
-    if (!upload_id) {
-      return NextResponse.json({ error: 'upload_id requerido' }, { status: 400 })
+    if (!hasRole(profile as Profile, 'analyst')) {
+      return NextResponse.json({ error: SPEND_ROLE_DENIED }, { status: 403 })
     }
 
-    // 3. Analizar datos de gasto por categoría
-    const { data: lines } = await supabase
-      .from('si_spend_lines')
-      .select('*')
-      .eq('upload_id', upload_id)
-      .eq('company_id', profile.company_id)
-      .not('category', 'is', null)
-
-    if (!lines || lines.length === 0) {
-      return NextResponse.json({
-        error: 'No hay líneas clasificadas para generar el plan'
-      }, { status: 400 })
+    const { upload_id, group_id, plan_name, plan_year } = await request.json()
+    if (!upload_id && !group_id) {
+      return NextResponse.json({ error: 'Falta el análisis o el grupo.' }, { status: 400 })
     }
 
-    // 4. Agrupar por categoría y analizar
-    const categoryMap = new Map<string, {
-      total_spend: number
-      suppliers: Set<string>
-      lines: typeof lines
-    }>()
+    let viewSource: {
+      display_currency?: string | null
+      fx_mode?: string | null
+      fx_rates?: Record<string, number> | null
+      fx_as_of?: string | null
+      window_mode?: string | null
+      window_year?: number | null
+      window_end?: string | null
+    } | null = null
+    let members: Array<{ id: string; tax_basis?: string | null; group_id?: string | null; file_name?: string | null }> = []
+    let scopeGroupId: string | null = group_id || null
 
-    lines.forEach(line => {
-      const category = line.category!
+    if (group_id && !upload_id) {
+      const { data: group } = await supabase
+        .from('si_spend_groups')
+        .select('*')
+        .eq('id', group_id)
+        .eq('company_id', profile.company_id)
+        .limit(1)
+      viewSource = group?.[0] || null
+      if (!viewSource) return NextResponse.json({ error: 'No se encontró el grupo.' }, { status: 404 })
+      const { data: rows } = await supabase
+        .from('si_uploads')
+        .select('id, tax_basis, group_id, file_name')
+        .eq('group_id', group_id)
+        .eq('company_id', profile.company_id)
+      members = rows || []
+    } else {
+      const { data: rows } = await supabase
+        .from('si_uploads')
+        .select('id, tax_basis, group_id, file_name, display_currency, fx_mode, fx_rates, fx_as_of, window_mode, window_year, window_end')
+        .eq('id', upload_id)
+        .eq('company_id', profile.company_id)
+        .limit(1)
+      const upload = rows?.[0]
+      if (!upload) return NextResponse.json({ error: 'No se encontró el análisis.' }, { status: 404 })
+      viewSource = upload
+      scopeGroupId = upload.group_id || null
+      members = [upload]
+    }
+
+    const facts = await loadSpendFacts(supabase, profile.company_id, members, true)
+    const assessed = assessLines(facts, viewFromRow(viewSource || {}))
+    if ('error' in assessed) {
+      return NextResponse.json({ error: assessed.error }, { status: 409 })
+    }
+
+    const categoryMap = new Map<string, CategoryAgg>()
+    const allSuppliers = new Set<string>()
+    for (const line of assessed.kept) {
+      const category = line.category || ''
+      if (!category) continue
       if (!categoryMap.has(category)) {
-        categoryMap.set(category, {
-          total_spend: 0,
-          suppliers: new Set(),
-          lines: []
-        })
+        categoryMap.set(category, { total_spend: 0, suppliers: new Set(), supplierSpend: new Map(), lineCount: 0 })
       }
-
       const data = categoryMap.get(category)!
       data.total_spend += line.amount
-      if (line.supplier_name) {
-        data.suppliers.add(line.supplier_name)
+      data.lineCount += 1
+      const supplier = line.supplier?.trim()
+      if (supplier) {
+        data.suppliers.add(supplier)
+        allSuppliers.add(supplier)
+        data.supplierSpend.set(supplier, (data.supplierSpend.get(supplier) || 0) + line.amount)
       }
-      data.lines.push(line)
-    })
+    }
+
+    if (categoryMap.size === 0) {
+      return NextResponse.json(
+        { error: 'No hay líneas clasificadas para generar el plan' },
+        { status: 400 }
+      )
+    }
 
     // 5. Calcular métricas globales
     const total_spend = Array.from(categoryMap.values())
       .reduce((sum, cat) => sum + cat.total_spend, 0)
 
     const max_spend = Math.max(...Array.from(categoryMap.values()).map(c => c.total_spend))
-    const max_lines = Math.max(...Array.from(categoryMap.values()).map(c => c.lines.length))
-    const max_suppliers = Math.max(...Array.from(categoryMap.values()).map(c => c.suppliers.size))
+    const max_lines = Math.max(...Array.from(categoryMap.values()).map(c => c.lineCount))
+    const max_suppliers = Math.max(...Array.from(categoryMap.values()).map(c => c.suppliers.size), 1)
 
-    // 6. Crear plan de compras
+    const previous = supabase
+      .from('si_procurement_plans')
+      .select('id')
+      .eq('company_id', profile.company_id)
+    const { data: previousPlans } = upload_id && !group_id
+      ? await previous.eq('upload_id', upload_id)
+      : await previous.eq('group_id', scopeGroupId).is('upload_id', null)
+    const previousIds = (previousPlans || []).map(plan => plan.id)
+    if (previousIds.length) {
+      await supabase.from('si_plan_items').delete().in('plan_id', previousIds)
+      await supabase.from('si_procurement_plans').delete().in('id', previousIds).eq('company_id', profile.company_id)
+    }
+
     const { data: plan, error: planError } = await supabase
       .from('si_procurement_plans')
       .insert({
-        upload_id,
+        upload_id: upload_id && !group_id ? upload_id : null,
+        group_id: scopeGroupId,
         company_id: profile.company_id,
-        name: plan_name || `Plan de Compras ${new Date().getFullYear()}`,
-        plan_year: plan_year || new Date().getFullYear(),
+        name: plan_name || `Plan de Compras ${plan_year || new Date().getFullYear()}`,
+        plan_year: plan_year || viewSource?.window_year || new Date().getFullYear(),
         status: 'draft',
         total_spend,
         category_count: categoryMap.size,
-        supplier_count: new Set(lines.map(l => l.supplier_name).filter(Boolean)).size,
-        created_by: profile.id
+        supplier_count: allSuppliers.size,
+        created_by: profile.id,
+        display_currency: assessed.display,
+        fx_mode: viewSource?.fx_mode || 'native',
+        fx_rates: viewSource?.fx_rates || {},
+        fx_as_of: viewSource?.fx_as_of || null,
+        stale: false,
       })
       .select()
       .single()
@@ -101,7 +166,7 @@ export async function POST(request: NextRequest) {
     // 7. Crear items del plan con estrategias sugeridas
     const planItems = Array.from(categoryMap.entries()).map(([category, data]) => {
       const supplier_count = data.suppliers.size
-      const suppliersBySpend = calculateSupplierConcentration(data.lines)
+      const suppliersBySpend = calculateSupplierConcentrationFromMap(data.supplierSpend)
       const main_supplier = suppliersBySpend[0]?.supplier
       const supplier_concentration = suppliersBySpend[0]?.percentage || 0
 
@@ -133,7 +198,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Calcular Kraljic scores
-      const impact_score = (data.total_spend / max_spend) * 0.7 + (data.lines.length / max_lines) * 0.3
+      const impact_score = (data.total_spend / max_spend) * 0.7 + (data.lineCount / max_lines) * 0.3
       const risk_score = (supplier_concentration / 100) * 0.6 + (1 - supplier_count / max_suppliers) * 0.4
 
       let kraljic_quadrant: string
@@ -187,7 +252,7 @@ export async function POST(request: NextRequest) {
     const total_projected_savings = planItems.reduce((sum, item) =>
       sum + (item.projected_savings_amount || 0), 0)
 
-    const projected_savings_percentage = (total_projected_savings / total_spend) * 100
+    const projected_savings_percentage = total_spend > 0 ? (total_projected_savings / total_spend) * 100 : 0
 
     await supabase
       .from('si_procurement_plans')
@@ -197,46 +262,43 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', plan.id)
 
-    // 9. Actualizar status del upload
-    await supabase
-      .from('si_uploads')
-      .update({ status: 'completed' })
-      .eq('id', upload_id)
+    if (upload_id && !group_id) {
+      await supabase
+        .from('si_uploads')
+        .update({ status: 'completed' })
+        .eq('id', upload_id)
+        .eq('company_id', profile.company_id)
+    }
 
     return NextResponse.json({
       success: true,
       plan_id: plan.id,
       category_count: planItems.length,
       total_spend,
+      currency: assessed.display,
+      excluded: assessed.excluded,
       projected_savings_amount: total_projected_savings,
       projected_savings_percentage: projected_savings_percentage.toFixed(2),
-      message: `Plan de compras generado exitosamente con ${planItems.length} categorías.`
+      message: `Plan generado en ${assessed.display}, con gasto neto.`
     })
 
-  } catch (error: any) {
-    console.error('Error in SI generate plan:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch {
+    console.error('Error in SI generate plan')
+    return NextResponse.json({ error: 'No se pudo generar el plan' }, { status: 500 })
   }
 }
 
-// Función auxiliar para calcular concentración de proveedores
-function calculateSupplierConcentration(lines: any[]) {
-  const supplierSpend = new Map<string, number>()
+function calculateSupplierConcentrationFromMap(supplierSpend: Map<string, number>) {
   let total = 0
-
-  lines.forEach(line => {
-    if (line.supplier_name) {
-      const current = supplierSpend.get(line.supplier_name) || 0
-      supplierSpend.set(line.supplier_name, current + line.amount)
-      total += line.amount
-    }
+  supplierSpend.forEach(amt => {
+    total += amt
   })
-
+  if (total <= 0) return []
   return Array.from(supplierSpend.entries())
     .map(([supplier, spend]) => ({
       supplier,
       spend,
-      percentage: (spend / total) * 100
+      percentage: (spend / total) * 100,
     }))
     .sort((a, b) => b.spend - a.spend)
 }

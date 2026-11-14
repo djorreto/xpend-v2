@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,8 @@ import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
+import { fetchUnifiedSpendForCompany, describeSpendSource, closeSpendPeriod, totalsByCurrency, primaryCurrency, type SpendSourceInfo, type MoneyTotal } from '@/lib/spend-sources'
+import { canReadSpendRole } from '@/lib/spend-privacy'
 
 interface SpendData {
   id: string
@@ -48,17 +51,41 @@ interface SpendVendor {
 
 export default function SpendPage() {
   const supabase = supabaseBrowser()
+  const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<any>(null)
   const [spendData, setSpendData] = useState<SpendData[]>([])
   const [spendByCategory, setSpendByCategory] = useState<SpendCategory[]>([])
   const [spendByVendor, setSpendByVendor] = useState<SpendVendor[]>([])
-  const [totalSpend, setTotalSpend] = useState(0)
-  const [monthlySpend, setMonthlySpend] = useState(0)
+  const [totalSpend, setTotalSpend] = useState<MoneyTotal[]>([])
+  const [monthlySpend, setMonthlySpend] = useState<MoneyTotal[]>([])
+  const [chartCurrency, setChartCurrency] = useState('CLP')
+  const [spendSource, setSpendSource] = useState<SpendSourceInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [closing, setClosing] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const { addToast } = useToast()
+
+  const exportSpend = () => {
+    if (!spendData.length) {
+      addToast({ type: 'info', title: 'No hay líneas', message: 'Todavía no hay gasto para exportar.' })
+      return
+    }
+    const header = ['Fecha', 'Categoría', 'Proveedor', 'Monto', 'Moneda']
+    const lines = spendData.map(item =>
+      [item.date, item.category, item.vendor, item.amount, item.currency]
+        .map(value => `"${String(value ?? '').replace(/"/g, '""')}"`)
+        .join(',')
+    )
+    const blob = new Blob(['\uFEFF' + header.join(',') + '\n' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'gasto-xpend.csv'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
 
   const loadSpendData = useCallback(async () => {
     try {
@@ -86,10 +113,16 @@ export default function SpendPage() {
       }
 
       setUser({
+        id: profile.id,
         name: profile.full_name || authUser.email,
         email: authUser.email,
         role: profile.role,
       })
+
+      if (!canReadSpendRole(profile.role)) {
+        setError('Tu rol no puede ver el gasto de la empresa.')
+        return
+      }
 
       // Get company info
       if (profile.company_id) {
@@ -103,35 +136,30 @@ export default function SpendPage() {
           setCompany(companyData)
         }
 
-        // Load spend data
-        const { data: spendDataResult, error: spendError } = await supabase
-          .from('spend_data')
-          .select('*')
-          .eq('company_id', profile.company_id)
-          .order('date', { ascending: false })
+        const unified = await fetchUnifiedSpendForCompany(supabase, profile.company_id)
+        setSpendSource(await describeSpendSource(supabase, profile.company_id))
 
-        if (spendError) throw spendError
-
-        const spendDataArray: SpendData[] = (spendDataResult || []).map((item: any) => ({
-          ...item,
-          vendor: item.vendor || item.supplier_name || 'Sin proveedor',
-          category: item.category || 'Sin categoría',
-        }))
+        const spendDataArray: SpendData[] = unified.map((item, index) => ({
+          id: `u-${index}-${item.date}`,
+          amount: item.amount,
+          category: item.category,
+          vendor: item.supplier,
+          date: item.date,
+          description: null,
+          currency: item.currency,
+        })).sort((a, b) => (a.date < b.date ? 1 : -1))
         setSpendData(spendDataArray)
 
-        // Calculate totals
-        const total = spendDataArray.reduce((sum, item) => sum + Number(item.amount), 0)
-        setTotalSpend(total)
-
-        // Calculate monthly spend
+        const totals = totalsByCurrency(spendDataArray)
+        setTotalSpend(totals)
         const currentMonth = new Date().toISOString().slice(0, 7)
-        const monthly = spendDataArray
-          .filter(item => item.date.startsWith(currentMonth))
-          .reduce((sum, item) => sum + Number(item.amount), 0)
-        setMonthlySpend(monthly)
+        setMonthlySpend(totalsByCurrency(spendDataArray.filter(item => item.date.startsWith(currentMonth))))
+        const mainCurrency = primaryCurrency(spendDataArray)
+        setChartCurrency(mainCurrency)
+        const chartRows = spendDataArray.filter(item => item.currency === mainCurrency)
+        const chartTotal = chartRows.reduce((sum, item) => sum + Number(item.amount), 0)
 
-        // Calculate spend by category
-        const categoryTotals = spendDataArray.reduce(
+        const categoryTotals = chartRows.reduce(
           (acc, item) => {
             const category = item.category || 'Sin categoría'
             if (!acc[category]) {
@@ -150,7 +178,7 @@ export default function SpendPage() {
           .map(([category, data]) => ({
             category,
             total: data.total,
-            percentage: total > 0 ? Math.round((data.total / total) * 100) : 0,
+            percentage: chartTotal > 0 ? Math.round((data.total / chartTotal) * 100) : 0,
             count: data.count,
           }))
           .sort((a, b) => b.total - a.total)
@@ -159,7 +187,7 @@ export default function SpendPage() {
         setSpendByCategory(categoryArray)
 
         // Calculate spend by vendor
-        const vendorTotals = spendDataArray.reduce(
+        const vendorTotals = chartRows.reduce(
           (acc, item) => {
             const vendor = item.vendor || 'Sin proveedor'
             if (!acc[vendor]) {
@@ -178,7 +206,7 @@ export default function SpendPage() {
           .map(([vendor, data]) => ({
             vendor,
             total: data.total,
-            percentage: total > 0 ? Math.round((data.total / total) * 100) : 0,
+            percentage: chartTotal > 0 ? Math.round((data.total / chartTotal) * 100) : 0,
             count: data.count,
           }))
           .sort((a, b) => b.total - a.total)
@@ -251,15 +279,32 @@ export default function SpendPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Spend Analysis</h1>
             <p className="text-muted-foreground">
-              Análisis y gestión de gastos por categoría y proveedor
+              {spendSource?.label || 'Análisis y gestión de gastos por categoría y proveedor'}
             </p>
           </div>
           <div className="flex space-x-2">
-            <Button variant="outline">
+            <Button
+              variant="outline"
+              disabled={closing || !user?.id || !company?.id}
+              onClick={async () => {
+                if (!user?.id || !company?.id) return
+                setClosing(true)
+                const result = await closeSpendPeriod(supabase, company.id, user.id)
+                setClosing(false)
+                addToast(result.mixed
+                  ? { type: 'info', title: 'El mes tiene más de una moneda', message: 'Los totales quedan separados. No se guarda un solo número que mezcle pesos y dólares.' }
+                  : result.missingTable || result.error
+                  ? { type: 'error', title: 'No se guardó el cierre', message: result.missingTable ? 'La base todavía no tiene la tabla de cierres. Los números de esta pantalla sí van por moneda.' : result.error || '' }
+                  : { type: 'success', title: 'Período cerrado', message: `${result.period}: ${result.lineCount} líneas.` })
+              }}
+            >
+              {closing ? 'Cerrando…' : 'Cerrar mes'}
+            </Button>
+            <Button variant="outline" onClick={exportSpend}>
               <Download className="mr-2 h-4 w-4" />
               Exportar
             </Button>
-            <Button>
+            <Button onClick={() => router.push('/sourcing-intelligence/upload')}>
               <Upload className="mr-2 h-4 w-4" />
               Importar
             </Button>
@@ -274,9 +319,16 @@ export default function SpendPage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(totalSpend)}</div>
+              <div className="space-y-1 text-xl font-bold">
+                {(totalSpend.length ? totalSpend : [{ currency: 'CLP', amount: 0 }]).map(item => (
+                  <div key={item.currency}>{formatCurrency(item.amount, item.currency)}</div>
+                ))}
+              </div>
               <p className="text-xs text-muted-foreground">
-                {formatCurrency(monthlySpend)} este mes
+                Este mes:{' '}
+                {(monthlySpend.length ? monthlySpend : [{ currency: chartCurrency, amount: 0 }])
+                  .map(item => formatCurrency(item.amount, item.currency))
+                  .join(' · ')}
               </p>
             </CardContent>
           </Card>
@@ -321,7 +373,7 @@ export default function SpendPage() {
           <Card>
             <CardHeader>
               <CardTitle>Spend por Categoría</CardTitle>
-              <CardDescription>Distribución del gasto por categorías principales</CardDescription>
+              <CardDescription>Solo {chartCurrency}. El resto del gasto está en el total, en su moneda.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -331,7 +383,7 @@ export default function SpendPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">{item.category}</span>
                         <span className="text-sm text-muted-foreground">
-                          {formatCurrency(item.total)} ({item.percentage}%)
+                          {formatCurrency(item.total, chartCurrency)} ({item.percentage}%)
                         </span>
                       </div>
                       <div className="h-2 w-full rounded-full bg-secondary">
@@ -355,7 +407,7 @@ export default function SpendPage() {
           <Card>
             <CardHeader>
               <CardTitle>Spend por Proveedor</CardTitle>
-              <CardDescription>Top proveedores por volumen de gasto</CardDescription>
+              <CardDescription>Top proveedores en {chartCurrency}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -365,7 +417,7 @@ export default function SpendPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">{item.vendor}</span>
                         <span className="text-sm text-muted-foreground">
-                          {formatCurrency(item.total)} ({item.percentage}%)
+                          {formatCurrency(item.total, chartCurrency)} ({item.percentage}%)
                         </span>
                       </div>
                       <div className="h-2 w-full rounded-full bg-secondary">
@@ -447,7 +499,7 @@ export default function SpendPage() {
                   <p className="mb-4 text-muted-foreground">
                     Importa datos de gastos para comenzar el análisis
                   </p>
-                  <Button>
+                  <Button onClick={() => router.push('/sourcing-intelligence/upload')}>
                     <Upload className="mr-2 h-4 w-4" />
                     Importar Datos
                   </Button>

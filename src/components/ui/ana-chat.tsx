@@ -212,16 +212,10 @@ export function AnaChat() {
           aria-label="Abrir chat de ANA"
         >
           <div
-            className="relative w-14 h-14 md:w-16 md:h-16 rounded-full shadow-2xl transition-all duration-300 group-hover:scale-110"
-            style={{
-              background: 'linear-gradient(135deg, #2AD4D2 0%, #3BE7AE 100%)',
-            }}
+            className="relative flex h-12 w-12 items-center justify-center rounded-full border border-white/25 shadow-[0_12px_30px_-12px_rgba(45,62,61,0.7)] transition-transform duration-200 group-hover:-translate-y-0.5 md:h-[52px] md:w-[52px]"
+            style={{ background: 'linear-gradient(160deg, #314846 0%, #243230 100%)' }}
           >
-            <MessageCircle className="w-7 h-7 md:w-8 md:h-8 text-white absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-            <Sparkles className="w-3 h-3 md:w-4 md:h-4 text-yellow-300 absolute top-1 right-1 animate-pulse" />
-          </div>
-          <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 w-5 h-5 md:w-6 md:h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] md:text-xs font-bold animate-pulse">
-            AI
+            <MessageCircle className="h-5 w-5 text-[#3BE7AE]" />
           </div>
         </button>
       )}

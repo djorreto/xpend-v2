@@ -7,7 +7,7 @@ export interface Profile {
   full_name: string | null
   avatar_url: string | null
   company_id: string | null
-  role: 'admin' | 'manager' | 'analyst' | 'viewer'
+  role: 'admin' | 'manager' | 'analyst' | 'viewer' | 'supplier'
   created_at: string
   updated_at: string
 }
@@ -117,15 +117,17 @@ export async function getCurrentProfileClient(): Promise<Profile | null> {
 export function hasRole(profile: Profile | null, requiredRole: string): boolean {
   if (!profile) return false
 
-  const roleHierarchy = {
-    'viewer': 0,
-    'analyst': 1,
-    'manager': 2,
-    'admin': 3
+  const roleHierarchy: Record<string, number> = {
+    supplier: -1,
+    viewer: 0,
+    analyst: 1,
+    manager: 2,
+    admin: 3,
+    super_admin: 4,
   }
 
   const userLevel = roleHierarchy[profile.role] || 0
-  const requiredLevel = roleHierarchy[requiredRole as keyof typeof roleHierarchy] || 0
+  const requiredLevel = roleHierarchy[requiredRole] || 0
 
   return userLevel >= requiredLevel
 }

@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { supabaseBrowser } from '@/lib/supabase'
 import { Brain, Trash2, Filter, TrendingUp, Search } from 'lucide-react'
 import { SILearningRule } from '@/types'
+import { SpendFlowBar } from '@/components/spend/spend-flow-bar'
+import { SpendBrainChip } from '@/components/spend/spend-brain-chip'
 
 export default function LearningRulesPage() {
   const router = useRouter()
@@ -141,15 +143,19 @@ export default function LearningRulesPage() {
     <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold flex items-center space-x-3">
-            <Brain className="h-8 w-8" style={{ color: '#2AD4D2' }} />
-            <span>Reglas de Aprendizaje</span>
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Gestiona las reglas que el sistema ha aprendido para mejorar la clasificación
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center space-x-3">
+              <Brain className="h-8 w-8" style={{ color: '#2AD4D2' }} />
+              <span>Reglas de Aprendizaje</span>
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Valen solo para esta empresa. Un clic en el cerebro muestra también la base y el modelo.
+            </p>
+          </div>
+          <SpendBrainChip tab="reglas" />
         </div>
+        <SpendFlowBar current="clasificar" />
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

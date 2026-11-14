@@ -225,7 +225,7 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
           />
 
           {/* Dropdown */}
-          <Card className="absolute right-0 top-12 w-80 z-50 max-h-96 overflow-hidden">
+          <Card className="absolute right-0 top-12 z-50 max-h-96 w-80 overflow-hidden !bg-white/95">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">Notificaciones</CardTitle>

@@ -16,6 +16,7 @@ import { CalendarIcon, ArrowLeft, Save, Loader2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabaseBrowser } from '@/lib/supabase'
 import { useToast } from '@/components/ui/toast'
+import { awardSavings, blockedSuppliers, statusGateMessage, syncPlanFromLicitacion } from '@/lib/procurement-flow'
 import { licitacionDocumentPath } from '@/lib/storage-paths'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
@@ -38,6 +39,8 @@ export default function EditLicitacionPage() {
   const [selectedPlans, setSelectedPlans] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savedStatus, setSavedStatus] = useState('planned')
+  const [exceptionNote, setExceptionNote] = useState('')
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -153,7 +156,7 @@ export default function EditLicitacionPage() {
       const currentYear = new Date().getFullYear()
       const { data: plansData, error: plansError } = await supabase
         .from('sourcing_plans')
-        .select('id, title, plan_year, quarter, status, initiative_type')
+        .select('id, title, plan_year, quarter, status, initiative_type, responsible_user_id')
         .eq('company_id', profile.company_id)
         .gte('plan_year', currentYear - 1)
         .order('plan_year', { ascending: false })
@@ -194,6 +197,7 @@ export default function EditLicitacionPage() {
       }
 
       // Populate form with existing data
+      setSavedStatus(licitacionData.status || 'planned')
       setFormData({
         name: licitacionData.name || '',
         description: licitacionData.description || '',
@@ -293,6 +297,118 @@ export default function EditLicitacionPage() {
       return
     }
 
+    const gate = statusGateMessage(user.role, formData.status)
+    if (gate) {
+      addToast({ type: 'error', title: 'Falta aprobación', message: gate })
+      return
+    }
+
+    if (['published', 'evaluation', 'awarded', 'contract_signed'].includes(formData.status)) {
+      if (!formData.tender_file && !formData.existing_tender_document) {
+        addToast({
+          type: 'error',
+          title: 'Faltan las bases',
+          message: 'Adjunta las bases antes de publicar, evaluar o adjudicar.',
+        })
+        return
+      }
+    }
+
+    if (['awarded', 'contract_signed'].includes(formData.status)) {
+      if (!formData.baseline_amount || !formData.baseline_source) {
+        addToast({
+          type: 'error',
+          title: 'Falta la línea base',
+          message: 'Para adjudicar hace falta el monto y la fuente de la línea base.',
+        })
+        return
+      }
+    }
+
+    if (selectedPlans.length) {
+      const withoutOwner = sourcingPlans.filter(plan => selectedPlans.includes(plan.id) && !plan.responsible_user_id)
+      if (withoutOwner.length) {
+        addToast({
+          type: 'error',
+          title: 'La iniciativa no tiene dueño',
+          message: withoutOwner.map(plan => plan.title).join(', '),
+        })
+        return
+      }
+    }
+
+    if (['published', 'evaluation', 'awarded', 'contract_signed'].includes(savedStatus) && formData.tender_file) {
+      addToast({
+        type: 'error',
+        title: 'Las bases quedaron congeladas',
+        message: 'Después de publicar, un cambio de bases es una addenda. No se reemplaza el archivo en silencio.',
+      })
+      return
+    }
+
+    const live = ['published', 'evaluation', 'awarded', 'contract_signed']
+    const awarded = ['awarded', 'contract_signed']
+    const enteringLive = live.includes(formData.status) && !live.includes(savedStatus)
+    const enteringAward = awarded.includes(formData.status) && !awarded.includes(savedStatus)
+    if (enteringLive && ['published', 'evaluation'].includes(formData.status)) {
+      const response = await fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'publish',
+          licitacion_id: licitacionId,
+          plan_id: selectedPlans[0] || null,
+          payload: {},
+        }),
+      })
+      const body = await response.json()
+      if (!response.ok) {
+        addToast({ type: 'error', title: 'La publicación no quedó registrada', message: body.error || 'Error' })
+        return
+      }
+    }
+    if (enteringAward) {
+      const response = await fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'award',
+          licitacion_id: licitacionId,
+          plan_id: selectedPlans[0] || null,
+          payload: {
+            exception: exceptionNote,
+            amount: Number(formData.awarded_amount) || Number(formData.baseline_amount) || 0,
+            currency: formData.baseline_currency,
+            baseline_source: formData.baseline_source,
+            responsible_user_id: formData.responsible_user_id,
+          },
+        }),
+      })
+      const body = await response.json()
+      if (!response.ok) {
+        addToast({ type: 'error', title: 'No se puede adjudicar', message: body.error || 'Error' })
+        return
+      }
+    }
+
+    if (selectedSuppliers.length) {
+      const blocked = await blockedSuppliers(supabase, company.id, selectedSuppliers)
+      if (blocked.length) {
+        const names = blocked
+          .map(item => {
+            const supplier = suppliers.find(row => row.id === item.id)
+            return `${supplier?.fantasy_name || item.id} (${item.reason})`
+          })
+          .join(', ')
+        addToast({
+          type: 'error',
+          title: 'Proveedor no invitable',
+          message: `Corrige la evaluación antes de invitar: ${names}`,
+        })
+        return
+      }
+    }
+
     setSaving(true)
     let uploadedTenderPath: string | null = null
     let licitacionUpdated = false
@@ -317,6 +433,10 @@ export default function EditLicitacionPage() {
           baseline_amount: formData.baseline_amount ? parseFloat(formData.baseline_amount) : null,
           baseline_source: formData.baseline_source || null,
           awarded_amount: formData.awarded_amount ? parseFloat(formData.awarded_amount) : null,
+          ...awardSavings(
+            formData.baseline_amount ? parseFloat(formData.baseline_amount) : null,
+            formData.awarded_amount ? parseFloat(formData.awarded_amount) : null
+          ),
           department_id: formData.department_id || null,
           responsible_user_id: formData.responsible_user_id || null,
           request_date: formData.request_date ? format(formData.request_date, 'yyyy-MM-dd') : null,
@@ -349,6 +469,8 @@ export default function EditLicitacionPage() {
           .from('documents')
           .remove([formData.existing_tender_document.path])
       }
+
+      await syncPlanFromLicitacion(supabase, licitacionId, formData.status)
 
       // Update associated suppliers
       // First, delete all existing associations
@@ -477,6 +599,41 @@ export default function EditLicitacionPage() {
                       <SelectItem value="contract_signed">Contrato firmado</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    const response = await fetch('/api/process', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        action: 'technical_closed',
+                        licitacion_id: licitacionId,
+                        plan_id: selectedPlans[0] || null,
+                        payload: {},
+                      }),
+                    })
+                    const body = await response.json()
+                    if (!response.ok) {
+                      addToast({ type: 'error', title: 'No se cerró la nota', message: body.error || 'Error' })
+                      return
+                    }
+                    addToast({ type: 'success', title: 'Nota técnica cerrada', message: 'Quedó tu nombre y la hora. Otra persona adjudica.' })
+                  }}
+                >
+                  Cerrar nota técnica
+                </Button>
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="exception">Excepción, si eres la única persona que puede firmar</Label>
+                  <Input
+                    id="exception"
+                    value={exceptionNote}
+                    onChange={(event) => setExceptionNote(event.target.value)}
+                    placeholder="Escribe por qué la misma persona cierra y adjudica"
+                  />
                 </div>
               </div>
 
@@ -627,9 +784,11 @@ export default function EditLicitacionPage() {
                       <SelectValue placeholder="Selecciona fuente" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="historical">Línea base histórica</SelectItem>
+                      <SelectItem value="historical">Promedio de 12 meses</SelectItem>
+                      <SelectItem value="last_price">Último precio</SelectItem>
                       <SelectItem value="budget">Presupuesto</SelectItem>
-                      <SelectItem value="other">Otro</SelectItem>
+                      <SelectItem value="standing_offer">Oferta vigente</SelectItem>
+                      <SelectItem value="other">Otro, no alcanza para adjudicar</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -646,7 +805,7 @@ export default function EditLicitacionPage() {
                   placeholder="95000.00"
                 />
                 <p className="text-sm text-muted-foreground">
-                  El ahorro se calculará automáticamente al comparar con el baseline
+                  El número queda como ahorro comprometido. Todavía no es caja.
                 </p>
               </div>
             </CardContent>

@@ -11,16 +11,24 @@ import { Select } from '@/components/ui/select'
 import { useRouter } from 'next/navigation'
 import { supabaseBrowser } from '@/lib/supabase'
 import { useToast } from '@/components/ui/toast'
-import { ArrowLeft, Save, Loader2 } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, Sparkles } from 'lucide-react'
 import type { RfxTemplate, RfxCompanyPolicy } from '@/types/rfx-maker'
+import { saveDossier } from '@/lib/dossier-store'
+import { RFX_FIELDS, basesMarkdown } from '@/lib/rfx-sections'
 
 export default function NewRfxProjectPage() {
   const router = useRouter()
   const { addToast } = useToast()
+  const [planId, setPlanId] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [templates, setTemplates] = useState<RfxTemplate[]>([])
   const [activePolicy, setActivePolicy] = useState<RfxCompanyPolicy | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [preparing, setPreparing] = useState(false)
+  const [startDocument, setStartDocument] = useState<'tecnica' | 'administrativa'>('tecnica')
+  const [fillMode, setFillMode] = useState<'directo' | 'agente'>('directo')
+  const [sections, setSections] = useState<Record<string, string>>({})
+  const [planMeta, setPlanMeta] = useState<{ id?: string; responsible_user_id?: string | null; estimated_spend?: number | null; category?: string | null; title?: string } | null>(null)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -38,6 +46,29 @@ export default function NewRfxProjectPage() {
 
   useEffect(() => {
     loadTemplatesAndPolicy()
+    const linkedPlan = new URLSearchParams(window.location.search).get('planId')
+    if (!linkedPlan) return
+    setPlanId(linkedPlan)
+    const supabase = supabaseBrowser()
+    supabase
+      .from('sourcing_plans')
+      .select('title, description, estimated_spend, category, responsible_user_id')
+      .eq('id', linkedPlan)
+      .single()
+      .then(({ data }) => {
+        if (!data) return
+        setPlanMeta({ id: linkedPlan, ...data })
+        setFormData(prev => ({
+          ...prev,
+          title: prev.title || data.title || '',
+          description: prev.description || data.description || '',
+          project_context: {
+            ...prev.project_context,
+            project_budget: prev.project_context.project_budget || (data.estimated_spend ? String(data.estimated_spend) : ''),
+            special_requirements: data.category ? [data.category] : prev.project_context.special_requirements,
+          },
+        }))
+      })
   }, [])
 
   const loadTemplatesAndPolicy = async () => {
@@ -69,6 +100,12 @@ export default function NewRfxProjectPage() {
       if (templatesData && templatesData.length > 0) {
         setFormData(prev => ({ ...prev, template_id: templatesData[0].id }))
       }
+      const ensured = await fetch('/api/rfx-maker/ensure-template', { method: 'POST' })
+      const ensuredBody = await ensured.json()
+      if (ensured.ok && ensuredBody.id) {
+        setFormData(prev => ({ ...prev, template_id: ensuredBody.id }))
+        setTemplates(current => current.some(item => item.id === ensuredBody.id) ? current : [...current, { id: ensuredBody.id, name: 'Bases por secciones', version_number: ensuredBody.version_number || 1 } as RfxTemplate])
+      }
     } catch (error) {
       console.error('Error loading data:', error)
       addToast({
@@ -95,10 +132,6 @@ export default function NewRfxProjectPage() {
 
     if (formData.title && formData.title.length > 200) {
       errors.push('El título no puede exceder 200 caracteres')
-    }
-
-    if (!formData.template_id) {
-      errors.push('Debes seleccionar una plantilla')
     }
 
     if (!formData.rfx_type) {
@@ -179,11 +212,21 @@ export default function NewRfxProjectPage() {
           template_id: formData.template_id,
           template_version_snapshot: selectedTemplate.version_number,
           policy_snapshot: activePolicy?.policy_values || {},
-          admin_parameters: activePolicy?.policy_values || {},
-          project_context: formData.project_context,
+          admin_parameters: { ...activePolicy?.policy_values, ...sections },
+          project_context: {
+            ...formData.project_context,
+            ...(planId ? { sourcing_plan_id: planId } : {}),
+            simple_bases: true,
+            start: {
+              process: formData.rfx_type,
+              document: startDocument,
+              mode: fillMode,
+            },
+          },
+          technical_base_content: fillMode === 'directo' ? basesMarkdown(formData.title, formData.rfx_type, sections) : null,
+          technical_base_is_valid: fillMode === 'directo',
           status: 'draft',
-          technical_base_is_valid: false,
-          technical_base_manually_edited: false,
+          technical_base_manually_edited: fillMode === 'directo',
           responsible_user_id: user.id,
           created_by: user.id,
         })
@@ -191,6 +234,18 @@ export default function NewRfxProjectPage() {
         .single()
 
       if (error) throw error
+
+      if (planId && profile.company_id) {
+        await saveDossier(supabase, {
+          companyId: profile.company_id,
+          userId: user.id,
+          title: formData.title,
+          sourcingPlanId: planId,
+          rfxProjectId: newProject.id,
+          netSpend: formData.project_context.project_budget ? Number(formData.project_context.project_budget) : null,
+          stage: 'bases',
+        })
+      }
 
       addToast({
         type: 'success',
@@ -221,27 +276,6 @@ export default function NewRfxProjectPage() {
     )
   }
 
-  if (templates.length === 0) {
-    return (
-      <MainLayout>
-        <div className="max-w-4xl mx-auto">
-          <Card>
-            <CardContent className="p-12 text-center">
-              <h2 className="text-2xl font-bold mb-4">No hay plantillas disponibles</h2>
-              <p className="text-gray-600 mb-6">
-                Necesitas que un administrador cree una plantilla administrativa antes de poder crear proyectos RFx.
-              </p>
-              <Button onClick={() => router.push('/rfx-maker')}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Volver
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </MainLayout>
-    )
-  }
-
   return (
     <MainLayout>
       <div className="max-w-4xl mx-auto space-y-6">
@@ -255,9 +289,9 @@ export default function NewRfxProjectPage() {
             Volver
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Nuevo Proyecto RFx</h1>
-            <p className="text-gray-600 mt-1">
-              Crea un nuevo proyecto de bases administrativas y técnicas
+            <h1 className="text-xl font-semibold text-gray-900">Nuevo RFx</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Elige el proceso, por dónde partes y si lo llenas tú o te lo pregunta un agente.
             </p>
           </div>
         </div>
@@ -270,20 +304,40 @@ export default function NewRfxProjectPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Tipo de RFx */}
-              <div className="space-y-2">
-                <Label htmlFor="rfx_type">Tipo de RFx *</Label>
-                <select
-                  id="rfx_type"
-                  value={formData.rfx_type}
-                  onChange={(e) => setFormData({ ...formData, rfx_type: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="RFP">RFP - Request for Proposal</option>
-                  <option value="RFQ">RFQ - Request for Quotation</option>
-                  <option value="RFI">RFI - Request for Information</option>
-                </select>
-              </div>
+              <Choice
+                label="1. Tipo de proceso"
+                value={formData.rfx_type}
+                onChange={value => setFormData({ ...formData, rfx_type: value as 'RFP' | 'RFQ' | 'RFI' })}
+                options={[
+                  ['RFP', 'Propuesta'],
+                  ['RFQ', 'Cotización'],
+                  ['RFI', 'Información'],
+                ]}
+              />
+              <Choice
+                label="2. Por dónde empezar"
+                value={startDocument}
+                onChange={value => setStartDocument(value as 'tecnica' | 'administrativa')}
+                options={[
+                  ['tecnica', 'Bases técnicas'],
+                  ['administrativa', 'Bases administrativas'],
+                ]}
+              />
+              <Choice
+                label="3. Cómo llenarlo"
+                value={fillMode}
+                onChange={value => setFillMode(value as 'directo' | 'agente')}
+                options={[
+                  ['directo', 'Lo lleno yo'],
+                  ['agente', 'Que me pregunte'],
+                ]}
+              />
+              <p className="text-sm text-muted-foreground">
+                {startDocument === 'tecnica'
+                  ? 'Después de las bases técnicas se arman dos tablas del mismo servicio: cotización y propuesta técnica.'
+                  : 'Partes por plazos, pago y evaluación. Las tablas técnicas se arman cuando exista la base técnica.'}
+                {fillMode === 'agente' ? ' En el proyecto, el agente pregunta hasta tener lo necesario para el documento.' : ' En el proyecto llenas las secciones directo.'}
+              </p>
 
               {/* Título */}
               <div className="space-y-2">
@@ -309,28 +363,69 @@ export default function NewRfxProjectPage() {
                 />
               </div>
 
-              {/* Plantilla */}
-              <div className="space-y-2">
-                <Label htmlFor="template_id">Plantilla Administrativa *</Label>
-                <select
-                  id="template_id"
-                  value={formData.template_id}
-                  onChange={(e) => setFormData({ ...formData, template_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
+              {fillMode === 'directo' && (
+              <>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold">Secciones de las bases</h3>
+                  <p className="text-sm text-gray-500">ANA las propone. Tú corriges el texto.</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={preparing}
+                  onClick={async () => {
+                    setPreparing(true)
+                    try {
+                      const response = await fetch('/api/rfx-maker/prefill', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          title: formData.title,
+                          rfx_type: formData.rfx_type,
+                          description: formData.description,
+                          alcance: sections.alcance || formData.description,
+                          plan: planMeta || { title: formData.title },
+                        }),
+                      })
+                      const body = await response.json()
+                      if (!response.ok) {
+                        addToast({ type: 'error', title: 'ANA no pudo preparar las bases', message: body.error || 'Error' })
+                        return
+                      }
+                      setSections(body.values || {})
+                    } catch {
+                      addToast({ type: 'error', title: 'ANA no pudo preparar las bases', message: 'Inténtalo de nuevo.' })
+                    } finally {
+                      setPreparing(false)
+                    }
+                  }}
                 >
-                  {templates.map((template) => (
-                    <option key={template.id} value={template.id}>
-                      {template.name} (v{template.version_number})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-sm text-gray-500">
-                  La plantilla define la estructura de la base administrativa
-                </p>
+                  {preparing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                  Preparar con ANA
+                </Button>
               </div>
+              {Array.from(new Set(RFX_FIELDS.filter(field => startDocument === 'tecnica' ? field.kind === 'technical' : field.kind === 'admin').map(field => field.section))).map(section => (
+                <div key={section} className="space-y-3 rounded-xl border border-gray-200 p-4">
+                  <p className="text-sm font-medium">{section}</p>
+                  {RFX_FIELDS.filter(field => field.section === section && (startDocument === 'tecnica' ? field.kind === 'technical' : field.kind === 'admin')).map(field => (
+                    <div key={field.key} className="space-y-1">
+                      <Label htmlFor={field.key}>{field.label}</Label>
+                      <Textarea
+                        id={field.key}
+                        rows={2}
+                        value={sections[field.key] || ''}
+                        onChange={(event) => setSections(current => ({ ...current, [field.key]: event.target.value }))}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ))}
 
-              {/* Contexto del Proyecto */}
+              </>
+              )}
+
+              {fillMode === 'directo' && (
               <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold mb-4">Contexto del Proyecto (para IA)</h3>
 
@@ -380,6 +475,7 @@ export default function NewRfxProjectPage() {
                   Esta información ayudará a la IA a generar una base técnica más precisa y contextualizada
                 </p>
               </div>
+              )}
             </CardContent>
           </Card>
 
@@ -402,7 +498,7 @@ export default function NewRfxProjectPage() {
               ) : (
                 <>
                   <Save className="h-4 w-4 mr-2" />
-                  Crear Proyecto
+                  {fillMode === 'agente' ? 'Empezar preguntas' : 'Crear y llenar'}
                 </>
               )}
             </Button>
@@ -410,6 +506,36 @@ export default function NewRfxProjectPage() {
         </form>
       </div>
     </MainLayout>
+  )
+}
+
+function Choice({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  options: Array<[string, string]>
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="flex flex-wrap gap-2">
+        {options.map(([id, text]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onChange(id)}
+            className={`rounded-md border px-3 py-1.5 text-sm ${value === id ? 'border-[#1B4D3E] bg-[#1B4D3E] text-white' : 'bg-white'}`}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 

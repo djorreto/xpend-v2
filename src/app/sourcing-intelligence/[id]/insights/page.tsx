@@ -7,10 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { supabaseBrowser } from '@/lib/supabase'
-import { ArrowLeft, TrendingUp, AlertTriangle, Target, Users, FileText, Download, AlertCircle } from 'lucide-react'
+import { TrendingUp, AlertTriangle, Target, Users, Download, AlertCircle } from 'lucide-react'
 import { SIPlanItem } from '@/types'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { SpendFlowBar } from '@/components/spend/spend-flow-bar'
+import { SpendResultTabs } from '@/components/spend/spend-result-tabs'
 
 export default function InsightsPage() {
   const router = useRouter()
@@ -579,34 +581,21 @@ export default function InsightsPage() {
     <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <Button
-            variant="ghost"
-            onClick={() => router.push(`/sourcing-intelligence/${uploadId}/plan`)}
-            className="mb-2"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver al Plan
-          </Button>
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-bold flex items-center space-x-3">
-                <FileText className="h-8 w-8" style={{ color: '#2AD4D2' }} />
-                <span>Informe Preliminar</span>
-              </h1>
-              <p className="text-muted-foreground mt-2">
-                Análisis objetivo de la situación actual del gasto
-              </p>
-            </div>
-            <Button
-              onClick={handleExportPDF}
-              className="bg-gradient-to-r from-[#2AD4D2] to-[#3BE7AE]"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Descargar Informe PDF
-            </Button>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold">Informe</h1>
+            <p className="text-muted-foreground mt-2">
+              Lectura del gasto de este archivo
+            </p>
           </div>
+          <Button onClick={handleExportPDF} variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            PDF
+          </Button>
         </div>
+
+        <SpendFlowBar current="ver" uploadId={uploadId} />
+        <SpendResultTabs uploadId={uploadId} current="informe" />
 
         {/* Disclaimer - Visible en la página */}
         <Card className="bg-yellow-50 border-yellow-200">
@@ -815,21 +804,6 @@ export default function InsightsPage() {
           </CardContent>
         </Card>
 
-        {/* Navegación */}
-        <div className="flex space-x-4">
-          <Button
-            variant="outline"
-            onClick={() => router.push(`/sourcing-intelligence/${uploadId}/plan`)}
-          >
-            Ver Plan Detallado
-          </Button>
-          <Button
-            onClick={() => router.push(`/sourcing-intelligence/${uploadId}/kraljic`)}
-            className="bg-gradient-to-r from-[#2AD4D2] to-[#3BE7AE]"
-          >
-            Ver Matriz de Kraljic
-          </Button>
-        </div>
       </div>
     </MainLayout>
   )

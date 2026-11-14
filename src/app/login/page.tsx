@@ -29,24 +29,18 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    console.log('Intentando hacer login con:', email);
-
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      console.log('Resultado del login:', { data, error });
-
       if (error) {
-        console.error('Error en login:', error);
-        setError(`Error: ${error.message}`);
+        setError(error.message);
         return;
       }
 
       if (data.user) {
-        console.log('Login exitoso, redirigiendo al dashboard...');
         router.replace('/dashboard');
       } else {
         setError('No se pudo obtener información del usuario');
@@ -60,19 +54,27 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-8">
-        {/* Logo */}
-        <div className="flex justify-center">
+    <div className="app-canvas relative flex min-h-screen items-center justify-center overflow-hidden p-6">
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-10 top-10 h-72 w-72 rounded-full bg-accent-mint/45 blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-accent-turquoise/35 blur-3xl" />
+        <div className="absolute left-1/2 top-1/3 h-56 w-56 rounded-full bg-accent-lime/25 blur-3xl" />
+      </div>
+
+      <div className="glass-card relative w-full max-w-sm p-8">
+        <div className="mb-6 flex justify-center">
           <Logo size="xl" variant="default" />
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <h1 className="text-2xl font-semibold text-center">Iniciar sesión</h1>
+        <form onSubmit={onSubmit} className="space-y-3">
+          <div className="mb-5 text-center">
+            <h1 className="text-lg font-medium tracking-tight text-petrol-blue">Iniciar sesión</h1>
+            <p className="mt-1 text-xs text-petrol-blue/50">Entra a tu espacio de procurement</p>
+          </div>
 
           <input
             type="email"
-            className="w-full border rounded p-2"
+            className="w-full rounded-xl border border-white/70 bg-white/60 px-3 py-2 text-[13px] text-petrol-blue shadow-sm outline-none transition-all duration-200 placeholder:text-petrol-blue/35 focus:border-accent-turquoise/50 focus:ring-2 focus:ring-accent-turquoise/25"
             placeholder="tu@correo.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -82,7 +84,7 @@ export default function LoginPage() {
 
           <input
             type="password"
-            className="w-full border rounded p-2"
+            className="w-full rounded-xl border border-white/70 bg-white/60 px-3 py-2 text-[13px] text-petrol-blue shadow-sm outline-none transition-all duration-200 placeholder:text-petrol-blue/35 focus:border-accent-turquoise/50 focus:ring-2 focus:ring-accent-turquoise/25"
             placeholder="Contraseña"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -93,19 +95,19 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-black text-white rounded p-2"
+            className="mt-2 w-full rounded-xl bg-accent-mint px-3 py-2 text-[13px] font-medium text-petrol-blue shadow-sm shadow-accent-mint/40 transition-all duration-200 hover:-translate-y-px hover:bg-accent-mint/85 disabled:opacity-60"
           >
             {loading ? 'Entrando…' : 'Entrar'}
           </button>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-xs text-red-600">{error}</p>}
 
-          <p className="text-sm text-center">
-            <a href="/reset-password" className="underline">¿Olvidaste tu contraseña?</a>
+          <p className="pt-2 text-center text-xs text-petrol-blue/60">
+            <a href="/reset-password" className="transition-colors hover:text-petrol-blue">¿Olvidaste tu contraseña?</a>
           </p>
 
-          <p className="text-sm text-center">
-            ¿Aún no tienes cuenta? <a href="/signup" className="underline">Crear cuenta</a>
+          <p className="text-center text-xs text-petrol-blue/60">
+            ¿Aún no tienes cuenta? <a href="/signup" className="font-medium text-petrol-blue hover:text-accent-turquoise">Crear cuenta</a>
           </p>
         </form>
       </div>

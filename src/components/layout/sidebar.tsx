@@ -11,10 +11,12 @@ import {
   BarChart3,
   Settings,
   Users,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Building2,
   Gavel,
+  Scale,
   TrendingUp,
   Truck,
   Target,
@@ -26,20 +28,40 @@ import {
 import { Button } from '@/components/ui/button'
 import { VersionSelector } from '@/components/ui/version-selector'
 import { Receipt } from 'lucide-react'
+import { featureInvoicesModule } from '@/lib/mvp-config'
 
-const navigation = [
+const navigationBase = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Comité', href: '/comite', icon: BarChart3 },
   { name: 'Sourcing Intelligence', href: '/sourcing-intelligence', icon: Brain },
   { name: 'Sourcing Plan', href: '/sourcing-plan', icon: Target },
   { name: 'RFx Maker', href: '/rfx-maker', icon: FileEdit },
   { name: 'Licitaciones', href: '/licitaciones', icon: Gavel },
+  { name: 'Sala de Ofertas', href: '/sala', icon: Scale },
   { name: 'Proveedores', href: '/suppliers', icon: Truck },
   { name: 'Spend Analysis', href: '/spend', icon: TrendingUp },
   { name: 'Reportes', href: '/reports', icon: BarChart3 },
-  { name: 'Facturas', href: '/invoices', icon: Receipt },
   { name: 'Usuarios', href: '/users', icon: Users },
   { name: 'Configuración', href: '/settings', icon: Settings },
 ]
+
+const invoicesNavItem = { name: 'Facturas', href: '/invoices', icon: Receipt }
+
+const NAV_GROUPS = [
+  { label: 'Hoy', hrefs: ['/dashboard', '/comite'] },
+  { label: 'Estrategia', hrefs: ['/sourcing-intelligence', '/spend', '/sourcing-plan', '/rfx-maker'] },
+  { label: 'Compra', hrefs: ['/licitaciones', '/sala', '/suppliers', '/invoices'] },
+  { label: 'Lectura', hrefs: ['/reports'] },
+  { label: 'Cuenta', hrefs: ['/users', '/settings', '/super-admin'] },
+]
+
+const navigation = featureInvoicesModule
+  ? [
+      ...navigationBase.slice(0, 8),
+      invoicesNavItem,
+      ...navigationBase.slice(8),
+    ]
+  : navigationBase
 
 interface SidebarProps {
   companyName?: string
@@ -83,7 +105,54 @@ export function Sidebar({ companyName, userRole, mobileMenuOpen = false, onClose
   const effectiveCompanyName = companyName || cachedCompanyName
 
   // Filter navigation based on user role
-  const filteredNavigation = effectiveRole === 'super_admin'
+  const supplierNavigation = [
+    { name: 'Sala de Ofertas', href: '/sala', icon: Scale },
+  ]
+
+  const [isMobile, setIsMobile] = useState(false)
+  const [closedGroups, setClosedGroups] = useState<string[]>([])
+
+  const groups = effectiveRole === 'supplier'
+    ? [{ label: '', hrefs: ['/sala'] }]
+    : NAV_GROUPS
+
+  useEffect(() => {
+    let closed: string[] = []
+    const stored = sessionStorage.getItem('xpend-nav-closed')
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed)) closed = parsed.filter(item => typeof item === 'string')
+      } catch {
+        sessionStorage.removeItem('xpend-nav-closed')
+      }
+    }
+    const active = NAV_GROUPS.find(group =>
+      group.hrefs.some(href => pathname === href || pathname.startsWith(`${href}/`))
+    )
+    if (active) closed = closed.filter(label => label !== active.label)
+    setClosedGroups(closed)
+  }, [pathname])
+
+  const toggleGroup = (label: string) => {
+    setClosedGroups(current => {
+      const next = current.includes(label) ? current.filter(item => item !== label) : [...current, label]
+      sessionStorage.setItem('xpend-nav-closed', JSON.stringify(next))
+      return next
+    })
+  }
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)')
+    const apply = () => setIsMobile(media.matches)
+    apply()
+    media.addEventListener('change', apply)
+    return () => media.removeEventListener('change', apply)
+  }, [])
+
+  const filteredNavigation = effectiveRole === 'supplier'
+    ? supplierNavigation
+    : effectiveRole === 'super_admin'
     ? [
         ...navigation,
         { name: 'Super Admin', href: '/super-admin', icon: Shield }
@@ -93,18 +162,15 @@ export function Sidebar({ companyName, userRole, mobileMenuOpen = false, onClose
   return (
     <div
       className={cn(
-        'flex flex-col border-r transition-all duration-300 shadow-lg',
-        // Desktop: normal sidebar behavior
-        'md:relative md:translate-x-0',
-        collapsed ? 'md:w-16' : 'md:w-64',
-        // Mobile: drawer behavior
-        'fixed inset-y-0 left-0 z-50 w-64',
-        'transform transition-transform duration-300 ease-in-out',
-        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        'z-50 flex w-[min(248px,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-[22px] border border-white/10 shadow-[0_24px_50px_-28px_rgba(0,0,0,0.65)]',
+        'fixed bottom-3 left-3 top-[max(0.75rem,env(safe-area-inset-top))] h-auto md:static md:inset-auto md:my-3 md:ml-3 md:h-[calc(100%-1.5rem)]',
+        collapsed ? 'md:w-[72px]' : 'md:w-[248px]'
       )}
       style={{
-        background: 'linear-gradient(to bottom, #2D3E3D, #263331)',
-        borderRightColor: 'rgba(42, 212, 210, 0.2)'
+        background:
+          'linear-gradient(180deg, rgba(255,255,255,0.08), transparent 22%), linear-gradient(180deg, #314846 0%, #1f2c2b 100%)',
+        transform: !isMobile || mobileMenuOpen ? 'translateX(0)' : 'translateX(calc(-100% - 1rem))',
+        transition: 'transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1)',
       }}
       suppressHydrationWarning
     >
@@ -170,44 +236,46 @@ export function Sidebar({ companyName, userRole, mobileMenuOpen = false, onClose
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1" suppressHydrationWarning>
-        {filteredNavigation.map((item) => {
-          const isActive = pathname === item.href
+      <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4" suppressHydrationWarning>
+        {groups.map(group => {
+          const items = group.hrefs
+            .map(href => filteredNavigation.find(item => item.href === href))
+            .filter((item): item is (typeof filteredNavigation)[number] => !!item)
+          if (!items.length) return null
+          const closed = Boolean(group.label) && closedGroups.includes(group.label)
           return (
-            <Link
-              key={item.name}
-              href={item.href}
-              onClick={() => {
-                // Close mobile menu when navigating
-                if (onCloseMobileMenu) {
-                  onCloseMobileMenu()
-                }
-              }}
-              className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200 shadow-sm"
-              style={{
-                backgroundColor: isActive ? '#2AD4D2' : 'transparent',
-                color: isActive ? '#2D3E3D' : '#ffffff',
-                transform: isActive ? 'scale(1.02)' : 'scale(1)'
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = 'rgba(42, 212, 210, 0.2)'
-                  e.currentTarget.style.color = '#3BE7AE'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                  e.currentTarget.style.color = '#ffffff'
-                }
-              }}
-            >
-              <item.icon
-                className="h-5 w-5 flex-shrink-0"
-                style={{ color: isActive ? '#2D3E3D' : '#3BE7AE' }}
-              />
-              {!collapsed && <span className="font-semibold">{item.name}</span>}
-            </Link>
+            <div key={group.label || 'sala'} className="space-y-1">
+              {!collapsed && group.label && (
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.label)}
+                  className="flex w-full items-center justify-between px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.16em] text-white/35 hover:text-white/70"
+                  aria-expanded={!closed}
+                >
+                  {group.label}
+                  <ChevronDown className={cn('h-3 w-3 transition-transform', closed && '-rotate-90')} />
+                </button>
+              )}
+              {(!closed || collapsed) && items.map(item => {
+                const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => onCloseMobileMenu?.()}
+                    className={cn(
+                      'flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] tracking-tight transition-colors duration-200',
+                      isActive
+                        ? 'bg-white/10 text-white shadow-[inset_0_0_0_1px_rgba(59,231,174,0.45)]'
+                        : 'text-white/70 hover:bg-white/10 hover:text-white'
+                    )}
+                  >
+                    <item.icon className={cn('h-4 w-4 flex-shrink-0', isActive ? 'text-[#3BE7AE]' : 'text-white/45')} />
+                    {!collapsed && <span>{item.name}</span>}
+                  </Link>
+                )
+              })}
+            </div>
           )
         })}
       </nav>
@@ -222,8 +290,8 @@ export function Sidebar({ companyName, userRole, mobileMenuOpen = false, onClose
           }}
         >
           <div className="text-xs font-medium">
-            <p style={{ color: '#3BE7AE' }}>© 2025 Xpend™</p>
-            <p className="text-white opacity-70">v2.0.0</p>
+            <p style={{ color: '#3BE7AE' }}>© 2026 Xpend™</p>
+            <p className="text-white/50">v3</p>
           </div>
         </div>
       )}

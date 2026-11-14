@@ -8,6 +8,12 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Upload, FileSpreadsheet, CheckCircle, ArrowRight, AlertCircle } from 'lucide-react'
 import { supabaseBrowser } from '@/lib/supabase'
+import { canManageSpendRole } from '@/lib/spend-privacy'
+import * as XLSX from 'xlsx'
+import { SpendFlowBar } from '@/components/spend/spend-flow-bar'
+import { SpendBrainChip } from '@/components/spend/spend-brain-chip'
+import { SpendLoadForm } from '@/components/spend/spend-load-form'
+import { TAX_REFERENCES, type TaxReference } from '@/lib/spend-basis'
 
 export default function UploadPage() {
   const router = useRouter()
@@ -24,6 +30,10 @@ export default function UploadPage() {
   const [step, setStep] = useState<'select' | 'mapping' | 'uploading' | 'success'>('select')
   const [uploadResult, setUploadResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
+  const [excelSheetNames, setExcelSheetNames] = useState<string[]>([])
+  const [selectedExcelSheet, setSelectedExcelSheet] = useState<string>('')
+  const [groups, setGroups] = useState<{ id: string; name: string }[]>([])
+  const [references, setReferences] = useState<TaxReference[]>(TAX_REFERENCES)
 
   useEffect(() => {
     loadUser()
@@ -45,12 +55,45 @@ export default function UploadPage() {
     if (profile) {
       setUser(profile)
       setCompany(profile.companies)
+      const [{ data: groupRows }, { data: rateRows }] = await Promise.all([
+        supabase.from('si_spend_groups').select('id, name').eq('company_id', profile.company_id).order('name'),
+        supabase.from('si_tax_rates').select('country_code, country_name, tax_name, rate, note').order('country_name'),
+      ])
+      setGroups(groupRows || [])
+      if (rateRows?.length) {
+        setReferences(rateRows.map(row => ({
+          code: row.country_code,
+          name: row.country_name,
+          taxName: row.tax_name,
+          rate: row.rate == null ? null : Number(row.rate),
+          note: row.note || '',
+        })))
+      }
+    }
+  }
+
+  const loadExcelSheetNames = async (selectedFile: File) => {
+    if (!/\.xlsx?$/i.test(selectedFile.name)) {
+      setExcelSheetNames([])
+      setSelectedExcelSheet('')
+      return
+    }
+    try {
+      const buf = await selectedFile.arrayBuffer()
+      const wb = XLSX.read(buf, { type: 'array' })
+      const names = wb.SheetNames || []
+      setExcelSheetNames(names)
+      setSelectedExcelSheet(names[0] || '')
+    } catch {
+      setExcelSheetNames([])
+      setSelectedExcelSheet('')
     }
   }
 
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile)
     setError(null)
+    void loadExcelSheetNames(selectedFile)
   }
 
   const handleDrop = (e: React.DragEvent) => {
@@ -83,41 +126,40 @@ export default function UploadPage() {
       return
     }
 
-    // Validar tamaño (10MB)
-    if (selectedFile.size > 10 * 1024 * 1024) {
-      setError('Archivo demasiado grande. Máximo 10MB.')
+    const maxMb = 80
+    if (selectedFile.size > maxMb * 1024 * 1024) {
+      setError(`Archivo demasiado grande. Máximo ${maxMb} MB.`)
       return
     }
 
     handleFileSelect(selectedFile)
   }
 
-  const handleUpload = async () => {
-    if (!file) return
+  const postFile = async (preview: boolean, decisions?: Record<string, unknown>) => {
+    if (!file) return null
+    const formData = new FormData()
+    formData.append('file', file)
+    if (selectedExcelSheet && excelSheetNames.includes(selectedExcelSheet)) {
+      formData.append('sheet_name', selectedExcelSheet)
+    }
+    if (preview) formData.append('preview', '1')
+    if (Object.keys(mapping).length) formData.append('mapping', JSON.stringify(mapping))
+    if (decisions) formData.append('decisions', JSON.stringify(decisions))
+    const response = await fetch('/api/si/upload', { method: 'POST', body: formData })
+    const result = await response.json()
+    if (!response.ok) throw new Error(result.error || 'No se pudo leer el archivo')
+    return result
+  }
 
+  const handleUpload = async () => {
     setUploading(true)
     setError(null)
-
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const response = await fetch('/api/si/upload', {
-        method: 'POST',
-        body: formData
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Error al subir archivo')
-      }
-
+      const result = await postFile(true)
       setUploadResult(result)
-      setColumns(result.columns)
-      setMapping(result.column_mapping)
+      setColumns(result.columns || [])
+      setMapping(result.column_mapping || {})
       setStep('mapping')
-
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -125,8 +167,26 @@ export default function UploadPage() {
     }
   }
 
-  const handleConfirmMapping = () => {
-    setStep('success')
+  const handleConfirmMapping = async (decisions: Record<string, unknown>) => {
+    setUploading(true)
+    setError(null)
+    try {
+      const result = await postFile(false, decisions)
+      setUploadResult(result)
+      if (decisions.new_group_name && user?.company_id) {
+        const { data: groupRows } = await supabase
+          .from('si_spend_groups')
+          .select('id, name')
+          .eq('company_id', user.company_id)
+          .order('name')
+        setGroups(groupRows || [])
+      }
+      setStep('success')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setUploading(false)
+    }
   }
 
   const handleStartClassification = async () => {
@@ -135,28 +195,32 @@ export default function UploadPage() {
     router.push(`/sourcing-intelligence/${uploadResult.upload_id}/classify`)
   }
 
-  const requiredFields = [
-    { key: 'description', label: 'Descripción *', required: true },
-    { key: 'amount', label: 'Monto *', required: true },
-    { key: 'supplier_name', label: 'Proveedor', required: false },
-    { key: 'purchase_order', label: 'Orden de Compra', required: false },
-    { key: 'currency', label: 'Moneda', required: false },
-    { key: 'cost_center', label: 'Centro de Costo', required: false },
-    { key: 'purchase_date', label: 'Fecha', required: false },
-  ]
-
-  const isMappingValid = mapping.description && mapping.amount
-
   return (
     <MainLayout user={user} companyName={company?.name}>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold">Cargar Archivo de Gasto</h1>
-          <p className="text-muted-foreground mt-2">
-            Sube un archivo Excel o CSV con órdenes de compra para análisis con IA
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Cargar Archivo de Gasto</h1>
+            <p className="text-muted-foreground mt-2">
+              Sube un Excel o CSV. Se guardan solo las columnas mapeadas, no el archivo original.
+            </p>
+          </div>
+          <SpendBrainChip />
         </div>
+
+        <SpendFlowBar current={step === 'select' ? 'cargar' : 'mapear'} uploadId={uploadResult?.upload_id} />
+
+        {user && !canManageSpendRole(user.role) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>No puedes cargar gasto</CardTitle>
+              <CardDescription>
+                Solo un manager o un administrador puede subir un archivo de gasto.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        )}
 
         {/* Progress Steps */}
         <div className="flex items-center justify-center space-x-4 py-6">
@@ -194,7 +258,7 @@ export default function UploadPage() {
         )}
 
         {/* Step 1: File Selection */}
-        {step === 'select' && (
+        {step === 'select' && canManageSpendRole(user?.role) && (
           <Card>
             <CardHeader>
               <CardTitle>Paso 1: Selecciona tu archivo</CardTitle>
@@ -225,7 +289,7 @@ export default function UploadPage() {
                     Formatos soportados: Excel (.xlsx, .xls) o CSV
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Máximo 10MB - Hasta 5,000 líneas
+                    Hasta 80 MB · hasta 200.000 filas · elige la hoja si el libro tiene varias
                   </p>
                 </div>
               ) : (
@@ -240,10 +304,38 @@ export default function UploadPage() {
                         </p>
                       </div>
                     </div>
-                    <Button variant="ghost" onClick={() => setFile(null)}>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setFile(null)
+                        setExcelSheetNames([])
+                        setSelectedExcelSheet('')
+                      }}
+                    >
                       Cambiar
                     </Button>
                   </div>
+
+                  {excelSheetNames.length > 1 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Hoja de Excel a importar</p>
+                      <Select value={selectedExcelSheet} onValueChange={setSelectedExcelSheet}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona hoja" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {excelSheetNames.map((name) => (
+                            <SelectItem key={name} value={name}>
+                              {name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Solo se importa una hoja por carga. Repite la carga para otras hojas si lo necesitas.
+                      </p>
+                    </div>
+                  )}
 
                   <Button
                     onClick={handleUpload}
@@ -258,7 +350,7 @@ export default function UploadPage() {
                       </>
                     ) : (
                       <>
-                        Subir y Analizar
+                        Revisar archivo
                         <ArrowRight className="ml-2 h-5 w-5" />
                       </>
                     )}
@@ -273,82 +365,31 @@ export default function UploadPage() {
         {step === 'mapping' && (
           <Card>
             <CardHeader>
-              <CardTitle>Paso 2: Mapeo de Columnas</CardTitle>
+              <CardTitle>Paso 2: Confirmar la base</CardTitle>
               <CardDescription>
-                Verifica que las columnas se hayan detectado correctamente
+                {uploadResult?.total_rows?.toLocaleString()} líneas
+                {uploadResult?.sheet_used ? ` · hoja ${uploadResult.sheet_used}` : ''}. País, moneda e impuesto quedan guardados y se pueden cambiar después.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                <p className="text-sm text-blue-900">
-                  <strong>✅ Detectadas automáticamente:</strong> {uploadResult?.processed_rows} líneas de {uploadResult?.total_rows}
-                </p>
-                <div className="text-sm text-blue-800 space-y-1">
-                  <p><strong>📋 Instrucciones:</strong></p>
-                  <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li>Los campos con <strong>*</strong> son obligatorios (Descripción y Monto)</li>
-                    <li>Verifica que cada campo esté mapeado a la columna correcta de tu Excel</li>
-                    <li>Si algo está mal, usa el dropdown para cambiar la columna</li>
-                    <li>Los campos opcionales puedes dejarlos en &quot;Sin mapear&quot;</li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                {requiredFields.map((field) => (
-                  <div key={field.key} className="flex items-center space-x-4">
-                    <label className="w-40 font-medium">
-                      {field.label}
-                    </label>
-                    <Select
-                      value={mapping[field.key] || 'none'}
-                      onValueChange={(value) => {
-                        if (value === 'none') {
-                          const newMapping = { ...mapping }
-                          delete newMapping[field.key]
-                          setMapping(newMapping)
-                        } else {
-                          setMapping({ ...mapping, [field.key]: value })
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Seleccionar columna..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sin mapear</SelectItem>
-                        {columns.map((col) => (
-                          <SelectItem key={col} value={col}>
-                            {col}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex space-x-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setStep('select')
-                    setFile(null)
-                    setColumns([])
-                    setMapping({})
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleConfirmMapping}
-                  disabled={!isMappingValid}
-                  className="flex-1 bg-gradient-to-r from-[#2AD4D2] to-[#3BE7AE]"
-                >
-                  Confirmar y Continuar
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </div>
+            <CardContent>
+              <SpendLoadForm
+                key={`${uploadResult?.stats?.dated || 0}-${(uploadResult?.stats?.currencies || []).map((item: { code: string }) => item.code).join()}-${(uploadResult?.stats?.countries || []).map((item: { code: string }) => item.code).join()}`}
+                columns={columns}
+                mapping={mapping}
+                onMapping={setMapping}
+                stats={uploadResult?.stats || { currencies: [], countries: [], dated: 0, min: null, max: null, total: 0 }}
+                groups={groups}
+                references={references}
+                saving={uploading}
+                onReread={handleUpload}
+                onCancel={() => {
+                  setStep('select')
+                  setFile(null)
+                  setColumns([])
+                  setMapping({})
+                }}
+                onConfirm={handleConfirmMapping}
+              />
             </CardContent>
           </Card>
         )}
@@ -362,7 +403,7 @@ export default function UploadPage() {
                 <span>¡Archivo Cargado Exitosamente!</span>
               </CardTitle>
               <CardDescription>
-                Tu archivo ha sido procesado. Ahora puedes clasificar las líneas con IA.
+                Las líneas quedaron guardadas en neto, sin el archivo original. Ahora puedes aplicar las reglas de la empresa.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

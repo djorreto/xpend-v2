@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "src/app/api/si/classify/route.ts": { "maxDuration": 60 },
+    "src/app/api/si/classify-batch/route.ts": { "maxDuration": 60 },
+    "src/app/api/si/export/route.ts": { "maxDuration": 60 }
+  }
+}

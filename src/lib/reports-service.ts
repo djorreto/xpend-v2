@@ -1,5 +1,6 @@
 import { supabaseBrowser } from './supabase'
 import { StorageService } from './storage'
+import { fetchUnifiedSpendForCompany, primaryCurrency, totalsByCurrency } from './spend-sources'
 
 export interface ReportParameters {
   dateFrom?: string
@@ -31,18 +32,20 @@ export class ReportsService {
   ): Promise<ReportData> {
     const supabase = supabaseBrowser()
 
-    // Obtener datos de gastos
-    const { data: spendData, error } = await supabase
-      .from('spend_data')
-      .select('*')
-      .eq('company_id', companyId)
-      .gte('date', parameters.dateFrom || new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString())
-      .lte('date', parameters.dateTo || new Date().toISOString())
+    const dateFrom = (parameters.dateFrom || new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()).slice(0, 10)
+    const dateTo = (parameters.dateTo || new Date().toISOString()).slice(0, 10)
 
-    if (error) throw error
+    const unified = await fetchUnifiedSpendForCompany(supabase, companyId)
 
-    // Filtrar por categorías si se especifican
-    let filteredData = spendData || []
+    let filteredData = unified
+      .filter(item => item.date >= dateFrom && item.date <= dateTo)
+      .map(item => ({
+        category: item.category,
+        amount: item.amount,
+        date: item.date,
+        vendor: item.supplier,
+        currency: item.currency,
+      }))
     if (parameters.categories?.length) {
       filteredData = filteredData.filter(item =>
         parameters.categories!.includes(item.category)
@@ -56,14 +59,16 @@ export class ReportsService {
       )
     }
 
-    // Calcular resumen
-    const totalSpend = filteredData.reduce((sum, item) => sum + Number(item.amount), 0)
-    const categoryTotals = filteredData.reduce((acc, item) => {
+    const byCurrency = totalsByCurrency(filteredData)
+    const currency = primaryCurrency(filteredData)
+    const mainRows = filteredData.filter(item => item.currency === currency)
+    const totalSpend = mainRows.reduce((sum, item) => sum + Number(item.amount), 0)
+    const categoryTotals = mainRows.reduce((acc, item) => {
       acc[item.category] = (acc[item.category] || 0) + Number(item.amount)
       return acc
     }, {} as Record<string, number>)
 
-    const vendorTotals = filteredData.reduce((acc, item) => {
+    const vendorTotals = mainRows.reduce((acc, item) => {
       acc[item.vendor] = (acc[item.vendor] || 0) + Number(item.amount)
       return acc
     }, {} as Record<string, number>)
@@ -72,7 +77,7 @@ export class ReportsService {
     const charts = parameters.includeCharts ? [
       {
         type: 'pie',
-        title: 'Distribución por Categoría',
+        title: `Distribución por Categoría (${currency})`,
         data: (Object.entries(categoryTotals) as Array<[string, number]>).map(([category, amount]) => ({
           name: category,
           value: amount,
@@ -81,7 +86,7 @@ export class ReportsService {
       },
       {
         type: 'bar',
-        title: 'Top 10 Proveedores',
+        title: `Top 10 Proveedores (${currency})`,
         data: (Object.entries(vendorTotals) as Array<[string, number]>)
           .sort(([,a], [,b]) => b - a)
           .slice(0, 10)
@@ -95,10 +100,12 @@ export class ReportsService {
     return {
       summary: {
         totalSpend,
-        transactionCount: filteredData.length,
+        currency,
+        byCurrency,
+        transactionCount: mainRows.length,
         categoryCount: Object.keys(categoryTotals).length,
         vendorCount: Object.keys(vendorTotals).length,
-        averageTransaction: filteredData.length > 0 ? totalSpend / filteredData.length : 0
+        averageTransaction: mainRows.length > 0 ? totalSpend / mainRows.length : 0
       },
       details: filteredData,
       charts,
@@ -200,25 +207,30 @@ export class ReportsService {
   ): Promise<ReportData> {
     const supabase = supabaseBrowser()
 
-    // Obtener datos de gastos por proveedor
-    const { data: spendData, error } = await supabase
-      .from('spend_data')
-      .select('*')
-      .eq('company_id', companyId)
-      .gte('date', parameters.dateFrom || new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString())
-      .lte('date', parameters.dateTo || new Date().toISOString())
+    const dateFrom = (parameters.dateFrom || new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()).slice(0, 10)
+    const dateTo = (parameters.dateTo || new Date().toISOString()).slice(0, 10)
 
-    if (error) throw error
+    const unified = await fetchUnifiedSpendForCompany(supabase, companyId)
 
-    let filteredData = spendData || []
+    let filteredData = unified
+      .filter(item => item.date >= dateFrom && item.date <= dateTo)
+      .map(item => ({
+        vendor: item.supplier,
+        amount: item.amount,
+        date: item.date,
+        category: item.category,
+        currency: item.currency,
+      }))
     if (parameters.vendors?.length) {
       filteredData = filteredData.filter(item =>
         parameters.vendors!.includes(item.vendor)
       )
     }
 
-    // Agrupar por proveedor
-    const vendorData = filteredData.reduce((acc, item) => {
+    const byCurrency = totalsByCurrency(filteredData)
+    const currency = primaryCurrency(filteredData)
+    const mainRows = filteredData.filter(item => item.currency === currency)
+    const vendorData = mainRows.reduce((acc, item) => {
       if (!acc[item.vendor]) {
         acc[item.vendor] = {
           vendor: item.vendor,
@@ -254,6 +266,8 @@ export class ReportsService {
       summary: {
         totalVendors: vendorPerformance.length,
         totalSpend,
+        currency,
+        byCurrency,
         averageSpendPerVendor: vendorPerformance.length > 0 ? totalSpend / vendorPerformance.length : 0,
         topVendor: topVendors[0]?.vendor || 'N/A',
         topVendorSpend: topVendors[0]?.totalSpend || 0

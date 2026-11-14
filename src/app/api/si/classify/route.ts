@@ -1,151 +1,154 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
+import { assessmentPrompt, classifySpendLine, modelNeedsReview, parseAssessment } from '@/lib/spend-assessment'
+import { BASE_TAXONOMY, knownFamily, taxonomyFromRules } from '@/lib/spend-taxonomy'
+import { requireSpendAccess } from '@/lib/spend-access'
+import { EXTERNAL_AI_DISABLED, externalAiAllowed } from '@/lib/spend-privacy'
+import { REDACTION_MESSAGES, redactSpendDescription } from '@/lib/spend-redaction'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-// Configurar Groq
-function getGroqApiKey() {
-  if (typeof process !== 'undefined' && process.env) {
-    return process.env.GROQ_API_KEY || ''
-  }
-  return ''
+const MODEL_NAME = 'qwen/qwen3.8-27b'
+
+function getGroq() {
+  return createOpenAI({
+    apiKey: process.env.GROQ_API_KEY || '',
+    baseURL: 'https://api.groq.com/openai/v1',
+  })
 }
-
-const groq = createOpenAI({
-  apiKey: getGroqApiKey(),
-  baseURL: 'https://api.groq.com/openai/v1',
-})
-
-const model = groq('llama-3.3-70b-versatile')
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const access = await requireSpendAccess('analyst')
+    if (!access.ok) return access.response
+    const { supabase, profile, settings } = access
 
-    // 1. Autenticación
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const body = await request.json().catch(() => ({}))
+    const lineId = body?.line_id
+    if (!lineId || typeof lineId !== 'string') {
+      return NextResponse.json({ error: 'line_id requerido' }, { status: 400 })
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, company_id')
-      .eq('id', session.user.id)
+    const { data: line, error: lineError } = await supabase
+      .from('si_spend_lines')
+      .select('id, description, supplier_name')
+      .eq('id', lineId)
+      .eq('company_id', profile.company_id)
       .single()
 
-    if (!profile) {
-      return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
+    if (lineError || !line) {
+      return NextResponse.json({ error: 'Línea no encontrada' }, { status: 404 })
     }
 
-    // 2. Obtener datos de la solicitud
-    const { line_id, description, supplier_name, amount } = await request.json()
-
-    if (!description) {
-      return NextResponse.json({ error: 'Descripción requerida' }, { status: 400 })
-    }
-
-    // 3. Obtener reglas de aprendizaje existentes
     const { data: rules } = await supabase
       .from('si_learning_rules')
       .select('*')
       .eq('company_id', profile.company_id)
       .order('success_rate', { ascending: false })
-      .limit(10)
+      .limit(80)
 
-    // 4. Construir prompt para IA
-    const rulesContext = rules && rules.length > 0
-      ? `\n\nREGLAS APRENDIDAS (úsalas para mejorar la precisión):\n${rules.map(r => `- Si encuentra "${r.pattern}" → categoría "${r.category}" (confianza +${r.confidence_boost})`).join('\n')}`
-      : ''
-
-    const prompt = `Eres un experto en clasificación de gastos corporativos y Strategic Sourcing.
-
-DATOS DE LA LÍNEA DE GASTO:
-- Descripción: "${description}"
-${supplier_name ? `- Proveedor: "${supplier_name}"` : ''}
-${amount ? `- Monto: $${amount}` : ''}
-${rulesContext}
-
-INSTRUCCIONES:
-1. Analiza la descripción y el proveedor para determinar la categoría de gasto más apropiada.
-2. Asigna una categoría principal y una subcategoría si es posible.
-3. Proporciona un nivel de confianza (0.0 a 1.0).
-4. Justifica brevemente tu clasificación.
-5. Sugiere una estrategia de sourcing si es evidente.
-
-CATEGORÍAS COMUNES:
-- Servicios de TI (Software, Hardware, Cloud, Soporte técnico, Licencias)
-- Servicios Profesionales (Consultoría, Legal, Auditoría, Marketing, RRHH)
-- Servicios Generales (Limpieza, Seguridad, Alimentación, Transporte, Mensajería)
-- Suministros de Oficina (Papelería, Mobiliario, Equipamiento)
-- Suministros Operacionales (Insumos, Materiales, Repuestos)
-- Infraestructura (Obras civiles, Mantención, Construcción, Instalaciones)
-- Energía y Servicios Básicos (Electricidad, Agua, Gas, Telecomunicaciones, Internet)
-- Logística y Transporte (Fletes, Courier, Almacenamiento)
-- Capacitación y Desarrollo (Cursos, Entrenamiento, Certificaciones)
-- Equipos y Maquinaria (Compra, Arriendo, Mantención)
-- Materias Primas (Producción, Manufactura)
-- Marketing y Publicidad (Campañas, Eventos, Material promocional)
-
-FORMATO DE RESPUESTA (JSON):
-{
-  "category": "Categoría principal",
-  "subcategory": "Subcategoría (opcional)",
-  "confidence": 0.85,
-  "justification": "Breve explicación de la clasificación",
-  "suggested_strategy": "licitar | consolidar | negociar_marco | monitorear | optimizar"
-}
-
-Responde SOLO con el JSON, sin texto adicional.`
-
-    // 5. Llamar a la IA
-    const { text } = await generateText({
-      model,
-      prompt,
-      temperature: 0.3,
-    })
-
-    // 6. Parsear respuesta
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      throw new Error('Respuesta de IA en formato inválido')
-    }
-
-    const classification = JSON.parse(jsonMatch[0])
-
-    // Validar confianza
-    if (classification.confidence > 1) classification.confidence = 1
-    if (classification.confidence < 0) classification.confidence = 0
-
-    // 7. Actualizar línea de gasto si se proporcionó line_id
-    if (line_id) {
-      const needs_review = classification.confidence < 0.8
-
+    const nodes = taxonomyFromRules(rules || [])
+    const remembered = await classifySpendLine(line.description, line.supplier_name, rules || [], nodes)
+    if (remembered) {
+      const needs_review = remembered.source === 'modelo' && modelNeedsReview(remembered.confidence)
       await supabase
         .from('si_spend_lines')
         .update({
-          category: classification.category,
-          subcategory: classification.subcategory,
-          ai_confidence: classification.confidence,
-          ai_justification: classification.justification,
-          needs_review
+          category: remembered.category,
+          subcategory: remembered.subcategory,
+          ai_confidence: remembered.confidence,
+          ai_justification: remembered.justification,
+          needs_review,
         })
-        .eq('id', line_id)
+        .eq('id', line.id)
         .eq('company_id', profile.company_id)
+
+      return NextResponse.json({
+        success: true,
+        external: false,
+        classification: remembered,
+      })
     }
+
+    if (!externalAiAllowed(settings)) {
+      return NextResponse.json({ error: EXTERNAL_AI_DISABLED, external: false }, { status: 403 })
+    }
+
+    if (!process.env.GROQ_API_KEY) {
+      return NextResponse.json({ error: 'La categorización externa no está configurada' }, { status: 503 })
+    }
+
+    const redacted = redactSpendDescription(line.description, line.supplier_name)
+    const audit = {
+      company_id: profile.company_id,
+      line_id: line.id,
+      user_id: profile.id,
+      model: MODEL_NAME,
+      payload_chars: redacted.text.length,
+    }
+
+    if (redacted.blocked) {
+      await supabase.from('si_ai_calls').insert({
+        ...audit,
+        outcome: 'blocked',
+        block_reason: redacted.reason,
+      })
+      return NextResponse.json({
+        success: false,
+        external: false,
+        blocked: true,
+        reason: redacted.reason,
+        message: REDACTION_MESSAGES[redacted.reason],
+      })
+    }
+
+    const { error: auditError } = await supabase.from('si_ai_calls').insert({
+      ...audit,
+      outcome: 'sent',
+      block_reason: null,
+    })
+    if (auditError) {
+      return NextResponse.json({ error: 'No se pudo registrar el envío. La línea no salió de Xpend.' }, { status: 503 })
+    }
+
+    const { text } = await generateText({
+      model: getGroq()(MODEL_NAME),
+      prompt: assessmentPrompt(redacted.text),
+      temperature: 0.2,
+    })
+
+    const classification = parseAssessment(text, nodes)
+    const familyKnown = knownFamily(nodes.length ? nodes : BASE_TAXONOMY, classification.category)
+    if (!familyKnown) {
+      return NextResponse.json({
+        success: false,
+        external: true,
+        unclassified: true,
+        message: 'La IA no encontró una categoría de la taxonomía. La línea queda para completarla a mano.',
+      })
+    }
+    const needs_review = classification.confidence < 0.8
+    await supabase
+      .from('si_spend_lines')
+      .update({
+        category: classification.category,
+        subcategory: classification.subcategory,
+        ai_confidence: classification.confidence,
+        ai_justification: `Modelo general. ${classification.justification}`,
+        needs_review,
+      })
+      .eq('id', line.id)
+      .eq('company_id', profile.company_id)
 
     return NextResponse.json({
       success: true,
-      classification
+      external: true,
+      classification,
     })
-
-  } catch (error: any) {
-    console.error('Error in SI classification:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch {
+    console.error('Error in SI classification')
+    return NextResponse.json({ error: 'No se pudo categorizar la línea' }, { status: 500 })
   }
 }
-

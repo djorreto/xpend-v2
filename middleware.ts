@@ -8,7 +8,23 @@ export async function middleware(request: NextRequest) {
 
   // Manejo completo de cookies + refresh de sesión
   const supabase = createMiddlewareClient({ req: request, res: response })
-  await supabase.auth.getSession()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .maybeSingle()
+    const path = request.nextUrl.pathname
+    const supplierAllowed = path.startsWith('/sala') || path.startsWith('/api/sala') || path.startsWith('/login') || path.startsWith('/auth') || path.startsWith('/reset-password')
+    if (profile?.role === 'supplier' && !supplierAllowed) {
+      const redirected = NextResponse.redirect(new URL('/sala', request.url))
+      for (const cookie of response.headers.getSetCookie()) {
+        redirected.headers.append('set-cookie', cookie)
+      }
+      return redirected
+    }
+  }
 
   return response
 }

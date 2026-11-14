@@ -57,7 +57,8 @@ const roleLabels: Record<string, string> = {
   admin: 'Administrador',
   manager: 'Gerente',
   analyst: 'Analista',
-  viewer: 'Visualizador'
+  viewer: 'Visualizador',
+  super_admin: 'Super admin'
 }
 
 export default function UsersPage() {
@@ -123,32 +124,30 @@ export default function UsersPage() {
         // Load users from the same company
         const { data: usersData, error: usersError } = await supabase
           .from('profiles')
-          .select(`
-            id,
-            email,
-            full_name,
-            role,
-            created_at,
-            updated_at,
-            phone,
-            position,
-            department,
-            avatar_url,
-            company_roles:company_user_roles!inner(
-              role,
-              company:companies(id,name)
-            )
-          `)
-          .eq('company_roles.company_id', profile.company_id)
+          .select('id, email, full_name, role, created_at, updated_at, avatar_url, company_id')
+          .eq('company_id', profile.company_id)
           .order('created_at', { ascending: false })
 
         if (usersError) throw usersError
+
+        const { data: roleRows } = await supabase
+          .from('company_user_roles')
+          .select('user_id, role, company:companies(id,name)')
+          .eq('company_id', profile.company_id)
+
+        const rolesByUser = new Map<string, CompanyRole[]>()
+        for (const row of roleRows || []) {
+          const company = Array.isArray(row.company) ? row.company[0] : row.company
+          const list = rolesByUser.get(row.user_id) || []
+          list.push({ role: row.role, company })
+          rolesByUser.set(row.user_id, list)
+        }
+
         const normalized = (usersData || []).map(u => ({
           ...u,
-          company_roles: (u.company_roles || []).map((cr: any) => ({
-            role: cr.role,
-            company: Array.isArray(cr.company) ? cr.company[0] : cr.company
-          }))
+          company_roles: rolesByUser.get(u.id)?.length
+            ? rolesByUser.get(u.id)!
+            : [{ role: u.role || 'viewer', company: { id: companyData.id, name: companyData.name } }]
         }))
         setUsers(normalized)
       }
@@ -207,7 +206,7 @@ export default function UsersPage() {
     <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6" suppressHydrationWarning>
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Usuarios</h1>
             <p className="text-muted-foreground">

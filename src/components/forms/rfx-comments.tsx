@@ -11,7 +11,7 @@ interface Comment {
   id: string
   project_id: string
   comment_text: string
-  parent_comment_id: string | null
+  section?: string | null
   created_by: string
   created_at: string
   created_by_user?: {
@@ -54,7 +54,6 @@ export function RfxComments({ projectId }: RfxCommentsProps) {
           created_by_user:profiles!created_by(full_name, email)
         `)
         .eq('project_id', projectId)
-        .is('parent_comment_id', null) // Solo comentarios principales
         .order('created_at', { ascending: false })
 
       if (error) throw error

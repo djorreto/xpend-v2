@@ -1,196 +1,118 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
-import { createOpenAI } from '@ai-sdk/openai'
-import { generateText } from 'ai'
+import { classifySpendLine, modelNeedsReview } from '@/lib/spend-assessment'
+import { taxonomyFromRules } from '@/lib/spend-taxonomy'
+import { requireSpendAccess } from '@/lib/spend-access'
 
 export const runtime = 'nodejs'
-export const maxDuration = 300 // 5 minutos
-
-// Configurar Groq
-function getGroqApiKey() {
-  if (typeof process !== 'undefined' && process.env) {
-    return process.env.GROQ_API_KEY || ''
-  }
-  return ''
-}
-
-const groq = createOpenAI({
-  apiKey: getGroqApiKey(),
-  baseURL: 'https://api.groq.com/openai/v1',
-})
-
-const model = groq('llama-3.3-70b-versatile')
+export const maxDuration = 300
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const access = await requireSpendAccess('analyst')
+    if (!access.ok) return access.response
+    const { supabase, profile } = access
 
-    // 1. Autenticación
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, company_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!profile) {
-      return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
-    }
-
-    // 2. Obtener upload_id
-    const { upload_id } = await request.json()
-
-    if (!upload_id) {
+    const body = await request.json().catch(() => ({}))
+    const uploadId = body?.upload_id
+    if (!uploadId || typeof uploadId !== 'string') {
       return NextResponse.json({ error: 'upload_id requerido' }, { status: 400 })
     }
 
-    // 3. Obtener líneas sin clasificar o con baja confianza
-    const { data: lines, error: linesError } = await supabase
+    const lineIds = Array.isArray(body?.line_ids)
+      ? body.line_ids.filter((id: unknown) => typeof id === 'string').slice(0, 200)
+      : null
+
+    let query = supabase
       .from('si_spend_lines')
-      .select('*')
-      .eq('upload_id', upload_id)
+      .select('id, description, supplier_name')
+      .eq('upload_id', uploadId)
       .eq('company_id', profile.company_id)
-      .or('category.is.null,ai_confidence.lt.0.8')
-      .limit(100) // Procesar máximo 100 líneas por batch
+
+    if (lineIds) {
+      if (!lineIds.length) {
+        return NextResponse.json({
+          success: true,
+          classified_count: 0,
+          pending_count: 0,
+          external_ai: false,
+          message: 'No hay líneas dentro del corte.',
+        })
+      }
+      query = query.in('id', lineIds).is('category', null)
+    } else {
+      query = query.or('category.is.null,needs_review.eq.true').limit(500)
+    }
+
+    const { data: lines, error: linesError } = await query
 
     if (linesError) throw linesError
     if (!lines || lines.length === 0) {
       return NextResponse.json({
         success: true,
-        message: 'No hay líneas pendientes de clasificación',
-        classified_count: 0
+        classified_count: 0,
+        pending_count: 0,
+        external_ai: false,
+        message: 'No hay líneas pendientes. No se envió gasto a un modelo externo.',
       })
     }
 
-    // 4. Obtener reglas de aprendizaje
     const { data: rules } = await supabase
       .from('si_learning_rules')
       .select('*')
       .eq('company_id', profile.company_id)
       .order('success_rate', { ascending: false })
-      .limit(10)
+      .limit(400)
 
-    const rulesContext = rules && rules.length > 0
-      ? `\n\nREGLAS APRENDIDAS:\n${rules.map(r => `- "${r.pattern}" → "${r.category}"`).join('\n')}`
-      : ''
-
-    // 5. Clasificar líneas en lotes de 10
+    const nodes = taxonomyFromRules(rules || [])
     let classified_count = 0
-    const batchSize = 10
+    let pending_count = 0
+    let model_count = 0
 
-    for (let i = 0; i < lines.length; i += batchSize) {
-      const batch = lines.slice(i, i + batchSize)
-
-      // Crear prompt para el lote
-      const batchDescriptions = batch.map((line, idx) =>
-        `${idx + 1}. Descripción: "${line.description}"${line.supplier_name ? `, Proveedor: "${line.supplier_name}"` : ''}`
-      ).join('\n')
-
-      const prompt = `Eres un experto en clasificación de gastos corporativos.
-
-LÍNEAS A CLASIFICAR:
-${batchDescriptions}
-${rulesContext}
-
-CATEGORÍAS COMUNES:
-- Servicios de TI, Servicios Profesionales, Servicios Generales
-- Suministros de Oficina, Suministros Operacionales
-- Infraestructura, Energía y Servicios Básicos
-- Logística y Transporte, Capacitación
-- Equipos y Maquinaria, Materias Primas
-- Marketing y Publicidad
-
-FORMATO DE RESPUESTA (JSON array):
-[
-  {
-    "category": "Categoría",
-    "subcategory": "Subcategoría (opcional)",
-    "confidence": 0.85,
-    "justification": "Breve explicación"
-  },
-  ...
-]
-
-Responde SOLO con el JSON array, una clasificación por cada línea en el mismo orden.`
-
-      try {
-        const { text } = await generateText({
-          model,
-          prompt,
-          temperature: 0.3,
-        })
-
-        // Parsear respuesta
-        const jsonMatch = text.match(/\[[\s\S]*\]/)
-        if (!jsonMatch) continue
-
-        const classifications = JSON.parse(jsonMatch[0])
-
-        // Actualizar cada línea
-        for (let j = 0; j < batch.length && j < classifications.length; j++) {
-          const line = batch[j]
-          const classification = classifications[j]
-
-          if (classification.confidence > 1) classification.confidence = 1
-          if (classification.confidence < 0) classification.confidence = 0
-
-          const needs_review = classification.confidence < 0.8
-
-          await supabase
-            .from('si_spend_lines')
-            .update({
-              category: classification.category,
-              subcategory: classification.subcategory,
-              ai_confidence: classification.confidence,
-              ai_justification: classification.justification,
-              needs_review
-            })
-            .eq('id', line.id)
-
-          classified_count++
-        }
-
-        // Pequeño delay para no saturar la API
-        await new Promise(resolve => setTimeout(resolve, 500))
-
-      } catch (batchError) {
-        console.error('Error en lote:', batchError)
-        // Continuar con el siguiente lote
+    for (const line of lines) {
+      const remembered = await classifySpendLine(line.description, line.supplier_name, rules || [], nodes)
+      if (!remembered) {
+        pending_count++
+        continue
       }
+      if (remembered.source === 'modelo') model_count++
+      const needs_review = remembered.source === 'modelo' && modelNeedsReview(remembered.confidence)
+      const { error: updateError } = await supabase
+        .from('si_spend_lines')
+        .update({
+          category: remembered.category,
+          subcategory: remembered.subcategory,
+          ai_confidence: remembered.confidence,
+          ai_justification: remembered.justification,
+          needs_review,
+        })
+        .eq('id', line.id)
+        .eq('company_id', profile.company_id)
+      if (updateError) throw updateError
+      classified_count++
     }
 
-    // 6. Actualizar status del upload
-    const { data: remainingLines } = await supabase
+    const { count } = await supabase
       .from('si_spend_lines')
       .select('id', { count: 'exact', head: true })
-      .eq('upload_id', upload_id)
+      .eq('upload_id', uploadId)
+      .eq('company_id', profile.company_id)
       .eq('needs_review', true)
-
-    const allClassified = (remainingLines?.length || 0) === 0
 
     await supabase
       .from('si_uploads')
-      .update({
-        status: allClassified ? 'classified' : 'processing'
-      })
-      .eq('id', upload_id)
+      .update({ status: (count || 0) === 0 ? 'classified' : 'processing' })
+      .eq('id', uploadId)
+      .eq('company_id', profile.company_id)
 
     return NextResponse.json({
       success: true,
       classified_count,
-      remaining: remainingLines?.length || 0,
-      all_classified: allClassified,
-      message: `Se clasificaron ${classified_count} líneas correctamente.`
+      pending_count: count || pending_count,
+      external_ai: false,
+      message: `Se aplicaron reglas y el modelo propio a ${classified_count} líneas (${model_count} por el modelo). ${count || pending_count} quedan para revisión. No se envió gasto a un modelo externo.`,
     })
-
-  } catch (error: any) {
-    console.error('Error in SI batch classification:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch {
+    console.error('Error in SI local classification')
+    return NextResponse.json({ error: 'No se pudieron aplicar las reglas internas' }, { status: 500 })
   }
 }
-

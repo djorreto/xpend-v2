@@ -21,30 +21,37 @@ import { formatCurrency } from '@/lib/utils'
 
 // Colores para los gráficos
 const COLORS = {
-  primary: '#3b82f6',
-  secondary: '#8b5cf6',
-  success: '#10b981',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  info: '#06b6d4',
-  purple: '#8b5cf6',
-  pink: '#ec4899',
-  indigo: '#6366f1',
-  teal: '#14b8a6'
+  primary: '#2AD4D2',
+  secondary: '#2D3E3D',
+  success: '#3BE7AE',
+  warning: '#9BB800',
+  danger: '#E15B64',
+  info: '#1F8A88',
+  purple: '#2D3E3D',
+  pink: '#3BE7AE',
+  indigo: '#1F6F6E',
+  teal: '#2AD4D2'
 }
 
 const CHART_COLORS = [
-  COLORS.primary,
-  COLORS.secondary,
-  COLORS.success,
-  COLORS.warning,
-  COLORS.danger,
-  COLORS.info,
-  COLORS.purple,
-  COLORS.pink,
-  COLORS.indigo,
-  COLORS.teal
+  '#2AD4D2',
+  '#3BE7AE',
+  '#2D3E3D',
+  '#C6FF00',
+  '#1F8A88',
+  '#7D8F8C',
+  '#0E6E6C',
+  '#A8E6CF'
 ]
+
+const GLASS_TOOLTIP = {
+  backgroundColor: 'rgba(255,255,255,0.78)',
+  border: '1px solid rgba(255,255,255,0.85)',
+  borderRadius: '16px',
+  boxShadow: '0 10px 30px rgba(45, 62, 61, 0.08)',
+  fontSize: 12,
+  color: '#2D3E3D',
+}
 
 // Gráfico de barras para gastos por categoría
 interface SpendByCategoryChartProps {
@@ -61,14 +68,14 @@ export function SpendByCategoryChart({ data, title = "Gastos por Categoría", de
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+        <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent>
         <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(45,62,61,0.08)" />
               <XAxis 
                 dataKey="category" 
                 tick={{ fontSize: 12 }}
@@ -83,12 +90,7 @@ export function SpendByCategoryChart({ data, title = "Gastos por Categoría", de
               <Tooltip 
                 formatter={(value: number) => [formatCurrency(value), 'Gasto']}
                 labelStyle={{ color: '#374151' }}
-                contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                }}
+                contentStyle={GLASS_TOOLTIP}
               />
               <Bar 
                 dataKey="amount" 
@@ -120,7 +122,7 @@ export function SpendDistributionChart({ data, title = "Distribución de Gastos"
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+        <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent>
@@ -143,12 +145,7 @@ export function SpendDistributionChart({ data, title = "Distribución de Gastos"
               <Tooltip 
                 formatter={(value: number) => [formatCurrency(value), 'Gasto']}
                 labelStyle={{ color: '#374151' }}
-                contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                }}
+                contentStyle={GLASS_TOOLTIP}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -188,14 +185,14 @@ export function MonthlyTrendChart({ data, title = "Tendencia Mensual", descripti
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+        <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent>
         <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(45,62,61,0.08)" />
               <XAxis 
                 dataKey="month" 
                 tick={{ fontSize: 12 }}
@@ -210,12 +207,7 @@ export function MonthlyTrendChart({ data, title = "Tendencia Mensual", descripti
                   name === 'gastos' ? 'Gastos' : name === 'ahorros' ? 'Ahorros' : 'Proyectos'
                 ]}
                 labelStyle={{ color: '#374151' }}
-                contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                }}
+                contentStyle={GLASS_TOOLTIP}
               />
               <Line 
                 type="monotone" 
@@ -257,14 +249,14 @@ export function ProjectEvolutionChart({ data, title = "Evolución de Proyectos",
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+        <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent>
         <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(45,62,61,0.08)" />
               <XAxis 
                 dataKey="month" 
                 tick={{ fontSize: 12 }}
@@ -278,12 +270,7 @@ export function ProjectEvolutionChart({ data, title = "Evolución de Proyectos",
                   name === 'activos' ? 'Activos' : name === 'completados' ? 'Completados' : 'En Pausa'
                 ]}
                 labelStyle={{ color: '#374151' }}
-                contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                }}
+                contentStyle={GLASS_TOOLTIP}
               />
               <Area 
                 type="monotone" 
@@ -332,7 +319,7 @@ export function SavingsByProjectChart({ data, title = "Ahorros por Proyecto", de
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+        <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent>
@@ -348,7 +335,7 @@ export function SavingsByProjectChart({ data, title = "Ahorros por Proyecto", de
                 layout="horizontal"
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
               >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(45,62,61,0.08)" />
               <XAxis 
                 type="number"
                 tick={{ fontSize: 12 }}
@@ -366,12 +353,7 @@ export function SavingsByProjectChart({ data, title = "Ahorros por Proyecto", de
                   name === 'ahorro' ? 'Ahorro' : 'Presupuesto'
                 ]}
                 labelStyle={{ color: '#374151' }}
-                contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                }}
+                contentStyle={GLASS_TOOLTIP}
               />
               <Bar 
                 dataKey="presupuesto" 

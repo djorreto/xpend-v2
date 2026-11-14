@@ -124,20 +124,68 @@ export default function ReportsPage() {
     }
   }
 
-  const handleGenerateReport = async (type: string) => {
-    if (!user || !company) return
+  const downloadCsv = (filename: string, rows: Array<Array<string | number>>) => {
+    const csv = '\uFEFF' + rows
+      .map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+  }
 
+  const handleGenerateReport = async (type: string) => {
+    if (!company?.id) return
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) throw new Error('Usuario no autenticado')
+
+      if (type === 'spend_analysis') {
+        const report = await ReportsService.generateSpendAnalysisReport(company.id, authUser.id)
+        downloadCsv('analisis-de-gasto.csv', [
+          ['Fecha', 'Categoría', 'Proveedor', 'Monto', 'Moneda'],
+          ...report.details.map((item: { date: string; category: string; vendor: string; amount: number; currency: string }) => [
+            item.date, item.category, item.vendor, item.amount, item.currency,
+          ]),
+        ])
+      } else if (type === 'vendor_performance') {
+        const report = await ReportsService.generateVendorPerformanceReport(company.id, authUser.id)
+        downloadCsv('proveedores-gasto.csv', [
+          ['Proveedor', 'Monto', 'Movimientos', 'Moneda'],
+          ...report.details.map((item: { vendor: string; totalSpend: number; transactionCount: number }) => [
+            item.vendor, item.totalSpend, item.transactionCount, report.summary.currency,
+          ]),
+        ])
+      } else {
+        const { data, error: planError } = await supabase
+          .from('sourcing_plans')
+          .select('title, status, plan_year, quarter, currency, estimated_spend, actual_spend, projected_savings_amount, actual_savings_amount')
+          .eq('company_id', company.id)
+          .order('plan_year', { ascending: false })
+        if (planError) throw planError
+        downloadCsv(type === 'budget_tracking' ? 'presupuesto-iniciativas.csv' : 'estado-iniciativas.csv', [
+          ['Iniciativa', 'Estado', 'Año', 'Trimestre', 'Moneda', 'Gasto estimado', 'Gasto real', 'Ahorro proyectado', 'Ahorro registrado'],
+          ...(data || []).map(plan => [
+            plan.title, plan.status, plan.plan_year, plan.quarter || '', plan.currency || '',
+            plan.estimated_spend || 0, plan.actual_spend || 0,
+            plan.projected_savings_amount || 0, plan.actual_savings_amount || 0,
+          ]),
+        ])
+      }
+
       addToast({
-        type: 'error',
-        title: 'No implementado',
-        message: 'Generación de reportes aún no implementada con Supabase'
+        type: 'success',
+        title: 'Reporte listo',
+        message: 'La descarga usa el gasto y las iniciativas de la empresa.',
       })
     } catch (err) {
       addToast({
         type: 'error',
         title: 'Error',
-        message: 'No se pudo generar el reporte'
+        message: err instanceof Error ? err.message : 'No se pudo generar el reporte',
       })
     }
   }
@@ -225,7 +273,7 @@ ${report.type},${report.description},${new Date(report.created_at).toLocaleDateS
               Genera y gestiona reportes de análisis y seguimiento
             </p>
           </div>
-          <Button>
+          <Button onClick={() => handleGenerateReport('spend_analysis')}>
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Reporte
           </Button>
@@ -247,12 +295,12 @@ ${report.type},${report.description},${new Date(report.created_at).toLocaleDateS
 
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleGenerateReport('project_status')}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Estado de Proyectos</CardTitle>
+              <CardTitle className="text-sm font-medium">Estado de iniciativas</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">
-                Reporte de estado de proyectos
+                Estado del plan: dueño, trimestre y ahorro
               </p>
             </CardContent>
           </Card>
@@ -276,7 +324,7 @@ ${report.type},${report.description},${new Date(report.created_at).toLocaleDateS
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">
-                Control de presupuestos
+                Gasto estimado y real de cada iniciativa
               </p>
             </CardContent>
           </Card>

@@ -65,8 +65,8 @@ export function Topbar({ user, onOpenMobileMenu }: TopbarProps) {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center justify-between px-4 md:px-6 gap-3">
+    <header className="sticky top-0 z-40 rounded-[20px] border border-white/70 bg-white/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_40px_-28px_rgba(45,62,61,0.55)] backdrop-blur-2xl">
+      <div className="flex h-[52px] items-center justify-between gap-3 px-3 md:px-4">
         {/* Mobile Menu Button */}
         <Button
           variant="ghost"
@@ -78,14 +78,21 @@ export function Topbar({ user, onOpenMobileMenu }: TopbarProps) {
         </Button>
 
         {/* Search */}
-        <div className="flex-1 max-w-md">
-          <div className="relative hidden sm:block">
+        <div className="flex-1">
+          <button
+            type="button"
+            className="text-sm font-medium tracking-tight text-petrol-blue sm:hidden"
+            onClick={() => router.push('/dashboard')}
+          >
+            Xpend
+          </button>
+          <div className="relative hidden max-w-md sm:block">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar proyectos, licitaciones..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="rounded-full border-white/60 bg-white/50 pl-10"
             />
           </div>
         </div>

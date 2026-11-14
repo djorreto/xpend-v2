@@ -29,6 +29,7 @@ import {
   Grid
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { realizedSavings, savingsByCurrency } from '@/lib/procurement-flow'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
@@ -84,6 +85,8 @@ export default function SourcingPlanPage() {
     plan_year: new Date().getFullYear()
   })
   const [searchQuery, setSearchQuery] = useState('')
+  const [groups, setGroups] = useState<{ id: string; name: string }[]>([])
+  const [groupFilter, setGroupFilter] = useState('all')
   const [showFilters, setShowFilters] = useState(false)
 
   // Estadísticas
@@ -134,6 +137,13 @@ export default function SourcingPlanPage() {
 
         if (companyData) setCompany(companyData)
 
+        const { data: groupRows } = await supabase
+          .from('si_spend_groups')
+          .select('id, name')
+          .eq('company_id', profile.company_id)
+          .order('name')
+        setGroups(groupRows || [])
+
         // Cargar planes con filtros
         let query = supabase
           .from('sourcing_plans')
@@ -174,9 +184,15 @@ export default function SourcingPlanPage() {
             `)
             .in('plan_id', planIds)
           planLinksData = data || []
+          const currencyByPlan = Object.fromEntries(
+            (plansData || []).map(plan => [plan.id, String(plan.currency || 'CLP').toUpperCase()])
+          )
           planLinksData.forEach(link => {
             const pid = link.plan_id
             countsByPlan[pid] = (countsByPlan[pid] || 0) + 1
+            const planCurrency = currencyByPlan[pid] || 'CLP'
+            const licCurrency = String(link.licitacion?.baseline_currency || planCurrency).toUpperCase()
+            if (licCurrency !== planCurrency) return
             const b = link.licitacion?.baseline_amount || 0
             const s = link.licitacion?.savings_amount || 0
             licBaselineByPlan[pid] = (licBaselineByPlan[pid] || 0) + b
@@ -192,7 +208,12 @@ export default function SourcingPlanPage() {
         })))
 
         // Calcular estadísticas incluyendo aportes de licitaciones
-        calculateStats(plansData || [], licBaselineByPlan, licSavingsByPlan)
+        const moneyLinks = planLinksData.map(link => ({
+          plan_id: link.plan_id,
+          savings_amount: link.licitacion?.savings_amount ?? null,
+          currency: link.licitacion?.baseline_currency ?? null,
+        }))
+        calculateStats(plansData || [], licBaselineByPlan, licSavingsByPlan, moneyLinks)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar el plan')
@@ -209,7 +230,8 @@ export default function SourcingPlanPage() {
   const calculateStats = (
     plansData: SourcingPlan[],
     licBaselineByPlan: Record<string, number>,
-    licSavingsByPlan: Record<string, number>
+    licSavingsByPlan: Record<string, number>,
+    moneyLinks: { plan_id: string; savings_amount: number | null; currency: string | null }[]
   ) => {
     const planned = plansData.filter(p => p.status === 'planned' && !p.is_spot).length
     const inProgress = plansData.filter(p => p.status === 'in_progress').length
@@ -222,13 +244,14 @@ export default function SourcingPlanPage() {
     }, 0)
     const totalActual = plansData.reduce((sum, p) => sum + (p.actual_spend || 0), 0)
     const totalProjectedSavings = plansData.reduce((sum, p) => sum + (p.projected_savings_amount || 0), 0)
-    const totalActualSavings = plansData.reduce((sum, p) => {
-      const licSavings = licSavingsByPlan[p.id] || 0
-      return sum + (p.actual_savings_amount || 0) + licSavings
+    const totalActualSavings = plansData.reduce((sum, plan) => {
+      const licSavings = licSavingsByPlan[plan.id] || 0
+      return sum + realizedSavings(plan.actual_savings_amount, licSavings)
     }, 0)
 
     const completionRate = planned > 0 ? (completed / planned) * 100 : 0
     const achievementRate = totalProjectedSavings > 0 ? (totalActualSavings / totalProjectedSavings) * 100 : 0
+    const byCurrency = savingsByCurrency(plansData, moneyLinks)
 
     setStats({
       total_planned: planned,
@@ -240,11 +263,14 @@ export default function SourcingPlanPage() {
       total_projected_savings: totalProjectedSavings,
       total_actual_savings: totalActualSavings,
       completion_rate: completionRate,
-      savings_achievement_rate: achievementRate
+      savings_achievement_rate: achievementRate,
+      savings_by_currency: byCurrency,
     })
   }
 
   const filteredPlans = plans.filter(plan => {
+    if (groupFilter === 'none' && plan.group_id) return false
+    if (groupFilter !== 'all' && groupFilter !== 'none' && plan.group_id !== groupFilter) return false
     if (!searchQuery) return true
     const query = searchQuery.toLowerCase()
     return (
@@ -288,15 +314,16 @@ export default function SourcingPlanPage() {
         'Moneda',
         'Ahorro Proyectado %',
         'Ahorro Proyectado Monto',
-        'Ahorro Real %',
-        'Ahorro Real Monto',
+        'Ahorro comprometido %',
+        'Ahorro comprometido monto',
         'Cumplimiento %',
         'Notas'
       ].join(',')
 
       const csvRows = filteredPlans.map(plan => {
-        const achievementRate = plan.projected_savings_amount && plan.actual_savings_amount
-          ? ((plan.actual_savings_amount / plan.projected_savings_amount) * 100).toFixed(1)
+        const actual = realizedSavings(plan.actual_savings_amount, plan.lic_savings_sum)
+        const achievementRate = plan.projected_savings_amount
+          ? ((actual / plan.projected_savings_amount) * 100).toFixed(1)
           : ''
 
         return [
@@ -314,7 +341,7 @@ export default function SourcingPlanPage() {
           plan.projected_savings_percentage || '',
           plan.projected_savings_amount || '',
           plan.actual_savings_percentage || '',
-          plan.actual_savings_amount || '',
+          actual || '',
           achievementRate,
           `"${(plan.notes || '').replace(/"/g, '""')}"`
         ].join(',')
@@ -372,87 +399,81 @@ export default function SourcingPlanPage() {
 
   return (
     <MainLayout user={user} companyName={company?.name}>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Sourcing Plan</h1>
-            <p className="text-muted-foreground">
-              Planificación anual de iniciativas de Strategic Sourcing
-            </p>
+            <h1 className="text-xl font-semibold tracking-tight">Sourcing Plan</h1>
+            <p className="text-xs text-muted-foreground">Iniciativas del año</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleDuplicateYear}>
-              <Copy className="mr-2 h-4 w-4" />
-              Duplicar Año Anterior
+          <div className="flex flex-wrap gap-1.5">
+            <Button size="sm" variant="outline" onClick={handleDuplicateYear}>
+              <Copy className="mr-1.5 h-3.5 w-3.5" />
+              Año anterior
             </Button>
-            <Button variant="outline" onClick={handleExportPlan}>
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
+            <Button size="sm" variant="outline" onClick={handleExportPlan}>
+              <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5" />
               Exportar
             </Button>
-            <Button variant="outline" onClick={() => router.push('/sourcing-plan/kraljic')}>
-              <Grid className="mr-2 h-4 w-4" />
-              Ver Matriz Kraljic
+            <Button size="sm" variant="outline" onClick={() => router.push('/sourcing-plan/kraljic')}>
+              <Grid className="mr-1.5 h-3.5 w-3.5" />
+              Kraljic
             </Button>
-            <Button onClick={() => router.push('/sourcing-plan/new')}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nueva Iniciativa
+            <Button size="sm" onClick={() => router.push('/sourcing-plan/new')}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Nueva
             </Button>
           </div>
         </div>
 
         {/* Estadísticas Resumen */}
         {stats && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Planificado</CardTitle>
-                <Target className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.total_planned}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats.total_completed} completadas, {stats.total_in_progress} en progreso
+              <CardContent className="p-3">
+                <p className="text-[11px] text-muted-foreground">Planificado</p>
+                <p className="text-lg font-semibold leading-tight">{stats.total_planned}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {stats.total_completed} listas · {stats.total_in_progress} en curso
                 </p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Ahorro Proyectado</CardTitle>
-                <TrendingUp className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(stats.total_projected_savings)}</div>
-                <p className="text-xs text-muted-foreground">
-                  Sobre {formatCurrency(stats.total_estimated_spend)} estimado
-                </p>
+              <CardContent className="p-3">
+                <p className="text-[11px] text-muted-foreground">Ahorro proyectado</p>
+                <div className="text-sm font-semibold leading-tight text-green-700">
+                  {(stats.savings_by_currency || []).length === 0
+                    ? formatCurrency(0, 'CLP')
+                    : stats.savings_by_currency.map((row: { currency: string; projected: number }) => (
+                        <div key={row.currency}>{formatCurrency(row.projected, row.currency)}</div>
+                      ))}
+                </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Ahorro Real</CardTitle>
-                <TrendingDown className="h-4 w-4 text-emerald-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(stats.total_actual_savings)}</div>
-                <p className={`text-xs font-semibold ${getAchievementColor(stats.total_actual_savings, stats.total_projected_savings)}`}>
-                  {stats.savings_achievement_rate.toFixed(1)}% de cumplimiento
-                </p>
+              <CardContent className="p-3">
+                <p className="text-[11px] text-muted-foreground">Ahorro comprometido</p>
+                <div className="text-sm font-semibold leading-tight">
+                  {(stats.savings_by_currency || []).length === 0
+                    ? formatCurrency(0, 'CLP')
+                    : stats.savings_by_currency.map((row: { currency: string; actual: number; rate: number; projected: number }) => (
+                        <div key={row.currency}>
+                          {formatCurrency(row.actual, row.currency)}
+                          <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                            {row.projected > 0 ? `${row.rate.toFixed(0)}%` : ''}
+                          </span>
+                        </div>
+                      ))}
+                </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Iniciativas Spot</CardTitle>
-                <AlertCircle className="h-4 w-4 text-orange-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.total_spot}</div>
-                <p className="text-xs text-muted-foreground">
-                  No planificadas
-                </p>
+              <CardContent className="p-3">
+                <p className="text-[11px] text-muted-foreground">Spot</p>
+                <p className="text-lg font-semibold leading-tight">{stats.total_spot}</p>
+                <p className="text-[11px] text-muted-foreground">Fuera del plan</p>
               </CardContent>
             </Card>
           </div>
@@ -460,9 +481,9 @@ export default function SourcingPlanPage() {
 
         {/* Filtros y Búsqueda */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-4">
+          <CardContent className="p-3">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -474,7 +495,17 @@ export default function SourcingPlanPage() {
                     />
                   </div>
                 </div>
+                <select
+                  className="h-9 rounded-md border bg-background px-2 text-sm"
+                  value={groupFilter}
+                  onChange={event => setGroupFilter(event.target.value)}
+                >
+                  <option value="all">Todos los grupos</option>
+                  <option value="none">Sin grupo</option>
+                  {groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}
+                </select>
                 <Button
+                  size="sm"
                   variant="outline"
                   onClick={() => setShowFilters(!showFilters)}
                 >
@@ -575,94 +606,73 @@ export default function SourcingPlanPage() {
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full table-fixed text-[12px] leading-tight">
                 <thead className="border-b bg-muted/50">
                   <tr>
-                    <th className="text-left p-4 font-medium">Iniciativa</th>
-                    <th className="text-left p-4 font-medium">Año/Trim</th>
-                    <th className="text-left p-4 font-medium">Tipo</th>
-                    <th className="text-left p-4 font-medium">Estado</th>
-                    <th className="text-center p-4 font-medium">Licitaciones</th>
-                    <th className="text-right p-4 font-medium">Spend Estimado</th>
-                    <th className="text-right p-4 font-medium">Ahorro Proyectado</th>
-                    <th className="text-right p-4 font-medium">Ahorro Real</th>
-                    <th className="text-center p-4 font-medium">Cumplimiento</th>
-                    <th className="text-center p-4 font-medium">Acciones</th>
+                    <th className="w-[22%] p-2 text-left font-medium">Iniciativa</th>
+                    <th className="w-[8%] p-2 text-left font-medium">Año</th>
+                    <th className="w-[9%] p-2 text-left font-medium">Tipo</th>
+                    <th className="w-[12%] p-2 text-left font-medium">Estado</th>
+                    <th className="w-[6%] p-2 text-center font-medium">Lic.</th>
+                    <th className="w-[12%] p-2 text-right font-medium">Spend</th>
+                    <th className="w-[11%] p-2 text-right font-medium">Ahorro</th>
+                    <th className="w-[11%] p-2 text-right font-medium">Real</th>
+                    <th className="w-[5%] p-2 text-center font-medium">%</th>
+                    <th className="w-[4%] p-2 text-center font-medium" />
                   </tr>
                 </thead>
                 <tbody>
                   {filteredPlans.map((plan) => {
-                    const StatusIcon = statusIcons[plan.status]
-                    const achievementRate = plan.projected_savings_amount && plan.actual_savings_amount
-                      ? (plan.actual_savings_amount / plan.projected_savings_amount) * 100
+                    const actualSavings = realizedSavings(plan.actual_savings_amount, plan.lic_savings_sum)
+                    const achievementRate = plan.projected_savings_amount
+                      ? (actualSavings / plan.projected_savings_amount) * 100
                       : null
 
                     return (
                       <tr key={plan.id} className="border-b hover:bg-muted/30 transition-colors">
                         {/* Iniciativa */}
-                        <td className="p-4">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{plan.title}</span>
+                        <td className="p-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1">
+                              <span className="truncate font-medium">{plan.title}</span>
                               {plan.is_spot && (
                                 <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
                                   SPOT
                                 </Badge>
                               )}
                             </div>
-                            {plan.description && (
-                              <div className="text-sm text-muted-foreground line-clamp-1">
-                                {plan.description}
-                              </div>
-                            )}
-                            {plan.category && (
-                              <div className="text-xs text-muted-foreground">
-                                {plan.category}
+                            {(plan.category || plan.group_id) && (
+                              <div className="truncate text-[11px] text-muted-foreground">
+                                {[groups.find(group => group.id === plan.group_id)?.name, plan.category].filter(Boolean).join(' · ')}
                               </div>
                             )}
                           </div>
                         </td>
 
                         {/* Año/Trimestre */}
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-sm font-medium">{plan.plan_year}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {plan.quarter}
-                            </Badge>
-                          </div>
+                        <td className="whitespace-nowrap p-2">
+                          {plan.plan_year} {plan.quarter}
                         </td>
 
-                        {/* Tipo */}
-                        <td className="p-4">
-                          <span className="text-sm">{typeLabels[plan.initiative_type]}</span>
+                        <td className="p-2">
+                          {typeLabels[plan.initiative_type]}
                         </td>
 
-                        {/* Estado */}
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <StatusIcon className="h-4 w-4" />
-                            <Badge className={statusColors[plan.status]}>
-                              {statusLabels[plan.status]}
-                            </Badge>
-                          </div>
+                        <td className="p-2">
+                          <Badge className={`${statusColors[plan.status]} px-1.5 py-0 text-[10px]`}>
+                            {statusLabels[plan.status]}
+                          </Badge>
                         </td>
 
-                        {/* Licitaciones asociadas */}
-                        <td className="p-4 text-center">
-                          <Badge variant="outline">{(plan as any).licitaciones_count || 0}</Badge>
+                        <td className="p-2 text-center tabular-nums">
+                          {(plan as any).licitaciones_count || 0}
                         </td>
 
-                        {/* Spend Estimado */}
-                        <td className="p-4 text-right">
-                          <span className="font-medium">
-                            {formatCurrency(plan.estimated_spend, plan.currency)}
-                          </span>
+                        <td className="whitespace-nowrap p-2 text-right tabular-nums">
+                          {formatCurrency(plan.estimated_spend, plan.currency)}
                         </td>
 
-                        {/* Ahorro Proyectado */}
-                        <td className="p-4 text-right">
+                        <td className="whitespace-nowrap p-2 text-right tabular-nums">
                           {plan.projected_savings_amount ? (
                             <div>
                               <div className="font-medium text-green-600">
@@ -678,11 +688,11 @@ export default function SourcingPlanPage() {
                         </td>
 
                         {/* Ahorro Real */}
-                        <td className="p-4 text-right">
-                          {plan.actual_savings_amount ? (
+                        <td className="whitespace-nowrap p-2 text-right tabular-nums">
+                          {realizedSavings(plan.actual_savings_amount, plan.lic_savings_sum) ? (
                             <div>
                               <div className="font-medium text-emerald-600">
-                                {formatCurrency(plan.actual_savings_amount, plan.currency)}
+                                {formatCurrency(realizedSavings(plan.actual_savings_amount, plan.lic_savings_sum), plan.currency)}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 ({plan.actual_savings_percentage?.toFixed(1)}%)
@@ -694,9 +704,9 @@ export default function SourcingPlanPage() {
                         </td>
 
                         {/* Cumplimiento */}
-                        <td className="p-4 text-center">
+                        <td className="p-2 text-center tabular-nums">
                           {achievementRate !== null ? (
-                            <div className={`font-semibold ${getAchievementColor(plan.actual_savings_amount, plan.projected_savings_amount)}`}>
+                            <div className={`font-semibold ${getAchievementColor(actualSavings, plan.projected_savings_amount)}`}>
                               {achievementRate.toFixed(0)}%
                             </div>
                           ) : (
@@ -705,8 +715,8 @@ export default function SourcingPlanPage() {
                         </td>
 
                         {/* Acciones */}
-                        <td className="p-4">
-                          <div className="flex items-center justify-center gap-1">
+                        <td className="p-1">
+                          <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="outline"
                               size="sm"

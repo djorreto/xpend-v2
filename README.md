@@ -5,6 +5,12 @@
 
 Una plataforma colaborativa de próxima generación para planificación de Strategic Sourcing y gestión de Spend, construida con Next.js 14, TypeScript, TailwindCSS y Supabase.
 
+### Despliegue: V2 en producción y V3 independiente
+
+- **XPEND V2** sigue siendo la versión operativa en producción (por ejemplo [xpend.cl](https://xpend.cl)). Este trabajo **no debe pisar** ese entorno: ni el proyecto de Vercel de V2, ni sus variables de entorno, ni el proyecto de Supabase de V2.
+- **XPEND V3** se desarrolla en **localhost** con `.env.local` apuntando al proyecto Supabase **XPEND V3** (referencia en `.env.example` y `VARIABLES-ENTORNO.md`).
+- Cuando se publique V3, hacerlo en un **proyecto Vercel nuevo** (u otro espacio de despliegue independiente) con variables propias. Así V2 y V3 quedan aislados.
+
 ---
 
 ## 🎨 Identidad de Marca

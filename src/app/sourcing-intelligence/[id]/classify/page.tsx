@@ -1,29 +1,43 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useMemo, useState, useEffect } from 'react'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { supabaseBrowser } from '@/lib/supabase'
-import { Brain, CheckCircle, AlertCircle, ArrowRight, Sparkles, Filter, Edit } from 'lucide-react'
+import { Brain, CheckCircle, AlertCircle, ArrowRight, Sparkles, Filter, Edit, Trash2 } from 'lucide-react'
 import { SIUpload, SISpendLine } from '@/types'
+import { canManageSpendRole, canReadSpendRole, externalAiAllowed } from '@/lib/spend-privacy'
+import { inferClassificationSource, SOURCE_LABEL } from '@/lib/spend-flow'
+import { coverageShares, paretoIds, type CoverageRow, type ParetoChoice } from '@/lib/spend-coverage'
+import { SpendCoverageBars } from '@/components/spend/spend-coverage-bar'
+import { SpendFlowBar } from '@/components/spend/spend-flow-bar'
+import { ReprocessButton } from '@/components/spend/reprocess-button'
+import { SpendBrainChip } from '@/components/spend/spend-brain-chip'
+import { BASE_TAXONOMY } from '@/lib/spend-taxonomy'
+import { SpendDownloadButton } from '@/components/spend/spend-download-button'
+import { ClassificationSourceBadge } from '@/components/spend/classification-source'
 
 export default function ClassifyPage() {
   const router = useRouter()
   const params = useParams()
   const supabase = supabaseBrowser()
   const uploadId = params.id as string
+  const searchParams = useSearchParams()
+  const paso = searchParams.get('paso') === 'revisar' ? 'revisar' : 'clasificar'
 
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<any>(null)
   const [upload, setUpload] = useState<SIUpload | null>(null)
   const [lines, setLines] = useState<SISpendLine[]>([])
+  const [totalLinesCount, setTotalLinesCount] = useState(0)
+  const [pendingGlobalCount, setPendingGlobalCount] = useState(0)
+  const [classifiedGlobalCount, setClassifiedGlobalCount] = useState(0)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [loading, setLoading] = useState(true)
   const [classifying, setClassifying] = useState(false)
   const [filter, setFilter] = useState<'all' | 'pending' | 'classified'>('all')
@@ -31,14 +45,36 @@ export default function ClassifyPage() {
   const [selectedLine, setSelectedLine] = useState<SISpendLine | null>(null)
   const [editCategory, setEditCategory] = useState('')
   const [editSubcategory, setEditSubcategory] = useState('')
+  const [editScope, setEditScope] = useState<'supplier' | 'line'>('supplier')
+  const [editMulti, setEditMulti] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [classifyingLineId, setClassifyingLineId] = useState<string | null>(null)
+  const [coverage, setCoverage] = useState<CoverageRow[]>([])
+  const [pareto, setPareto] = useState<ParetoChoice>(80)
+  const [phase, setPhase] = useState<'idle' | 'modelo' | 'ia' | 'manual'>('idle')
+  const [manualOnly, setManualOnly] = useState(false)
+  const [modelTried, setModelTried] = useState<Set<string>>(new Set())
+  const [aiTried, setAiTried] = useState<Set<string>>(new Set())
+  const [coverageReady, setCoverageReady] = useState(false)
+  const [stepProgress, setStepProgress] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [staleDownstream, setStaleDownstream] = useState(false)
 
   useEffect(() => {
     loadData()
   }, [uploadId])
 
-  const loadData = async () => {
+  useEffect(() => {
+    setFilter(paso === 'revisar' ? 'pending' : 'all')
+  }, [paso])
+
+  const PAGE_SIZE = 500
+
+  const loadData = async (options?: { append?: boolean; offset?: number }) => {
+    const append = options?.append === true
+    const rangeStart = append ? (options?.offset ?? 0) : 0
     try {
+      if (append) setLoadingMore(true)
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         router.push('/login')
@@ -54,8 +90,8 @@ export default function ClassifyPage() {
       if (profile) {
         setUser(profile)
         setCompany(profile.companies)
+        if (!canReadSpendRole(profile.role)) return
 
-        // Cargar upload
         const { data: uploadData } = await supabase
           .from('si_uploads')
           .select('*')
@@ -67,46 +103,183 @@ export default function ClassifyPage() {
           setUpload(uploadData)
         }
 
-        // Cargar líneas
-        const { data: linesData } = await supabase
-          .from('si_spend_lines')
-          .select('*')
-          .eq('upload_id', uploadId)
-          .eq('company_id', profile.company_id)
+        const base = () =>
+          supabase
+            .from('si_spend_lines')
+            .select('*')
+            .eq('upload_id', uploadId)
+            .eq('company_id', profile.company_id)
+
+        const countOf = (needsReview?: boolean) => {
+          let query = supabase
+            .from('si_spend_lines')
+            .select('id', { count: 'exact', head: true })
+            .eq('upload_id', uploadId)
+            .eq('company_id', profile.company_id)
+          if (needsReview !== undefined) query = query.eq('needs_review', needsReview)
+          return query
+        }
+
+        const [{ count: total }, { count: pending }, { count: classified }] = await Promise.all([
+          countOf(),
+          countOf(true),
+          countOf(false),
+        ])
+
+        setTotalLinesCount(total ?? 0)
+        setPendingGlobalCount(pending ?? 0)
+        setClassifiedGlobalCount(classified ?? 0)
+
+        const to = rangeStart + PAGE_SIZE - 1
+
+        const { data: linesData, error: linesErr } = await base()
           .order('line_number', { ascending: true })
-          .limit(100)
+          .range(rangeStart, to)
+
+        if (linesErr) throw linesErr
 
         if (linesData) {
-          setLines(linesData)
+          setLines(prev => (append ? [...prev, ...linesData] : linesData))
         }
+        if (!append) await loadCoverage(profile.company_id)
       }
     } catch (error) {
       console.error('Error loading data:', error)
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
   }
 
-  const handleClassifyBatch = async () => {
-    setClassifying(true)
-    try {
-      const response = await fetch('/api/si/classify-batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ upload_id: uploadId })
-      })
+  const loadMoreLines = () => {
+    if (lines.length >= totalLinesCount || loadingMore) return
+    void loadData({ append: true, offset: lines.length })
+  }
 
-      const result = await response.json()
-      if (response.ok) {
-        await loadData()
-        alert(`✅ ${result.classified_count} líneas clasificadas exitosamente`)
-      } else {
-        alert(`❌ Error: ${result.error}`)
+  const loadCoverage = async (companyId: string) => {
+    const rows: CoverageRow[] = []
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase
+        .from('si_spend_lines')
+        .select('id, amount, amount_net, currency, category, ai_justification, reviewed_at, reviewed_by, needs_review')
+        .eq('upload_id', uploadId)
+        .eq('company_id', companyId)
+        .order('id')
+        .range(from, from + 999)
+      if (error) throw error
+      for (const row of data || []) {
+        rows.push({
+          id: row.id,
+          amount: Number(row.amount_net ?? row.amount) || 0,
+          currency: String(row.currency || 'CLP').toUpperCase(),
+          source: inferClassificationSource(row),
+        })
       }
+      if (!data || data.length < 1000) break
+    }
+    setCoverage(rows)
+    setCoverageReady(true)
+  }
+
+  const scopeIds = useMemo(() => paretoIds(coverage, pareto), [coverage, pareto])
+  const bars = useMemo(() => coverageShares(coverage, scopeIds), [coverage, scopeIds])
+  const openIds = useMemo(
+    () => coverage.filter(row => row.source === 'pendiente' && scopeIds.has(row.id)).map(row => row.id),
+    [coverage, scopeIds]
+  )
+  const modelLeft = useMemo(() => openIds.filter(id => !modelTried.has(id)), [openIds, modelTried])
+  const aiLeft = useMemo(
+    () => openIds.filter(id => modelTried.has(id) && !aiTried.has(id)),
+    [openIds, modelTried, aiTried]
+  )
+
+  const handleClassifyBatch = async () => {
+    if (!user?.company_id || !modelLeft.length) return
+    setClassifying(true)
+    setPhase('modelo')
+    setManualOnly(false)
+    const total = modelLeft.length
+    const tried = new Set(modelTried)
+    try {
+      let pending = [...modelLeft]
+      let done = 0
+      let guard = 0
+      while (pending.length && guard < 200) {
+        guard += 1
+        const chunk = pending.slice(0, 200)
+        setStepProgress(`Modelo ${done + chunk.length} de ${total}`)
+        const response = await fetch('/api/si/classify-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ upload_id: uploadId, line_ids: chunk }),
+        })
+        const result = await response.json()
+        if (!response.ok) {
+          alert(result.error || 'No se pudieron aplicar las reglas')
+          break
+        }
+        chunk.forEach(id => tried.add(id))
+        setModelTried(new Set(tried))
+        pending = pending.slice(chunk.length)
+        done += chunk.length
+        await loadCoverage(user.company_id)
+      }
+      await loadData()
     } catch (error: any) {
-      alert(`❌ Error: ${error.message}`)
+      alert(error.message)
     } finally {
       setClassifying(false)
+      setPhase('idle')
+      setStepProgress('')
+    }
+  }
+
+  const handleFillWithAi = async () => {
+    if (!user?.company_id || !aiLeft.length) return
+    setClassifying(true)
+    setPhase('ia')
+    setManualOnly(false)
+    const ids = [...aiLeft]
+    const tried = new Set(aiTried)
+    let cursor = 0
+    let done = 0
+    const takeOne = async () => {
+      while (cursor < ids.length) {
+        const lineId = ids[cursor]
+        cursor += 1
+        try {
+          const response = await fetch('/api/si/classify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ line_id: lineId }),
+          })
+          const result = await response.json()
+          if (response.ok && result.success && result.classification?.category) {
+            const source = result.external ? 'llm' : inferClassificationSource({
+              category: result.classification.category,
+              ai_justification: result.classification.justification,
+              needs_review: true,
+            })
+            setCoverage(current => current.map(row => row.id === lineId ? { ...row, source } : row))
+          }
+        } catch {
+          // La línea queda sin categoría y pasa a la revisión manual.
+        }
+        tried.add(lineId)
+        setAiTried(new Set(tried))
+        done += 1
+        setStepProgress(`IA ${done} de ${ids.length}`)
+      }
+    }
+    try {
+      await Promise.all(Array.from({ length: Math.min(3, ids.length) }, () => takeOne()))
+      await loadData()
+    } catch (error: any) {
+      alert(error.message)
+    } finally {
+      setClassifying(false)
+      setPhase('idle')
+      setStepProgress('')
     }
   }
 
@@ -137,6 +310,8 @@ export default function ClassifyPage() {
     setSelectedLine(line)
     setEditCategory(line.category || '')
     setEditSubcategory(line.subcategory || '')
+    setEditScope(line.supplier_name ? 'supplier' : 'line')
+    setEditMulti(false)
     setEditModalOpen(true)
   }
 
@@ -151,7 +326,9 @@ export default function ClassifyPage() {
         body: JSON.stringify({
           line_id: selectedLine.id,
           category: editCategory,
-          subcategory: editSubcategory || null
+          subcategory: editSubcategory || null,
+          scope: selectedLine.supplier_name ? editScope : 'line',
+          multi_rubro: editScope === 'supplier' && editMulti,
         })
       })
 
@@ -160,11 +337,20 @@ export default function ClassifyPage() {
         // Actualizar la línea en el estado local
         setLines(lines.map(line =>
           line.id === selectedLine.id
-            ? { ...line, category: editCategory, subcategory: editSubcategory, needs_review: false }
+            ? {
+                ...line,
+                category: editCategory,
+                subcategory: editSubcategory,
+                needs_review: false,
+                reviewed_by: user?.id,
+                reviewed_at: new Date().toISOString(),
+              }
             : line
         ))
+        setCoverage(current => current.map(row => row.id === selectedLine.id ? { ...row, source: 'humano' } : row))
         setEditModalOpen(false)
-        alert('✅ Clasificación actualizada correctamente')
+        setStaleDownstream(true)
+        alert(result.message || 'Clasificación actualizada')
       } else {
         alert(`❌ Error: ${result.error}`)
       }
@@ -175,11 +361,91 @@ export default function ClassifyPage() {
     }
   }
 
+  const handleClassifyLine = async (lineId: string) => {
+    setClassifyingLineId(lineId)
+    try {
+      const response = await fetch('/api/si/classify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ line_id: lineId })
+      })
+      const result = await response.json()
+      setAiTried(prev => {
+        const next = new Set(prev)
+        next.add(lineId)
+        return next
+      })
+      if (response.ok && result.success) {
+        await loadData()
+      } else {
+        alert(result.message || result.error || 'La línea queda para revisión humana')
+      }
+    } catch {
+      alert('No se pudo categorizar la línea')
+    } finally {
+      setClassifyingLineId(null)
+    }
+  }
+
+  const handleDeleteUpload = async () => {
+    if (!confirm('Se borrará esta carga y todas sus líneas de gasto. Esta acción no se puede deshacer.')) return
+    setDeleting(true)
+    try {
+      const response = await fetch('/api/si/delete-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ upload_id: uploadId })
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        alert(result.error || 'No se pudo borrar la carga')
+        return
+      }
+      router.push('/sourcing-intelligence')
+    } catch {
+      alert('No se pudo borrar la carga')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const aiEnabled = externalAiAllowed(company?.settings)
+  const manualIds = openIds.filter(id => modelTried.has(id) && (aiTried.has(id) || !aiEnabled))
   const filteredLines = lines.filter(line => {
+    if (manualOnly) return manualIds.includes(line.id)
     if (filter === 'pending') return line.needs_review
     if (filter === 'classified') return !line.needs_review
     return true
   })
+  if (manualOnly) {
+    filteredLines.sort((a, b) => Number(b.amount_net ?? b.amount) - Number(a.amount_net ?? a.amount))
+  }
+
+  const openManual = async () => {
+    setManualOnly(true)
+    setFilter('all')
+    if (!user?.company_id || !manualIds.length) return
+    const missing = manualIds.filter(id => !lines.some(line => line.id === id))
+    if (!missing.length) return
+    const fetched: SISpendLine[] = []
+    for (let index = 0; index < missing.length; index += 100) {
+      const { data, error } = await supabase
+        .from('si_spend_lines')
+        .select('*')
+        .eq('upload_id', uploadId)
+        .eq('company_id', user.company_id)
+        .in('id', missing.slice(index, index + 100))
+      if (error) {
+        alert(error.message)
+        return
+      }
+      if (data) fetched.push(...data)
+    }
+    setLines(current => {
+      const seen = new Set(current.map(line => line.id))
+      return [...current, ...fetched.filter(line => !seen.has(line.id))]
+    })
+  }
 
   const getConfidenceBadge = (confidence?: number) => {
     if (!confidence) return null
@@ -188,8 +454,18 @@ export default function ClassifyPage() {
     return <Badge className="bg-red-500">Baja: {(confidence * 100).toFixed(0)}%</Badge>
   }
 
-  const pendingCount = lines.filter(l => l.needs_review).length
-  const classifiedCount = lines.filter(l => !l.needs_review).length
+  const pendingInView = lines.filter(l => l.needs_review).length
+  const classifiedInView = lines.filter(l => !l.needs_review).length
+
+  const families = useMemo(() => Array.from(new Set(BASE_TAXONOMY.map(node => node.family))), [])
+  const familyOptions = !editCategory || families.includes(editCategory) ? families : [editCategory, ...families]
+  const subcategoryOptions = BASE_TAXONOMY.filter(node => node.family === editCategory).map(node => node.name)
+  const subcategoryChoices = !editSubcategory || subcategoryOptions.includes(editSubcategory)
+    ? subcategoryOptions
+    : [editSubcategory, ...subcategoryOptions]
+
+  const canRead = canReadSpendRole(user?.role)
+  const canManage = canManageSpendRole(user?.role)
 
   if (loading) {
     return (
@@ -209,33 +485,29 @@ export default function ClassifyPage() {
           <div>
             <h1 className="text-3xl font-bold flex items-center space-x-3">
               <Brain className="h-8 w-8" style={{ color: '#2AD4D2' }} />
-              <span>Clasificación con IA</span>
+              <span>{paso === 'revisar' ? 'Revisión de gasto' : 'Clasificación de gasto'}</span>
             </h1>
             <p className="text-muted-foreground mt-2">
               Archivo: {upload?.file_name}
+              {paso === 'revisar' ? ' · solo lo que falta confirmar o ya corrigió una persona.' : ' · aquí se aplican reglas y modelo.'}
             </p>
           </div>
-          <div className="flex space-x-3">
-            <Button
-              onClick={handleClassifyBatch}
-              disabled={classifying || pendingCount === 0}
-              className="bg-gradient-to-r from-[#2AD4D2] to-[#3BE7AE]"
-            >
-              {classifying ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Clasificando...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Clasificar Automáticamente
-                </>
-              )}
+          <div className="flex flex-wrap gap-2">
+            <SpendBrainChip />
+            <ReprocessButton uploadId={uploadId} />
+            <SpendDownloadButton uploadId={uploadId} />
+            {canManage && (
+              <Button variant="outline" onClick={handleDeleteUpload} disabled={deleting}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                {deleting ? 'Borrando...' : 'Borrar carga'}
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => router.push('/sourcing-intelligence/validacion')}>
+              Cola de validación
             </Button>
             <Button
               onClick={handleGeneratePlan}
-              disabled={classifiedCount === 0}
+              disabled={classifiedGlobalCount === 0}
               variant="outline"
             >
               Generar Plan
@@ -244,52 +516,104 @@ export default function ClassifyPage() {
           </div>
         </div>
 
-        {/* Instructions Banner */}
-        {pendingCount > 0 && (
-          <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200">
-            <CardContent className="pt-6">
-              <div className="flex items-start space-x-4">
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <Brain className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-blue-900 mb-2">
-                    🤖 Listo para clasificar con IA
-                  </h3>
-                  <p className="text-blue-800 mb-3">
-                    Tus {pendingCount} líneas están marcadas como &quot;Requiere Revisión&quot; porque aún no han sido clasificadas.
-                    La IA las analizará y asignará categorías automáticamente.
-                  </p>
-                  <div className="bg-white/50 rounded-lg p-3 mb-3">
-                    <p className="text-sm font-medium text-blue-900 mb-2">📋 ¿Qué hará la IA?</p>
-                    <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                      <li>Analizar la descripción y el proveedor de cada línea</li>
-                      <li>Asignar una categoría de gasto (ej: Servicios de TI, Suministros, etc.)</li>
-                      <li>Calcular un nivel de confianza (alta, media o baja)</li>
-                      <li>Proporcionar una justificación de la clasificación</li>
-                    </ul>
-                  </div>
-                  <Button
-                    onClick={handleClassifyBatch}
-                    disabled={classifying}
-                    size="lg"
-                    className="bg-gradient-to-r from-[#2AD4D2] to-[#3BE7AE] hover:opacity-90"
-                  >
-                    {classifying ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                        Clasificando... Esto puede tomar 10-30 segundos
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-5 w-5 mr-2" />
-                        Comenzar Clasificación Automática
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
+        <SpendFlowBar
+          current={paso}
+          uploadId={uploadId}
+          pending={pendingGlobalCount}
+        />
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Cobertura del gasto</CardTitle>
+            <CardDescription>
+              El corte usa el gasto neto de cada moneda, de mayor a menor.
+              {pareto === 100 ? ' Entra todo el gasto.' : ` Entra el ${pareto}% de mayor gasto.`}
+              {' '}Lo que queda bajo el corte se ve gris y no pasa a la IA ni a la revisión manual. Una línea que ya tiene categoría conserva su color.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span>Categorizar hasta</span>
+              {([80, 90, 100] as ParetoChoice[]).map(value => (
+                <Button key={value} type="button" size="sm" variant={pareto === value ? 'default' : 'outline'} disabled={classifying} onClick={() => { setPareto(value); setManualOnly(false) }}>
+                  {value === 80 ? 'Pareto 80%' : `${value}%`}
+                </Button>
+              ))}
+            </div>
+            {bars.length > 1 && (
+              <p className="text-sm text-muted-foreground">
+                Cada moneda tiene su propia barra. El corte no suma CLP con USD.
+              </p>
+            )}
+            <SpendCoverageBars bars={bars} />
+            {stepProgress && <p className="text-sm text-muted-foreground">{stepProgress}</p>}
+            <div className="flex flex-wrap gap-2">
+              {coverageReady && (modelLeft.length > 0 || phase === 'modelo') && (
+                <Button onClick={handleClassifyBatch} disabled={classifying || modelLeft.length === 0} className="bg-gradient-to-r from-[#2AD4D2] to-[#3BE7AE]">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  {phase === 'modelo' ? 'Categorizando…' : 'Categorizar'}
+                </Button>
+              )}
+              {coverageReady && phase !== 'modelo' && modelLeft.length === 0 && (aiLeft.length > 0 || phase === 'ia') && aiEnabled && (
+                <Button onClick={handleFillWithAi} disabled={classifying || aiLeft.length === 0}>
+                  {phase === 'ia' ? 'Completando con IA…' : `Completar con IA (${aiLeft.length})`}
+                </Button>
+              )}
+              {coverageReady && !classifying && modelLeft.length === 0 && manualIds.length > 0 && (!aiEnabled || aiLeft.length === 0) && (
+                <Button variant="outline" onClick={openManual} disabled={classifying}>
+                  Completar a mano ({manualIds.length})
+                </Button>
+              )}
+            </div>
+            {coverageReady && !classifying && modelLeft.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                El primer paso aplica las reglas de la empresa, la taxonomía y el modelo. Solo entra el gasto dentro del corte.
+              </p>
+            )}
+            {coverageReady && !classifying && modelLeft.length === 0 && aiLeft.length > 0 && aiEnabled && (
+              <p className="text-sm text-muted-foreground">
+                El modelo ya pasó. La IA puede intentar lo que sigue sin categoría. El gasto gris no sale de Xpend.
+              </p>
+            )}
+            {coverageReady && !classifying && modelLeft.length === 0 && manualIds.length > 0 && !aiEnabled && (
+              <p className="text-sm text-muted-foreground">
+                La IA de la empresa está apagada. Lo que quedó dentro del corte se completa a mano.
+              </p>
+            )}
+            {coverageReady && !classifying && modelLeft.length === 0 && aiLeft.length === 0 && manualIds.length > 0 && aiEnabled && (
+              <p className="text-sm text-muted-foreground">
+                La IA no encontró categoría para este gasto. Se completa a mano, de mayor a menor.
+              </p>
+            )}
+            {coverageReady && !classifying && coverage.length > 0 && openIds.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Dentro del corte el gasto ya tiene categoría.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {manualOnly && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm">
+            <span>Líneas dentro del corte que siguen sin categoría, de mayor a menor gasto.</span>
+            <Button type="button" variant="outline" size="sm" onClick={() => setManualOnly(false)}>
+              Ver el archivo completo
+            </Button>
+          </div>
+        )}
+
+        {staleDownstream && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            Guardaste un cambio en esta etapa. Kraljic y el plan siguen con el resultado anterior. Se actualizan cuando entras a Ver y generas el plan otra vez.
+          </div>
+        )}
+
+        {!canRead && user && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Sin acceso al gasto</CardTitle>
+              <CardDescription>Tu rol no puede ver las líneas de gasto de la empresa.</CardDescription>
+            </CardHeader>
           </Card>
         )}
 
@@ -300,7 +624,14 @@ export default function ClassifyPage() {
               <CardTitle className="text-sm font-medium">Total Líneas</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{lines.length}</div>
+              <div className="text-2xl font-bold">
+                {totalLinesCount > 0 ? totalLinesCount.toLocaleString() : lines.length}
+              </div>
+              {totalLinesCount > lines.length && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Cargadas en pantalla: {lines.length.toLocaleString()}
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -310,7 +641,7 @@ export default function ClassifyPage() {
               <AlertCircle className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{pendingCount}</div>
+              <div className="text-2xl font-bold">{pendingGlobalCount.toLocaleString()}</div>
             </CardContent>
           </Card>
 
@@ -320,7 +651,7 @@ export default function ClassifyPage() {
               <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{classifiedCount}</div>
+              <div className="text-2xl font-bold">{classifiedGlobalCount.toLocaleString()}</div>
             </CardContent>
           </Card>
         </div>
@@ -347,21 +678,21 @@ export default function ClassifyPage() {
                   size="sm"
                   onClick={() => setFilter('pending')}
                 >
-                  Pendientes ({pendingCount})
+                  Pendientes ({pendingInView})
                 </Button>
                 <Button
                   variant={filter === 'classified' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setFilter('classified')}
                 >
-                  Clasificadas ({classifiedCount})
+                  Clasificadas ({classifiedInView})
                 </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {filteredLines.slice(0, 50).map((line) => (
+              {filteredLines.map((line) => (
                 <div key={line.id} className={`border rounded-lg p-5 hover:bg-gray-50 transition-colors ${
                   line.needs_review ? 'border-yellow-300 bg-yellow-50/30' : 'border-green-300 bg-green-50/30'
                 }`}>
@@ -373,24 +704,40 @@ export default function ClassifyPage() {
                         {line.needs_review && (
                           <Badge className="bg-yellow-500 text-white">⚠️ Requiere Revisión</Badge>
                         )}
-                        {!line.needs_review && line.category && (
+                        {line.category && (
                           <>
                             <Badge className="bg-blue-600 text-white">
                               📂 {line.category}
                             </Badge>
-                            {line.ai_confidence && getConfidenceBadge(line.ai_confidence)}
+                            <ClassificationSourceBadge source={inferClassificationSource(line)} />
+                            {line.ai_confidence ? getConfidenceBadge(line.ai_confidence) : null}
                           </>
                         )}
+                        {!line.category && (
+                          <ClassificationSourceBadge source="pendiente" />
+                        )}
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditLine(line)}
-                        className="flex-shrink-0"
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        {aiEnabled && aiLeft.includes(line.id) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleClassifyLine(line.id)}
+                            disabled={classifyingLineId === line.id}
+                          >
+                            {classifyingLineId === line.id ? 'Categorizando...' : 'Categorizar esta línea'}
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditLine(line)}
+                          className="flex-shrink-0"
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar
+                        </Button>
+                      </div>
                     </div>
 
                     {/* Descripción */}
@@ -406,14 +753,17 @@ export default function ClassifyPage() {
                         </span>
                       )}
                       <span className="text-gray-600">
-                        <strong>Monto:</strong> ${line.amount.toLocaleString()} {line.currency}
+                        <strong>Neto:</strong> ${Number(line.amount_net ?? line.amount).toLocaleString()} {line.currency}
+                        {line.amount_net != null && Number(line.amount_net) !== Number(line.amount) ? ` · original ${Number(line.amount).toLocaleString()}` : ''}
                       </span>
                     </div>
 
                     {/* Justificación de IA (si existe) */}
                     {line.ai_justification && (
                       <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-xs font-semibold text-blue-900 mb-1">💬 Justificación de la IA:</p>
+                        <p className="text-xs font-semibold text-blue-900 mb-1">
+                          Origen: {SOURCE_LABEL[inferClassificationSource(line)]}
+                        </p>
                         <p className="text-sm text-blue-800 italic">
                           &quot;{line.ai_justification}&quot;
                         </p>
@@ -424,7 +774,8 @@ export default function ClassifyPage() {
                     {line.needs_review && !line.category && (
                       <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <p className="text-sm text-yellow-800">
-                          ⏳ Esta línea aún no ha sido clasificada. Usa el botón <strong>&quot;Clasificar Automáticamente&quot;</strong> arriba para que la IA la analice.
+                          Esta línea todavía no tiene categoría. Aplica las reglas internas o edítala a mano.
+                          {aiEnabled ? ' Si la descripción alcanza, también puedes categorizar solo esta línea.' : ''}
                         </p>
                       </div>
                     )}
@@ -433,7 +784,30 @@ export default function ClassifyPage() {
               ))}
               {filteredLines.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
-                  No hay líneas para mostrar con este filtro
+                  {manualOnly ? 'Dentro del corte no quedan líneas sin categoría.' : 'No hay líneas para mostrar con este filtro'}
+                </div>
+              )}
+              {totalLinesCount > 0 && lines.length < totalLinesCount && !manualOnly && (
+                <div className="flex flex-col items-center gap-2 pt-6 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {lines.length.toLocaleString()} de {totalLinesCount.toLocaleString()} líneas
+                    cargadas en el navegador
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={loadMoreLines}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? (
+                      <>
+                        <span className="inline-block h-4 w-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin mr-2 align-middle" />
+                        Cargando…
+                      </>
+                    ) : (
+                      `Cargar ${Math.min(PAGE_SIZE, totalLinesCount - lines.length).toLocaleString()} más`
+                    )}
+                  </Button>
                 </div>
               )}
             </div>
@@ -446,47 +820,90 @@ export default function ClassifyPage() {
             <DialogHeader>
               <DialogTitle>Editar Clasificación</DialogTitle>
               <DialogDescription>
-                Modifica la categoría asignada a esta línea de gasto
+                Elige la familia y la subcategoría de la taxonomía de Xpend.
               </DialogDescription>
             </DialogHeader>
 
             {selectedLine && (
               <div className="space-y-4 py-4">
-                {/* Descripción de la línea */}
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm font-medium text-gray-900 mb-1">
-                    {selectedLine.description}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    {selectedLine.supplier_name && `${selectedLine.supplier_name} • `}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="category">Familia</Label>
+                    <select
+                      id="category"
+                      value={editCategory}
+                      onChange={(event) => {
+                        const family = event.target.value
+                        const first = BASE_TAXONOMY.find(node => node.family === family)
+                        setEditCategory(family)
+                        setEditSubcategory(first?.name || '')
+                      }}
+                      className="h-10 w-full rounded-md border bg-white px-3 text-sm"
+                    >
+                      <option value="">Elige una familia</option>
+                      {familyOptions.map(family => (
+                        <option key={family} value={family}>{family}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="subcategory">Subcategoría</Label>
+                    <select
+                      id="subcategory"
+                      value={editSubcategory}
+                      onChange={(event) => setEditSubcategory(event.target.value)}
+                      disabled={!editCategory}
+                      className="h-10 w-full rounded-md border bg-white px-3 text-sm disabled:opacity-50"
+                    >
+                      <option value="">Elige una subcategoría</option>
+                      {subcategoryChoices.map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <p className="text-sm font-medium text-gray-900">{selectedLine.description}</p>
+                  <p className="mt-1 text-xs text-gray-600">
+                    {selectedLine.supplier_name && `${selectedLine.supplier_name} · `}
                     ${selectedLine.amount.toLocaleString()} {selectedLine.currency}
                   </p>
                 </div>
 
-                {/* Campo de Categoría */}
-                <div className="space-y-2">
-                  <Label htmlFor="category">Categoría *</Label>
-                  <Input
-                    id="category"
-                    value={editCategory}
-                    onChange={(e) => setEditCategory(e.target.value)}
-                    placeholder="Ej: Servicios de TI"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Ejemplos: Servicios de TI, Suministros de Oficina, Servicios Generales, etc.
-                  </p>
-                </div>
-
-                {/* Campo de Subcategoría */}
-                <div className="space-y-2">
-                  <Label htmlFor="subcategory">Subcategoría (opcional)</Label>
-                  <Input
-                    id="subcategory"
-                    value={editSubcategory}
-                    onChange={(e) => setEditSubcategory(e.target.value)}
-                    placeholder="Ej: Software, Hardware, Cloud"
-                  />
-                </div>
+                {selectedLine.supplier_name && (
+                  <div className="space-y-2 text-sm">
+                    <p className="font-medium">Esta corrección vale para</p>
+                    <label className="flex items-start gap-2">
+                      <input
+                        type="radio"
+                        name="edit-scope"
+                        checked={editScope === 'supplier'}
+                        onChange={() => setEditScope('supplier')}
+                      />
+                      <span>Siempre este proveedor. Una glosa distinta no cambia la familia.</span>
+                    </label>
+                    <label className="flex items-start gap-2">
+                      <input
+                        type="radio"
+                        name="edit-scope"
+                        checked={editScope === 'line'}
+                        onChange={() => setEditScope('line')}
+                      />
+                      <span>Solo esta compra. No se crea una palabra para el resto.</span>
+                    </label>
+                    {editScope === 'supplier' && (
+                      <label className="flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          checked={editMulti}
+                          onChange={event => setEditMulti(event.target.checked)}
+                        />
+                        <span>Vende varias cosas. Si la glosa es clara, manda la glosa.</span>
+                      </label>
+                    )}
+                  </div>
+                )}
 
                 {/* Botones */}
                 <div className="flex space-x-3 pt-4">
@@ -501,7 +918,7 @@ export default function ClassifyPage() {
                   <Button
                     onClick={handleSaveEdit}
                     className="flex-1 bg-gradient-to-r from-[#2AD4D2] to-[#3BE7AE]"
-                    disabled={!editCategory || saving}
+                    disabled={!editCategory || !editSubcategory || saving}
                   >
                     {saving ? (
                       <>

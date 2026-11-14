@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { hasRole, type Profile } from '@/lib/auth-helpers'
+import { SPEND_ROLE_DENIED } from '@/lib/spend-privacy'
+import { sameSupplier } from '@/lib/spend-assessment'
 
 export const runtime = 'nodejs'
 
@@ -16,16 +19,21 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, company_id')
+      .select('id, company_id, role')
       .eq('id', session.user.id)
       .single()
 
-    if (!profile) {
+    if (!profile?.company_id) {
       return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
     }
 
+    if (!hasRole(profile as Profile, 'analyst')) {
+      return NextResponse.json({ error: SPEND_ROLE_DENIED }, { status: 403 })
+    }
+
     // 2. Obtener datos de la corrección
-    const { line_id, category, subcategory } = await request.json()
+    const { line_id, category, subcategory, scope, multi_rubro } = await request.json()
+    const appliesToSupplier = scope !== 'line'
 
     if (!line_id || !category) {
       return NextResponse.json({
@@ -60,152 +68,84 @@ export async function POST(request: NextRequest) {
 
     if (updateError) throw updateError
 
-    // 5. Extraer keywords de la descripción para aprendizaje
-    const keywords = extractKeywords(line.description)
-
-    // 6. Crear o actualizar reglas de aprendizaje
-    const learningRules = []
-
-    // Regla basada en keywords (si encuentra keywords significativos)
-    if (keywords.length > 0) {
-      const keywordPattern = keywords[0].toLowerCase() // Usar el keyword más relevante
-
-      // Verificar si ya existe una regla similar
-      const { data: existingRule } = await supabase
+    let ruleMessage = 'La línea quedó corregida. No se creó una palabra global.'
+    if (appliesToSupplier && line.supplier_name) {
+      const { data: supplierRules } = await supabase
         .from('si_learning_rules')
-        .select('*')
-        .eq('company_id', profile.company_id)
-        .eq('rule_type', 'keyword')
-        .eq('pattern', keywordPattern)
-        .single()
-
-      if (existingRule) {
-        // Actualizar regla existente
-        await supabase
-          .from('si_learning_rules')
-          .update({
-            category,
-            subcategory,
-            usage_count: existingRule.usage_count + 1,
-            success_rate: Math.min(existingRule.success_rate + 0.1, 1.0)
-          })
-          .eq('id', existingRule.id)
-      } else {
-        // Crear nueva regla
-        learningRules.push({
-          company_id: profile.company_id,
-          rule_type: 'keyword',
-          pattern: keywordPattern,
-          category,
-          subcategory,
-          confidence_boost: 0.15,
-          source: 'user_correction',
-          usage_count: 1,
-          success_rate: 0.8,
-          created_by: profile.id
-        })
-      }
-    }
-
-    // Regla basada en proveedor (si existe)
-    if (line.supplier_name) {
-      const { data: existingSupplierRule } = await supabase
-        .from('si_learning_rules')
-        .select('*')
+        .select('id, pattern, usage_count, success_rate')
         .eq('company_id', profile.company_id)
         .eq('rule_type', 'supplier')
-        .eq('pattern', line.supplier_name.toLowerCase())
-        .single()
-
-      if (existingSupplierRule) {
+      const existing = (supplierRules || []).find(rule => sameSupplier(rule.pattern, line.supplier_name))
+      const source = multi_rubro ? 'supplier_multi' : 'supplier_always'
+      if (existing) {
         await supabase
           .from('si_learning_rules')
           .update({
             category,
             subcategory,
-            usage_count: existingSupplierRule.usage_count + 1,
-            success_rate: Math.min(existingSupplierRule.success_rate + 0.1, 1.0)
+            source,
+            usage_count: (existing.usage_count || 0) + 1,
+            success_rate: Math.min((existing.success_rate || 0.9) + 0.05, 1),
           })
-          .eq('id', existingSupplierRule.id)
+          .eq('id', existing.id)
+          .eq('company_id', profile.company_id)
       } else {
-        learningRules.push({
+        await supabase.from('si_learning_rules').insert({
           company_id: profile.company_id,
           rule_type: 'supplier',
           pattern: line.supplier_name.toLowerCase(),
           category,
           subcategory,
           confidence_boost: 0.2,
-          source: 'user_correction',
+          source,
           usage_count: 1,
           success_rate: 0.9,
-          created_by: profile.id
+          created_by: profile.id,
         })
       }
-    }
-
-    // Regla de corrección específica (few-shot example)
-    learningRules.push({
-      company_id: profile.company_id,
-      rule_type: 'correction',
-      pattern: line.description.substring(0, 100), // Primeros 100 caracteres
-      category,
-      subcategory,
-      confidence_boost: 0.1,
-      source: 'user_correction',
-      usage_count: 1,
-      success_rate: 1.0,
-      created_by: profile.id
-    })
-
-    // Insertar nuevas reglas
-    if (learningRules.length > 0) {
-      const { error: rulesError } = await supabase
+      ruleMessage = multi_rubro
+        ? 'El proveedor queda como de varios rubros: la glosa puede cambiar la familia.'
+        : 'El proveedor queda con esta familia. Una glosa distinta no la pisa.'
+    } else {
+      const pattern = String(line.description || '').slice(0, 100).toLowerCase()
+      const { data: corrections } = await supabase
         .from('si_learning_rules')
-        .insert(learningRules)
-
-      if (rulesError) {
-        console.error('Error al crear reglas de aprendizaje:', rulesError)
+        .select('id')
+        .eq('company_id', profile.company_id)
+        .eq('rule_type', 'correction')
+        .eq('pattern', pattern)
+        .limit(1)
+      if (corrections?.length) {
+        await supabase
+          .from('si_learning_rules')
+          .update({ category, subcategory, source: 'line_only' })
+          .eq('id', corrections[0].id)
+          .eq('company_id', profile.company_id)
+      } else if (pattern.length >= 8) {
+        await supabase.from('si_learning_rules').insert({
+          company_id: profile.company_id,
+          rule_type: 'correction',
+          pattern,
+          category,
+          subcategory,
+          confidence_boost: 0.1,
+          source: 'line_only',
+          usage_count: 1,
+          success_rate: 1,
+          created_by: profile.id,
+        })
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Clasificación actualizada y reglas de aprendizaje creadas',
-      rules_created: learningRules.length
+      message: ruleMessage,
     })
 
-  } catch (error: any) {
-    console.error('Error in SI update classification:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch {
+    console.error('Error in SI update classification')
+    return NextResponse.json({ error: 'No se pudo actualizar la clasificación' }, { status: 500 })
   }
 }
 
-// Función para extraer keywords relevantes
-function extractKeywords(text: string): string[] {
-  // Palabras comunes a ignorar (stop words)
-  const stopWords = new Set([
-    'de', 'la', 'el', 'los', 'las', 'un', 'una', 'en', 'y', 'a', 'o', 'por', 'para',
-    'con', 'sin', 'sobre', 'entre', 'hasta', 'desde', 'the', 'of', 'and', 'or', 'to',
-    'in', 'on', 'at', 'for', 'with', 'by', 'from', 'del', 'al'
-  ])
-
-  // Limpiar y dividir en palabras
-  const words = text
-    .toLowerCase()
-    .replace(/[^\w\s]/g, ' ')
-    .split(/\s+/)
-    .filter(word => word.length > 3 && !stopWords.has(word))
-
-  // Contar frecuencia
-  const frequency = new Map<string, number>()
-  words.forEach(word => {
-    frequency.set(word, (frequency.get(word) || 0) + 1)
-  })
-
-  // Ordenar por frecuencia y retornar top 3
-  return Array.from(frequency.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([word]) => word)
-}
 

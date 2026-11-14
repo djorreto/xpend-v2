@@ -251,6 +251,14 @@ export default function LicitacionesPage() {
           </Button>
         </div>
 
+        <Card className="bg-muted/40 border-dashed">
+          <CardContent className="pt-4 text-sm text-muted-foreground">
+            Los procesos se gestionan de forma <strong className="text-foreground">manual</strong> en XPEND
+            (fechas, estados, documentos y vínculo al plan). Más adelante el mismo registro podrá alimentarse o
+            sincronizarse desde una herramienta externa de e-sourcing.
+          </CardContent>
+        </Card>
+
         {/* Filters and Search */}
         <Card>
           <CardContent className="pt-6">

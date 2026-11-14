@@ -28,6 +28,8 @@ import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
 import { PermissionsMatrix } from '@/components/forms/permissions-matrix'
+import { Checkbox } from '@/components/ui/checkbox'
+import { readExternalAi, RETENTION_DAY_OPTIONS } from '@/lib/spend-privacy'
 
 interface CompanySettings {
   name: string
@@ -79,6 +81,11 @@ export default function SettingsPage() {
   const [editingDepartment, setEditingDepartment] = useState<any>(null)
   const [passwordForm, setPasswordForm] = useState({ next: '', confirm: '' })
   const [passwordLoading, setPasswordLoading] = useState(false)
+  const [profileId, setProfileId] = useState<string | null>(null)
+  const [aiEnabled, setAiEnabled] = useState(true)
+  const [retentionDays, setRetentionDays] = useState<number>(365)
+  const [aiAcceptedAt, setAiAcceptedAt] = useState<string | null>(null)
+  const [aiCalls, setAiCalls] = useState<Array<{ id: string; outcome: string; block_reason: string | null; created_at: string }>>([])
   const { addToast } = useToast()
 
   useEffect(() => {
@@ -108,10 +115,12 @@ export default function SettingsPage() {
       }
 
       setUser({
+        id: profile.id,
         name: profile.full_name || authUser.email,
         email: authUser.email,
         role: profile.role
       })
+      setProfileId(profile.id)
 
       setUserSettings({
         full_name: profile.full_name,
@@ -129,6 +138,10 @@ export default function SettingsPage() {
 
         if (!companyError && companyData) {
           setCompany(companyData)
+          const externalAi = readExternalAi(companyData.settings)
+          setAiEnabled(externalAi.enabled)
+          setAiAcceptedAt(externalAi.accepted_at)
+          setRetentionDays(externalAi.retention_days)
           setCompanySettings({
             name: companyData.name || '',
             description: companyData.description || '',
@@ -153,6 +166,16 @@ export default function SettingsPage() {
 
         if (!deptsError && departmentsData) {
           setDepartments(departmentsData)
+        }
+
+        if (profile.role === 'admin') {
+          const { data: calls } = await supabase
+            .from('si_ai_calls')
+            .select('id, outcome, block_reason, created_at')
+            .eq('company_id', profile.company_id)
+            .order('created_at', { ascending: false })
+            .limit(15)
+          setAiCalls(calls || [])
         }
       }
     } catch (err) {
@@ -203,11 +226,26 @@ export default function SettingsPage() {
         .update({
           name: companySettings.name,
           description: companySettings.description,
-          settings: companySettings.settings
+          settings: {
+            ...(company.settings || {}),
+            ...companySettings.settings,
+            external_ai: company.settings?.external_ai,
+          }
         })
         .eq('id', company.id)
 
       if (error) throw error
+
+      setCompany({
+        ...company,
+        name: companySettings.name,
+        description: companySettings.description,
+        settings: {
+          ...(company.settings || {}),
+          ...companySettings.settings,
+          external_ai: company.settings?.external_ai,
+        },
+      })
 
       addToast({
         type: 'success',
@@ -219,6 +257,78 @@ export default function SettingsPage() {
         type: 'error',
         title: 'Error',
         message: 'No se pudo guardar la configuración'
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const saveAi = async (enabled: boolean) => {
+    if (!company) return
+    setAiEnabled(enabled)
+    setSaving(true)
+    try {
+      const response = await fetch('/api/settings/external-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled,
+          retention_days: retentionDays,
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'No se pudo guardar')
+      setCompany({
+        ...company,
+        settings: { ...(company.settings || {}), external_ai: result.external_ai },
+      })
+      setAiAcceptedAt(result.external_ai?.accepted_at || null)
+      addToast({
+        type: 'success',
+        title: enabled ? 'IA activa' : 'IA apagada',
+        message: enabled ? 'Las bases, el chat y la categorización pueden usar la IA.' : 'Esas funciones quedan detenidas hasta que la vuelvas a activar.',
+      })
+    } catch (err) {
+      setAiEnabled(!enabled)
+      addToast({
+        type: 'error',
+        title: 'No se guardó',
+        message: err instanceof Error ? err.message : 'No se pudo cambiar la IA',
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSavePrivacy = async () => {
+    if (!company) return
+    setSaving(true)
+    try {
+      const response = await fetch('/api/settings/external-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: aiEnabled,
+          retention_days: retentionDays,
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'No se pudo guardar')
+      setCompany({
+        ...company,
+        settings: { ...(company.settings || {}), external_ai: result.external_ai },
+      })
+      setAiAcceptedAt(result.external_ai?.accepted_at || null)
+      addToast({
+        type: 'success',
+        title: 'Resguardo guardado',
+        message: 'La autorización quedó registrada en el servidor.'
+      })
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: err instanceof Error ? err.message : 'No se pudo guardar la autorización'
       })
     } finally {
       setSaving(false)
@@ -502,6 +612,88 @@ export default function SettingsPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {(user?.role === 'admin' || user?.role === 'super_admin') && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Shield className="h-5 w-5" />
+                <span>IA de la empresa</span>
+              </CardTitle>
+              <CardDescription>
+                Un clic la prende o la apaga. Activa, las bases pueden hacer preguntas, y también el chat y la categorización de una línea.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" disabled={saving} variant={aiEnabled ? 'default' : 'outline'} onClick={() => saveAi(true)}>
+                  IA activa
+                </Button>
+                <Button type="button" disabled={saving} variant={!aiEnabled ? 'default' : 'outline'} onClick={() => saveAi(false)}>
+                  IA apagada
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Ahora está {aiEnabled ? 'activa' : 'apagada'}.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="retention">Conservar cada carga de gasto</Label>
+                <Select
+                  value={String(retentionDays)}
+                  onValueChange={(value) => setRetentionDays(Number(value))}
+                >
+                  <SelectTrigger id="retention">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RETENTION_DAY_OPTIONS.map(days => (
+                      <SelectItem key={days} value={String(days)}>{days} días</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Al vencer, un manager que abre Sourcing Intelligence borra esa carga y sus líneas. El Excel original no se guarda.
+                </p>
+              </div>
+
+              {aiAcceptedAt && (
+                <p className="text-xs text-muted-foreground">
+                  Última autorización: {new Date(aiAcceptedAt).toLocaleString('es-CL')}. {aiEnabled ? 'La IA externa está activa.' : 'La IA externa está apagada.'}
+                </p>
+              )}
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Registro de categorización externa</p>
+                {aiCalls.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Todavía no hay envíos ni bloqueos.</p>
+                ) : (
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    {aiCalls.map(call => (
+                      <li key={call.id}>
+                        {new Date(call.created_at).toLocaleString('es-CL')} · {call.outcome === 'sent' ? 'enviada' : 'bloqueada'}
+                        {call.block_reason ? ` · ${call.block_reason}` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <Button onClick={handleSavePrivacy} disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Guardar resguardo
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Change Password */}
         <Card>

@@ -32,3 +32,4 @@ export function formatRut(rut: string): string {
   return `${formattedBody}-${dv}`
 }
 
+

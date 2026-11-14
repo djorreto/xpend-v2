@@ -55,11 +55,11 @@ export function MainLayout({
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="app-canvas relative flex h-[100dvh] min-h-[100dvh]">
       {/* Mobile Overlay */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 z-40 bg-petrol-blue/40 backdrop-blur-sm md:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
@@ -73,15 +73,13 @@ export function MainLayout({
       />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Topbar */}
+      <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] md:py-3 md:pl-0 md:pr-3">
         <Topbar
           user={user}
           onOpenMobileMenu={() => setMobileMenuOpen(true)}
         />
 
-        {/* Page content */}
-        <main className="flex-1 overflow-auto p-4 md:p-6">
+        <main className="app-main min-h-0 flex-1 overflow-auto px-1 pb-24 pt-4 md:px-6 md:pb-8 md:pt-5">
           {children}
         </main>
       </div>

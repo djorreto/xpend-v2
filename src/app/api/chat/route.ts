@@ -1,6 +1,8 @@
 // src/app/api/chat/route.ts
 import { streamJuanResponse } from '@/lib/ai'
 import { NextRequest } from 'next/server'
+import { recordExternalAiCall, requireExternalAi } from '@/lib/spend-access'
+import { redactOutboundText } from '@/lib/spend-redaction'
 
 export const runtime = 'nodejs' // Cambiado de edge a nodejs para acceso a env vars
 
@@ -57,68 +59,70 @@ function isOutOfScope(message: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, conversationHistory, userId } = await req.json()
+    const access = await requireExternalAi('analyst')
+    if (!access.ok) return access.response
 
-    if (!message || typeof message !== 'string') {
+    const body = await req.json()
+    const message = typeof body.message === 'string' ? body.message : ''
+    const history = typeof body.conversationHistory === 'string'
+      ? body.conversationHistory
+      : ''
+
+    if (!message) {
       return new Response(JSON.stringify({ error: 'Message is required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       })
     }
 
-    // Detectar intentos de prompt injection
     if (detectPromptInjection(message)) {
-      const safeResponse =
-        'No puedo ayudarte con eso. ¿Tienes alguna consulta sobre sourcing o procurement?'
-      return new Response(safeResponse, {
-        status: 200,
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-      })
-    }
-
-    // Generar respuesta con streaming
-    const result = await streamJuanResponse(message, conversationHistory)
-
-    // Guardar historial de forma no bloqueante (best effort)
-    // Nota: esta llamada no debe romper la respuesta al usuario si falla.
-    if (userId) {
-      // No esperamos el resultado, solo disparamos
-      saveToHistory(userId, message, '[streaming answer]').catch(err =>
-        console.error('saveToHistory failed:', err)
+      return new Response(
+        'No puedo ayudarte con eso. ¿Tienes alguna consulta sobre sourcing o procurement?',
+        { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
       )
     }
 
-    // Convertir el stream a respuesta HTTP
+    const redactedMessage = redactOutboundText(message)
+    const redactedHistory = redactOutboundText(history)
+    if (redactedMessage.blocked || redactedHistory.blocked) {
+      await recordExternalAiCall(access.supabase, {
+        company_id: access.profile.company_id,
+        user_id: access.profile.id,
+        outcome: 'blocked',
+        block_reason: 'listado',
+        model: 'qwen/qwen3.8-27b',
+        payload_chars: message.length,
+      })
+      return new Response(
+        'Ese mensaje parece un listado de gasto. No se envió a la IA. Clasifícalo en Sourcing Intelligence.',
+        { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
+      )
+    }
+
+    const recorded = await recordExternalAiCall(access.supabase, {
+      company_id: access.profile.company_id,
+      user_id: access.profile.id,
+      outcome: 'sent',
+      model: 'qwen/qwen3.8-27b',
+      payload_chars: redactedMessage.text.length,
+    })
+    if (!recorded) {
+      return new Response(JSON.stringify({ error: 'No se pudo registrar el envío. El mensaje no salió de Xpend.' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    const result = await streamJuanResponse(redactedMessage.text, redactedHistory.text)
     return result.toTextStreamResponse()
-  } catch (error) {
-    console.error('Error in chat API:', error)
+  } catch {
+    console.error('Error in chat API')
     return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Error al procesar el mensaje',
-      }),
+      JSON.stringify({ error: 'Error al procesar el mensaje' }),
       {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       }
     )
-  }
-}
-
-// Función auxiliar para guardar historial (temporalmente desactivada para build en Vercel)
-async function saveToHistory(userId: string, userMessage: string, assistantMessage: string) {
-  try {
-    // TODO: implementar guardado real en Supabase usando un cliente de servidor seguro.
-    // const supabase = supabaseBrowser()
-    // await supabase
-    //   .from('chat_history')
-    //   .insert({
-    //     user_id: userId,
-    //     user_message: userMessage,
-    //     assistant_message: assistantMessage,
-    //   });
-
-    console.log('[saveToHistory] skipped in production build')
-  } catch (error) {
-    console.error('Error saving chat history:', error)
   }
 }

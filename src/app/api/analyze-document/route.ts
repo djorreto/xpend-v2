@@ -2,9 +2,14 @@
 import { analyzeDocument } from '@/lib/ai'
 import { NextRequest, NextResponse } from 'next/server'
 import mammoth from 'mammoth'
+import { recordExternalAiCall, requireExternalAi } from '@/lib/spend-access'
+import { redactOutboundText } from '@/lib/spend-redaction'
 
 export async function POST(req: NextRequest) {
   try {
+    const access = await requireExternalAi('analyst')
+    if (!access.ok) return access.response
+
     const formData = await req.formData()
     const file = formData.get('file') as File
     const documentType = (formData.get('documentType') as string) || 'Especificación Técnica'
@@ -59,8 +64,34 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Analizar el documento con Juan Xpendo
-    const analysis = await analyzeDocument(extractedText, documentType)
+    const redacted = redactOutboundText(extractedText)
+    if (redacted.blocked || redacted.text.trim().length < 50) {
+      await recordExternalAiCall(access.supabase, {
+        company_id: access.profile.company_id,
+        user_id: access.profile.id,
+        outcome: 'blocked',
+        block_reason: redacted.blocked ? 'listado' : 'insuficiente',
+        model: 'qwen/qwen3.8-27b',
+        payload_chars: extractedText.length,
+      })
+      return NextResponse.json(
+        { error: 'El documento parece un listado de gasto o quedó sin contenido útil. No se envió a la IA.' },
+        { status: 422 }
+      )
+    }
+
+    const recorded = await recordExternalAiCall(access.supabase, {
+      company_id: access.profile.company_id,
+      user_id: access.profile.id,
+      outcome: 'sent',
+      model: 'qwen/qwen3.8-27b',
+      payload_chars: redacted.text.length,
+    })
+    if (!recorded) {
+      return NextResponse.json({ error: 'No se pudo registrar el envío. El documento no salió de Xpend.' }, { status: 503 })
+    }
+
+    const analysis = await analyzeDocument(redacted.text, documentType)
 
     return NextResponse.json({
       success: true,
@@ -69,15 +100,10 @@ export async function POST(req: NextRequest) {
       fileSize: file.size,
       wordCount: extractedText.split(/\s+/).length,
     })
-  } catch (error) {
-    console.error('Error analyzing document:', error)
+  } catch {
+    console.error('Error analyzing document')
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Error al analizar el documento. Intenta de nuevo.',
-      },
+      { error: 'Error al analizar el documento. Intenta de nuevo.' },
       { status: 500 }
     )
   }

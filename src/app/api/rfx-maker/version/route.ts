@@ -1,30 +1,28 @@
 // API para manejo de versiones de proyectos RFx
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseBrowser } from '@/lib/supabase'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 
 export const runtime = 'nodejs'
 
-/**
- * POST - Crear nueva versión de un proyecto
- * GET - Listar versiones de un proyecto
- */
-
-// Crear nueva versión
 export async function POST(req: NextRequest) {
   try {
+    const supabase = createRouteHandlerClient({ cookies })
     const body = await req.json()
     const { project_id, reason } = body
 
     if (!project_id) {
-      return NextResponse.json(
-        { error: 'project_id es requerido' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'project_id es requerido' }, { status: 400 })
     }
 
-    const supabase = supabaseBrowser()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session?.user) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+    const user = session.user
 
-    // Obtener proyecto actual
     const { data: project, error: projectError } = await supabase
       .from('rfx_projects')
       .select('*')
@@ -32,22 +30,9 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (projectError || !project) {
-      return NextResponse.json(
-        { error: 'Proyecto no encontrado' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Proyecto no encontrado' }, { status: 404 })
     }
 
-    // Obtener usuario actual
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json(
-        { error: 'No autorizado' },
-        { status: 401 }
-      )
-    }
-
-    // Crear snapshot de versión
     const { data: version, error: versionError } = await supabase
       .from('rfx_project_versions')
       .insert({
@@ -63,16 +48,13 @@ export async function POST(req: NextRequest) {
           status: project.status,
         },
         created_by: user.id,
-        version_notes: reason || 'Versión creada automáticamente',
+        change_description: reason || 'Versión creada automáticamente',
       })
       .select()
       .single()
 
-    if (versionError) {
-      throw versionError
-    }
+    if (versionError) throw versionError
 
-    // Incrementar versión del proyecto
     const { error: updateError } = await supabase
       .from('rfx_projects')
       .update({
@@ -81,24 +63,22 @@ export async function POST(req: NextRequest) {
       })
       .eq('id', project_id)
 
-    if (updateError) {
-      throw updateError
-    }
+    if (updateError) throw updateError
 
-    // Registrar en auditoría
     await supabase.from('rfx_audit_log').insert({
-      project_id: project.id,
+      entity_type: 'project',
+      entity_id: project.id,
       action: 'version_created',
-      changed_by: user.id,
       changes: {
         version_number: version.version_number,
         reason: reason || 'Versión creada',
       },
+      performed_by: user.id,
     })
 
     return NextResponse.json({
       success: true,
-      version: version,
+      version,
       message: `Versión ${version.version_number} creada exitosamente`,
     })
   } catch (error) {
@@ -110,33 +90,35 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Listar versiones
 export async function GET(req: NextRequest) {
   try {
+    const supabase = createRouteHandlerClient({ cookies })
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session?.user) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(req.url)
     const projectId = searchParams.get('project_id')
 
     if (!projectId) {
-      return NextResponse.json(
-        { error: 'project_id es requerido' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'project_id es requerido' }, { status: 400 })
     }
-
-    const supabase = supabaseBrowser()
 
     const { data: versions, error } = await supabase
       .from('rfx_project_versions')
-      .select(`
+      .select(
+        `
         *,
         created_by_user:profiles!created_by(full_name, email)
-      `)
+      `
+      )
       .eq('project_id', projectId)
       .order('version_number', { ascending: false })
 
-    if (error) {
-      throw error
-    }
+    if (error) throw error
 
     return NextResponse.json({
       success: true,
@@ -151,9 +133,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Restaurar una versión
 export async function PUT(req: NextRequest) {
   try {
+    const supabase = createRouteHandlerClient({ cookies })
     const body = await req.json()
     const { project_id, version_id } = body
 
@@ -164,9 +146,14 @@ export async function PUT(req: NextRequest) {
       )
     }
 
-    const supabase = supabaseBrowser()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session?.user) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+    const user = session.user
 
-    // Obtener la versión a restaurar
     const { data: version, error: versionError } = await supabase
       .from('rfx_project_versions')
       .select('*')
@@ -175,22 +162,9 @@ export async function PUT(req: NextRequest) {
       .single()
 
     if (versionError || !version) {
-      return NextResponse.json(
-        { error: 'Versión no encontrada' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Versión no encontrada' }, { status: 404 })
     }
 
-    // Obtener usuario actual
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json(
-        { error: 'No autorizado' },
-        { status: 401 }
-      )
-    }
-
-    // Primero, crear una versión de backup del estado actual
     const { data: currentProject } = await supabase
       .from('rfx_projects')
       .select('*')
@@ -211,12 +185,11 @@ export async function PUT(req: NextRequest) {
           status: currentProject.status,
         },
         created_by: user.id,
-        version_notes: `Backup antes de restaurar versión ${version.version_number}`,
+        change_description: `Backup antes de restaurar versión ${version.version_number}`,
       })
     }
 
-    // Restaurar la versión seleccionada
-    const snapshot = version.snapshot_data as any
+    const snapshot = version.snapshot_data as Record<string, unknown>
     const { error: updateError } = await supabase
       .from('rfx_projects')
       .update({
@@ -229,24 +202,21 @@ export async function PUT(req: NextRequest) {
         status: snapshot.status,
         parent_version_id: version_id,
         updated_at: new Date().toISOString(),
-        // Invalidar base técnica si los parámetros cambiaron
         technical_base_is_valid: false,
       })
       .eq('id', project_id)
 
-    if (updateError) {
-      throw updateError
-    }
+    if (updateError) throw updateError
 
-    // Registrar en auditoría
     await supabase.from('rfx_audit_log').insert({
-      project_id: project_id,
+      entity_type: 'project',
+      entity_id: project_id,
       action: 'version_restored',
-      changed_by: user.id,
       changes: {
         restored_version: version.version_number,
-        version_notes: version.version_notes,
+        change_description: version.change_description,
       },
+      performed_by: user.id,
     })
 
     return NextResponse.json({
@@ -261,4 +231,3 @@ export async function PUT(req: NextRequest) {
     )
   }
 }
-

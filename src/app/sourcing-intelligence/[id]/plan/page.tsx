@@ -10,6 +10,8 @@ import { supabaseBrowser } from '@/lib/supabase'
 import { Target, TrendingUp, Users, DollarSign, ArrowRight } from 'lucide-react'
 import { SIProcurementPlan, SIPlanItem } from '@/types'
 import { useToast } from '@/components/ui/toast'
+import { SpendFlowBar } from '@/components/spend/spend-flow-bar'
+import { SpendResultTabs } from '@/components/spend/spend-result-tabs'
 
 export default function PlanPage() {
   const router = useRouter()
@@ -25,6 +27,7 @@ export default function PlanPage() {
   const [generating, setGenerating] = useState(false)
   const [addingId, setAddingId] = useState<string | null>(null)
   const [existingCategories, setExistingCategories] = useState<Set<string>>(new Set())
+  const [uploadGroupId, setUploadGroupId] = useState<string | null>(null)
   const { addToast } = useToast()
 
   useEffect(() => {
@@ -50,12 +53,22 @@ export default function PlanPage() {
         setCompany(profile.companies)
 
         // Buscar plan existente
-        const { data: planData } = await supabase
+        const { data: uploadRow } = await supabase
+          .from('si_uploads')
+          .select('group_id')
+          .eq('id', uploadId)
+          .eq('company_id', profile.company_id)
+          .limit(1)
+        setUploadGroupId(uploadRow?.[0]?.group_id || null)
+
+        const { data: planRows } = await supabase
           .from('si_procurement_plans')
           .select('*')
           .eq('upload_id', uploadId)
           .eq('company_id', profile.company_id)
-          .single()
+          .order('created_at', { ascending: false })
+          .limit(1)
+        const planData = planRows?.[0]
 
         if (planData) {
           setPlan(planData)
@@ -117,7 +130,8 @@ export default function PlanPage() {
           description: `Generado desde Sourcing Intelligence (upload ${uploadId}). Ajusta la descripción y responsables en Sourcing Plan.`,
           category: item.category,
           estimated_spend: item.total_spend || 0,
-          currency: 'CLP',
+          currency: plan?.display_currency || 'CLP',
+          group_id: uploadGroupId,
           projected_savings_percentage: item.projected_savings_percentage || 0,
           projected_savings_amount: item.projected_savings_amount || 0,
           status: 'planned',
@@ -162,6 +176,10 @@ export default function PlanPage() {
 
       const result = await response.json()
       if (response.ok) {
+        const excluded = Object.keys(result.excluded || {})
+        if (excluded.length) {
+          alert(`Plan generado en ${result.currency}. Quedó fuera el gasto en ${excluded.join(', ')}.`)
+        }
         await loadData()
       } else {
         alert(`❌ Error: ${result.error}`)
@@ -209,6 +227,8 @@ export default function PlanPage() {
   if (!plan) {
     return (
       <MainLayout user={user} companyName={company?.name}>
+        <div className="space-y-6">
+        <SpendFlowBar current="ver" uploadId={uploadId} />
         <div className="max-w-2xl mx-auto text-center py-12">
           <Target className="h-16 w-16 mx-auto text-gray-300 mb-4" />
           <h2 className="text-2xl font-bold mb-4">Plan de Compras No Generado</h2>
@@ -234,6 +254,7 @@ export default function PlanPage() {
             )}
           </Button>
         </div>
+        </div>
       </MainLayout>
     )
   }
@@ -242,29 +263,21 @@ export default function PlanPage() {
     <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">{plan.name}</h1>
-            <p className="text-muted-foreground mt-2">
-              Año {plan.plan_year} · {items.length} categorías analizadas
-            </p>
-          </div>
-          <div className="flex space-x-3">
-            <Button
-              onClick={() => router.push(`/sourcing-intelligence/${uploadId}/insights`)}
-              className="bg-gradient-to-r from-[#2AD4D2] to-[#3BE7AE]"
-            >
-              📊 Ver Informe Preliminar
-            </Button>
-            <Button
-              onClick={() => router.push(`/sourcing-intelligence/${uploadId}/kraljic`)}
-              variant="outline"
-            >
-              Ver Matriz Kraljic
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold">{plan.name}</h1>
+          <p className="text-muted-foreground mt-2">
+            Año {plan.plan_year} · {items.length} categorías · neto en {plan.display_currency || 'moneda de la base'}
+          </p>
         </div>
+        {plan.stale && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+            <span>Cambió el país, el impuesto, la moneda o la ventana. Este plan sigue mostrando el cálculo anterior.</span>
+            <Button type="button" size="sm" onClick={handleGeneratePlan} disabled={generating}>Generar de nuevo</Button>
+          </div>
+        )}
+
+        <SpendFlowBar current="ver" uploadId={uploadId} />
+        <SpendResultTabs uploadId={uploadId} current="plan" />
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -275,7 +288,7 @@ export default function PlanPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${plan.total_spend.toLocaleString()}
+                {plan.total_spend.toLocaleString()} {plan.display_currency || ''}
               </div>
             </CardContent>
           </Card>
@@ -370,18 +383,24 @@ export default function PlanPage() {
                         {getQuadrantBadge(item.kraljic_quadrant!)}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleAddToSourcingPlan(item)}
-                          disabled={addingId === item.id || existingCategories.has((item.category || item.id).trim().toLowerCase())}
-                        >
-                          {existingCategories.has((item.category || item.id).trim().toLowerCase())
-                            ? 'Ya añadido'
-                            : addingId === item.id
-                              ? 'Enviando...'
-                              : 'Añadir al Sourcing Plan'}
-                        </Button>
+                        {uploadGroupId ? (
+                          <Button variant="outline" size="sm" onClick={() => router.push(`/sourcing-intelligence/grupo/${uploadGroupId}`)}>
+                            Enviar desde el grupo
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAddToSourcingPlan(item)}
+                            disabled={addingId === item.id || existingCategories.has((item.category || item.id).trim().toLowerCase())}
+                          >
+                            {existingCategories.has((item.category || item.id).trim().toLowerCase())
+                              ? 'Ya añadido'
+                              : addingId === item.id
+                                ? 'Enviando...'
+                                : 'Añadir al Sourcing Plan'}
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   ))}

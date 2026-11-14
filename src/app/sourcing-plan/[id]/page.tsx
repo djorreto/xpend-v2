@@ -18,9 +18,12 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  AlertCircle,
-  Link2
+  Plus,
+  Scale,
 } from 'lucide-react'
+import { realizedSavings } from '@/lib/procurement-flow'
+import { FichaGate } from '@/components/ficha-gate'
+import { DossierThread } from '@/components/dossier-thread'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
@@ -32,13 +35,22 @@ type SPLLink = {
   licitacion_id: string
   licitacion?: {
     id: string
-    titulo: string | null
-    estado: string | null
+    name: string | null
+    status: string | null
     baseline_amount?: number | null
     baseline_currency?: string | null
     awarded_amount?: number | null
     savings_amount?: number | null
   }
+}
+
+const licitacionStatusLabels: Record<string, string> = {
+  planned: 'Planificado',
+  bases_review: 'Revisión bases',
+  published: 'Publicada',
+  evaluation: 'Evaluación',
+  awarded: 'Adjudicada',
+  contract_signed: 'Contrato firmado',
 }
 
 const statusColors: Record<PlanStatus, string> = {
@@ -77,8 +89,8 @@ export default function SourcingPlanDetailPage() {
   const [plan, setPlan] = useState<SourcingPlan | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [linkedDocs, setLinkedDocs] = useState<{ id: string; title: string; href: string; detail: string }[]>([])
   const [linkedLicitaciones, setLinkedLicitaciones] = useState<SPLLink[]>([])
-  const [invoicesTotal, setInvoicesTotal] = useState(0)
 
   useEffect(() => {
     loadPlan()
@@ -142,8 +154,8 @@ export default function SourcingPlanDetailPage() {
             licitacion_id,
             licitacion:licitaciones(
               id,
-              titulo,
-              estado,
+              name,
+              status,
               baseline_amount,
               baseline_currency,
               awarded_amount,
@@ -162,18 +174,31 @@ export default function SourcingPlanDetailPage() {
         })
         setLinkedLicitaciones(normalizedLinks)
 
-        // Calcular total de facturas de las licitaciones vinculadas
-        const licIds = (linkData || []).map(l => l.licitacion_id)
-        if (licIds.length) {
-          const { data: invData } = await supabase
-            .from('service_invoices')
-            .select('amount, licitacion_id')
-            .in('licitacion_id', licIds)
-          const totalInv = (invData || []).reduce((sum, inv) => sum + (inv.amount || 0), 0)
-          setInvoicesTotal(totalInv)
-        } else {
-          setInvoicesTotal(0)
-        }
+        const [{ data: rfxRows }, { data: salaRows }] = await Promise.all([
+          supabase.from('rfx_projects').select('id, title, status, project_context').eq('company_id', profile.company_id),
+          supabase.from('offer_events').select('id, title, status, modality').eq('sourcing_plan_id', planId),
+        ])
+        const docs = [
+          ...((rfxRows || []).filter(row => row.project_context?.sourcing_plan_id === planId).map(row => ({
+            id: row.id,
+            title: row.title,
+            href: `/rfx-maker/${row.id}`,
+            detail: `Bases · ${row.status}`,
+          }))),
+          ...((salaRows || []).map(row => ({
+            id: row.id,
+            title: row.title,
+            href: `/sala/${row.id}`,
+            detail: `Sala · ${row.modality}`,
+          }))),
+          ...normalizedLinks.map(link => ({
+            id: link.licitacion_id,
+            title: link.licitacion?.name || 'Licitación',
+            href: `/licitaciones/${link.licitacion_id}`,
+            detail: `Proceso · ${link.licitacion?.status || 'sin estado'}`,
+          })),
+        ]
+        setLinkedDocs(docs)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar la iniciativa')
@@ -219,7 +244,7 @@ export default function SourcingPlanDetailPage() {
   // Ahorro proyectado: mantenemos el proyectado propio
   const projected = plan.projected_savings_amount || 0
   // Ahorro real = ahorro propio + ahorro de licitaciones
-  const actual = (plan.actual_savings_amount || 0) + linkedSavings
+  const actual = realizedSavings(plan.actual_savings_amount, linkedSavings)
   const achievementRate = projected > 0 ? (actual / projected) * 100 : null
 
   return (
@@ -261,11 +286,59 @@ export default function SourcingPlanDetailPage() {
             </div>
           </div>
 
-          <Button onClick={() => router.push(`/sourcing-plan/${plan.id}/edit`)}>
-            <Edit className="mr-2 h-4 w-4" />
-            Editar
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => router.push(`/rfx-maker/new?planId=${plan.id}`)}>
+              <FileText className="mr-2 h-4 w-4" />
+              Bases con esta iniciativa
+            </Button>
+            <Button variant="outline" onClick={() => router.push(`/licitaciones/new?planId=${plan.id}`)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Licitación con esta iniciativa
+            </Button>
+            <Button variant="outline" onClick={() => router.push(`/sala/new?planId=${plan.id}`)}>
+              <Scale className="mr-2 h-4 w-4" />
+              Sala con esta iniciativa
+            </Button>
+            <Button onClick={() => router.push(`/sourcing-plan/${plan.id}/edit`)}>
+              <Edit className="mr-2 h-4 w-4" />
+              Editar
+            </Button>
+          </div>
         </div>
+
+        <DossierThread match={{ companyId: company?.id || plan.company_id, sourcingPlanId: plan.id }} />
+        <FichaGate
+          planId={plan.id}
+          hasOwner={Boolean(plan.responsible_user_id)}
+          links={linkedLicitaciones}
+        />
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Flujo de esta iniciativa</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-4">
+            {[
+              ['1. Gasto base', formatCurrency(plan.estimated_spend || 0, plan.currency)],
+              ['2. Bases', linkedDocs.filter(doc => doc.detail.startsWith('Bases')).length ? `${linkedDocs.filter(doc => doc.detail.startsWith('Bases')).length} proyecto(s) de bases` : 'Todavía no hay bases.'],
+              ['3. Proceso', linkedLicitaciones.length ? `${linkedLicitaciones.length} licitación(es)` : 'Todavía no hay proceso.'],
+              ['4. Sala y comprometido', `${linkedDocs.filter(doc => doc.detail.startsWith('Sala')).length} sala(s) · ${formatCurrency(actual, plan.currency)}`],
+            ].map(([title, detail]) => (
+              <div key={title} className="glass-chip px-3 py-3">
+                <p className="text-[12px] font-medium text-petrol-blue/55">{title}</p>
+                <p className="mt-1 text-sm text-petrol-blue">{detail}</p>
+              </div>
+            ))}
+            </div>
+            {linkedDocs.map(doc => (
+              <button key={doc.id} type="button" onClick={() => router.push(doc.href)} className="block text-left text-sm text-petrol-blue">
+                {doc.title}
+                <span className="ml-2 text-xs text-petrol-blue/50">{doc.detail}</span>
+              </button>
+            ))}
+          </CardContent>
+        </Card>
 
         {/* Estado */}
         <Card>
@@ -320,7 +393,7 @@ export default function SourcingPlanDetailPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ahorro Real</CardTitle>
+              <CardTitle className="text-sm font-medium">Ahorro comprometido</CardTitle>
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             </CardHeader>
             <CardContent>
@@ -364,22 +437,6 @@ export default function SourcingPlanDetailPage() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Gasto real (facturas) */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gasto real (facturas)</CardTitle>
-            <DollarSign className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(invoicesTotal, plan.currency)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Suma de facturas asociadas a las licitaciones vinculadas
-            </p>
-          </CardContent>
-        </Card>
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Información General */}
@@ -472,10 +529,10 @@ export default function SourcingPlanDetailPage() {
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">Real</div>
-                {(plan.actual_savings_amount || linkedSavings) ? (
+                {actual ? (
                       <>
                         <p className="font-bold text-emerald-600">
-                      {formatCurrency((plan.actual_savings_amount || 0) + linkedSavings, plan.currency)}
+                      {formatCurrency(actual, plan.currency)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                       {plan.actual_savings_percentage?.toFixed(1) ?? '-'}%
@@ -501,10 +558,13 @@ export default function SourcingPlanDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5" />
-              Licitaciones asociadas
+              Procesos de licitación (gestión manual)
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <p className="text-xs text-muted-foreground mb-3">
+              En esta versión cada proceso se registra y actualiza en XPEND. Más adelante podrá sincronizarse con herramientas externas (p. ej. e-sourcing).
+            </p>
             {linkedLicitaciones.length === 0 ? (
               <p className="text-sm text-muted-foreground">Sin licitaciones vinculadas.</p>
             ) : (
@@ -525,8 +585,12 @@ export default function SourcingPlanDetailPage() {
                     {linkedLicitaciones.map(link => (
                       <tr key={link.licitacion_id} className="border-b last:border-0">
                         <td className="py-2 font-mono text-xs text-muted-foreground">{link.licitacion_id}</td>
-                        <td className="py-2">{link.licitacion?.titulo || 'Sin título'}</td>
-                        <td className="py-2">{link.licitacion?.estado || '-'}</td>
+                        <td className="py-2">{link.licitacion?.name || 'Sin nombre'}</td>
+                        <td className="py-2">
+                          {link.licitacion?.status
+                            ? licitacionStatusLabels[link.licitacion.status] || link.licitacion.status
+                            : '-'}
+                        </td>
                         <td className="py-2 text-right">
                           {link.licitacion?.baseline_amount
                             ? formatCurrency(link.licitacion.baseline_amount, link.licitacion.baseline_currency || plan.currency)

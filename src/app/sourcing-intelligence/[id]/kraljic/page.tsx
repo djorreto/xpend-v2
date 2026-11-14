@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { supabaseBrowser } from '@/lib/supabase'
-import { ArrowLeft, Download } from 'lucide-react'
 import { SIPlanItem } from '@/types'
+import { SpendFlowBar } from '@/components/spend/spend-flow-bar'
+import { SpendResultTabs } from '@/components/spend/spend-result-tabs'
 import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Label } from 'recharts'
 
 export default function KraljicPage() {
@@ -135,26 +135,15 @@ export default function KraljicPage() {
     <MainLayout user={user} companyName={company?.name}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <Button
-              variant="ghost"
-              onClick={() => router.push(`/sourcing-intelligence/${uploadId}/plan`)}
-              className="mb-2"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver al Plan
-            </Button>
-            <h1 className="text-3xl font-bold">Matriz de Kraljic</h1>
-            <p className="text-muted-foreground mt-2">
-              Clasificación estratégica de categorías por impacto y riesgo
-            </p>
-          </div>
-          <Button className="bg-gradient-to-r from-[#2AD4D2] to-[#3BE7AE]">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
-          </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Kraljic</h1>
+          <p className="text-muted-foreground mt-2">
+            Impacto y riesgo de cada familia de este archivo
+          </p>
         </div>
+
+        <SpendFlowBar current="ver" uploadId={uploadId} />
+        <SpendResultTabs uploadId={uploadId} current="kraljic" />
 
         {/* Chart */}
         <Card>

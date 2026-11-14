@@ -435,7 +435,7 @@ export default function EditSourcingPlanPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="actual_savings_percentage">Ahorro Real (%)</Label>
+                  <Label htmlFor="actual_savings_percentage">Ahorro comprometido (%)</Label>
                   <Input
                     id="actual_savings_percentage"
                     type="number"

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import mammoth from 'mammoth'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
+import { recordExternalAiCall, requireExternalAi } from '@/lib/spend-access'
+import { stripContactData } from '@/lib/spend-redaction'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -20,7 +20,7 @@ const groq = createOpenAI({
   baseURL: 'https://api.groq.com/openai/v1',
 })
 
-const model = groq('llama-3.3-70b-versatile')
+const model = groq('qwen/qwen3.8-27b')
 
 async function extractTextFromFile(file: File): Promise<string> {
   if (file.type === 'text/plain') {
@@ -43,21 +43,8 @@ async function extractTextFromFile(file: File): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, company_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!profile) {
-      return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
-    }
+    const access = await requireExternalAi('analyst')
+    if (!access.ok) return access.response
 
     const formData = await request.formData()
     const file = formData.get('file') as File | null
@@ -65,9 +52,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Archivo requerido' }, { status: 400 })
     }
 
-    const rawText = await extractTextFromFile(file)
-    if (!rawText || rawText.trim().length < 20) {
+    const sourceText = stripContactData(await extractTextFromFile(file))
+    if (!sourceText || sourceText.trim().length < 20) {
       return NextResponse.json({ error: 'El archivo no tiene contenido suficiente' }, { status: 400 })
+    }
+    const recorded = await recordExternalAiCall(access.supabase, {
+      company_id: access.profile.company_id,
+      user_id: access.profile.id,
+      outcome: 'sent',
+      model: 'qwen/qwen3.8-27b',
+      payload_chars: sourceText.length,
+    })
+    if (!recorded) {
+      return NextResponse.json({ error: 'No se pudo registrar el envío. La factura no salió de Xpend.' }, { status: 503 })
     }
 
     const prompt = `
@@ -83,7 +80,7 @@ Devuelve SOLO un JSON con estos campos:
 Si no encuentras un dato, deja cadena vacía. No inventes montos.
 
 TEXTO A ANALIZAR:
-${rawText.slice(0, 8000)}
+${sourceText.slice(0, 8000)}
 `
 
     const { text } = await generateText({
@@ -110,12 +107,10 @@ ${rawText.slice(0, 8000)}
         description: parsed.description ?? ''
       }
     })
-  } catch (error: any) {
-    console.error('AI invoice extract error:', error)
-    return NextResponse.json(
-      { error: error?.message || 'Error al procesar la factura con IA' },
-      { status: 500 }
-    )
+  } catch {
+    console.error('AI invoice extract error')
+    return NextResponse.json({ error: 'Error al procesar la factura con IA' }, { status: 500 })
   }
 }
+
 

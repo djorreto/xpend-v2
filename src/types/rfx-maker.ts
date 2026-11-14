@@ -265,11 +265,19 @@ export interface ValidationWarning {
 // 10. RESPONSES Y REQUESTS PARA APIs
 // =====================================================
 
+export interface RfxWizardQuestion {
+  id: string
+  question: string
+}
+
 export interface GenerateTechnicalBaseRequest {
   project_id: string
   admin_parameters: Record<string, any>
   project_context: ProjectContext
   force_regenerate?: boolean
+  /** Respuestas del usuario a preguntas de aclaración (flujo guiado) */
+  follow_up_technical?: Record<string, string>
+  follow_up_administrative?: Record<string, string>
 }
 
 export interface GenerateTechnicalBaseResponse {
