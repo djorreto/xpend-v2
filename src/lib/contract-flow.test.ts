@@ -32,6 +32,8 @@ function buyerPassword() {
 }
 
 test('un contrato cargado se confirma, se versiona y no altera la adjudicación', async () => {
+  const managerPassword = process.env.XPEND_MANAGER_PASSWORD
+  assert.ok(managerPassword, 'Define XPEND_MANAGER_PASSWORD para la prueba local')
   const keys = localKeys()
   const buyer = createClient(keys.API_URL, keys.ANON_KEY, { auth: { persistSession: false } })
   const buyerLogin = await buyer.auth.signInWithPassword({
@@ -135,8 +137,6 @@ test('un contrato cargado se confirma, se versiona y no altera la adjudicación'
   const selfApproval = await buyer.from('contract_versions').update({ status: 'approved' }).eq('id', version.id)
   assert.match(selfApproval.error?.message || '', /no puede aprobar/)
 
-  const managerPassword = process.env.XPEND_MANAGER_PASSWORD
-  assert.ok(managerPassword, 'Define XPEND_MANAGER_PASSWORD para la prueba local')
   const manager = createClient(keys.API_URL, keys.ANON_KEY, { auth: { persistSession: false } })
   const managerLogin = await manager.auth.signInWithPassword({
     email: 'gerente.f1b@xpend.test',

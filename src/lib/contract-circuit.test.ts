@@ -237,9 +237,9 @@ test('el contrato de LIC-F1B-MANT conserva el circuito y exporta la versión 4',
 })
 
 test('la revisión legal se exige solo cuando la política de la empresa está activa', async () => {
-  const keys = localKeys()
   const password = process.env.XPEND_MANAGER_PASSWORD
   assert.ok(password, 'Define XPEND_MANAGER_PASSWORD para la prueba local')
+  const keys = localKeys()
   const buyer = createClient(keys.API_URL, keys.ANON_KEY, { auth: { persistSession: false } })
   const manager = createClient(keys.API_URL, keys.ANON_KEY, { auth: { persistSession: false } })
   const buyerLogin = await buyer.auth.signInWithPassword({ email: 'buyer.fase0@xpend.test', password: buyerPassword() })
