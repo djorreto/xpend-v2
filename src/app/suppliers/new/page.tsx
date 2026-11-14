@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { supabaseBrowser } from '@/lib/supabase'
 import { useToast } from '@/components/ui/toast'
+import { supplierNdaPath } from '@/lib/storage-paths'
 import type { CreateSupplierData, ServiceType } from '@/types'
 
 const serviceTypeLabels: Record<ServiceType, string> = {
@@ -232,16 +233,16 @@ export default function NewSupplierPage() {
       // Upload NDA file if provided
       let ndaFilePath = null
       if (ndaFile) {
-        const fileExt = ndaFile.name.split('.').pop()
-        const fileName = `${supplierId}-nda.${fileExt}`
+        const fileName = supplierNdaPath(companyId, supplierId, ndaFile.name)
 
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('supplier-documents')
           .upload(fileName, ndaFile)
 
-        if (!uploadError && uploadData) {
-          ndaFilePath = uploadData.path
+        if (uploadError || !uploadData) {
+          throw new Error(uploadError?.message || 'No se pudo guardar el NDA.')
         }
+        ndaFilePath = uploadData.path
       }
 
       // Insert supplier
@@ -255,6 +256,9 @@ export default function NewSupplierPage() {
         })
 
       if (insertError) {
+        if (ndaFilePath) {
+          await supabase.storage.from('supplier-documents').remove([ndaFilePath])
+        }
         // Handle specific errors
         if (insertError.code === '23505') {
           throw new Error('Ya existe un proveedor con este RUT en la empresa')
@@ -274,7 +278,7 @@ export default function NewSupplierPage() {
       addToast({
         type: 'error',
         title: 'Error',
-        message: 'No se pudo crear el proveedor'
+        message: err instanceof Error ? err.message : 'No se pudo crear el proveedor'
       })
     } finally {
       setLoading(false)

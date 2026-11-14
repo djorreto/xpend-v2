@@ -24,6 +24,7 @@ import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
+import { supplierNdaPath } from '@/lib/storage-paths'
 import type { Supplier, UpdateSupplierData, ServiceType } from '@/types'
 
 const serviceTypeLabels: Record<ServiceType, string> = {
@@ -243,21 +244,24 @@ export default function EditSupplierPage() {
         nda_signed_date: ndaSigned ? new Date().toISOString().split('T')[0] : null,
         updated_at: new Date().toISOString()
       }
+      let uploadedNdaPath: string | null = null
 
       // Upload NDA file if provided
       if (ndaFile) {
-        const fileExt = ndaFile.name.split('.').pop()
-        const fileName = `${supplierId}-nda.${fileExt}`
+        if (!company?.id) throw new Error('No se pudo determinar la empresa del documento.')
+        const fileName = supplierNdaPath(company.id, supplierId, ndaFile.name)
 
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('supplier-documents')
-          .upload(fileName, ndaFile, { upsert: true })
+          .upload(fileName, ndaFile)
 
-        if (!uploadError && uploadData) {
-          updateData.nda_file_path = uploadData.path
-          updateData.nda_file_name = ndaFile.name
-          updateData.nda_file_size = ndaFile.size
+        if (uploadError || !uploadData) {
+          throw new Error(uploadError?.message || 'No se pudo guardar el NDA.')
         }
+        uploadedNdaPath = uploadData.path
+        updateData.nda_file_path = uploadData.path
+        updateData.nda_file_name = ndaFile.name
+        updateData.nda_file_size = ndaFile.size
       }
 
       // Update supplier
@@ -267,10 +271,21 @@ export default function EditSupplierPage() {
         .eq('id', supplierId)
 
       if (updateError) {
+        if (uploadedNdaPath) {
+          await supabase.storage.from('supplier-documents').remove([uploadedNdaPath])
+        }
         if (updateError.code === '23505') {
           throw new Error('Ya existe un proveedor con este RUT en la empresa')
         }
         throw new Error(updateError.message || 'Error al actualizar el proveedor')
+      }
+
+      if (
+        uploadedNdaPath &&
+        supplier?.nda_file_path &&
+        supplier.nda_file_path !== uploadedNdaPath
+      ) {
+        await supabase.storage.from('supplier-documents').remove([supplier.nda_file_path])
       }
 
       addToast({
@@ -285,7 +300,7 @@ export default function EditSupplierPage() {
       addToast({
         type: 'error',
         title: 'Error',
-        message: 'No se pudo actualizar el proveedor'
+        message: err instanceof Error ? err.message : 'No se pudo actualizar el proveedor'
       })
     } finally {
       setSaving(false)

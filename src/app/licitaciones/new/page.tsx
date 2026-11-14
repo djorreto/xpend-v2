@@ -16,6 +16,7 @@ import { CalendarIcon, ArrowLeft, Save, Loader2, Upload, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabaseBrowser } from '@/lib/supabase'
 import { useToast } from '@/components/ui/toast'
+import { licitacionDocumentPath } from '@/lib/storage-paths'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import type { Department } from '@/types'
@@ -176,9 +177,8 @@ export default function NewLicitacionPage() {
   const uploadTenderDocument = async (file: File, licitacionId: string) => {
     try {
       setUploading(true)
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${licitacionId}/bases.${fileExt}`
-      const filePath = `licitaciones/${fileName}`
+      if (!company?.id) throw new Error('No se pudo determinar la empresa del documento.')
+      const filePath = licitacionDocumentPath(company.id, licitacionId, file.name)
 
       const { error: uploadError } = await supabase.storage
         .from('documents')
@@ -222,12 +222,15 @@ export default function NewLicitacionPage() {
     }
 
     setSaving(true)
+    let uploadedTenderPath: string | null = null
+    let licitacionCreated = false
     try {
       let tenderDocData = null
 
       // Upload tender document if exists
       if (formData.tender_file) {
         tenderDocData = await uploadTenderDocument(formData.tender_file, formData.id)
+        uploadedTenderPath = tenderDocData.path
       }
 
       const { data, error } = await supabase
@@ -265,6 +268,7 @@ export default function NewLicitacionPage() {
         .single()
 
       if (error) throw error
+      licitacionCreated = true
 
       // Asociar múltiples iniciativas en tabla puente
       if (selectedPlans.length) {
@@ -282,6 +286,9 @@ export default function NewLicitacionPage() {
       })
       router.push(`/licitaciones/${data.id}`)
     } catch (err) {
+      if (uploadedTenderPath && !licitacionCreated) {
+        await supabase.storage.from('documents').remove([uploadedTenderPath])
+      }
       addToast({
         type: 'error',
         title: 'Error',

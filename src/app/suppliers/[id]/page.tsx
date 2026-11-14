@@ -253,8 +253,32 @@ export default function SupplierDetailPage() {
     }
   }
 
-  const downloadNDA = () => {
-    // TODO: Implement real NDA download
+  const downloadNDA = async () => {
+    if (!supplier?.nda_file_path) return
+
+    try {
+      const supabase = supabaseBrowser()
+      const { data, error: downloadError } = await supabase.storage
+        .from('supplier-documents')
+        .download(supplier.nda_file_path)
+
+      if (downloadError) throw downloadError
+
+      const url = window.URL.createObjectURL(data)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = supplier.nda_file_name || 'nda'
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Error',
+        message: err instanceof Error ? err.message : 'No se pudo descargar el NDA'
+      })
+    }
   }
 
   if (loading) {

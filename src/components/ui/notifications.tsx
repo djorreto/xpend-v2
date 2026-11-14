@@ -71,6 +71,7 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
+        .eq('user_id', session.user.id)
         .order('created_at', { ascending: false })
         .limit(20)
 
@@ -100,25 +101,37 @@ export function NotificationsDropdown({ className }: NotificationsDropdownProps)
 
   // Cargar notificaciones al montar el componente
   useEffect(() => {
-    loadNotifications()
+    let cancelled = false
+    let channel: ReturnType<typeof supabase.channel> | undefined
 
-    const channel = supabase
-      .channel('notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-        },
-        () => {
-          loadNotifications()
-        }
-      )
-      .subscribe()
+    const initializeNotifications = async () => {
+      await loadNotifications()
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (cancelled || !session?.user) return
+
+      channel = supabase
+        .channel(`notifications:${session.user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${session.user.id}`,
+          },
+          () => {
+            loadNotifications()
+          }
+        )
+        .subscribe()
+    }
+
+    void initializeNotifications()
 
     return () => {
-      supabase.removeChannel(channel)
+      cancelled = true
+      if (channel) supabase.removeChannel(channel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

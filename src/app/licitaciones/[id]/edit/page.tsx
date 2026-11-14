@@ -16,6 +16,7 @@ import { CalendarIcon, ArrowLeft, Save, Loader2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabaseBrowser } from '@/lib/supabase'
 import { useToast } from '@/components/ui/toast'
+import { licitacionDocumentPath } from '@/lib/storage-paths'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import type { Department } from '@/types'
@@ -257,15 +258,14 @@ export default function EditLicitacionPage() {
   const uploadTenderDocument = async (file: File, licitacionIdParam: string) => {
     try {
       setUploading(true)
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${licitacionIdParam}/bases.${fileExt}`
-      const filePath = `licitaciones/${fileName}`
+      if (!company?.id) throw new Error('No se pudo determinar la empresa del documento.')
+      const filePath = licitacionDocumentPath(company.id, licitacionIdParam, file.name)
 
       const { error: uploadError } = await supabase.storage
         .from('documents')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: true
+          upsert: false
         })
 
       if (uploadError) throw uploadError
@@ -294,12 +294,15 @@ export default function EditLicitacionPage() {
     }
 
     setSaving(true)
+    let uploadedTenderPath: string | null = null
+    let licitacionUpdated = false
     try {
       let tenderDocData = formData.existing_tender_document
 
       // Upload new tender document if changed
       if (formData.tender_file) {
         tenderDocData = await uploadTenderDocument(formData.tender_file, licitacionId)
+        uploadedTenderPath = tenderDocData.path
       }
 
       const { data, error } = await supabase
@@ -335,6 +338,17 @@ export default function EditLicitacionPage() {
         .single()
 
       if (error) throw error
+      licitacionUpdated = true
+
+      if (
+        uploadedTenderPath &&
+        formData.existing_tender_document?.path &&
+        formData.existing_tender_document.path !== uploadedTenderPath
+      ) {
+        await supabase.storage
+          .from('documents')
+          .remove([formData.existing_tender_document.path])
+      }
 
       // Update associated suppliers
       // First, delete all existing associations
@@ -384,6 +398,9 @@ export default function EditLicitacionPage() {
       })
       router.push(`/licitaciones/${licitacionId}`)
     } catch (err) {
+      if (uploadedTenderPath && !licitacionUpdated) {
+        await supabase.storage.from('documents').remove([uploadedTenderPath])
+      }
       addToast({
         type: 'error',
         title: 'Error',
