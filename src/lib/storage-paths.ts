@@ -30,6 +30,19 @@ export function licitacionDocumentPath(
   return `${companyId}/licitaciones/${licitacionId}/${timestamp}-bases${extension(fileName)}`
 }
 
+export function offerFilePath(
+  companyId: string,
+  eventId: string,
+  supplierId: string,
+  fileName: string,
+  timestamp = Date.now()
+) {
+  assertCompanyId(companyId)
+  assertSegment(eventId, 'La sala')
+  assertSegment(supplierId, 'El proveedor')
+  return `${companyId}/ofertas/${eventId}/${supplierId}/${timestamp}-anexo${extension(fileName)}`
+}
+
 export function supplierNdaPath(
   companyId: string,
   supplierId: string,

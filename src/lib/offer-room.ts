@@ -41,6 +41,10 @@ export type OfferEvent = {
   notes: string | null
   winning_supplier_id: string | null
   winning_amount: number | null
+  nda_required?: boolean
+  nda_text?: string | null
+  nda_version?: string
+  offers_opened_at?: string | null
 }
 
 export type AppSession = {
@@ -61,6 +65,12 @@ export function buyerCanSeeOpenAmounts(modality: string) {
   return modality === 'reverse_auction' || modality === 'adhesion'
 }
 
+export function buyerCanReadBidContent(event: { modality: string; status: string; offers_opened_at?: string | null }) {
+  if (event.modality === 'sealed') return Boolean(event.offers_opened_at)
+  if (event.modality === 'reverse_auction' || event.modality === 'adhesion') return true
+  return event.status === 'closed' || event.status === 'awarded'
+}
+
 export function minimumNextBid(leading: number, decrementPct: number | null) {
   const pct = Number(decrementPct) || 0
   return leading * (1 - pct / 100)
@@ -68,6 +78,15 @@ export function minimumNextBid(leading: number, decrementPct: number | null) {
 
 export async function loadAppSession(): Promise<AppSession | null> {
   const supabase = supabaseBrowser()
+  if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+    const params = new URLSearchParams(window.location.hash.slice(1))
+    const access_token = params.get('access_token')
+    const refresh_token = params.get('refresh_token')
+    if (access_token && refresh_token) {
+      await supabase.auth.setSession({ access_token, refresh_token })
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.user) return null
 

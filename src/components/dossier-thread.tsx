@@ -17,6 +17,7 @@ type Match = {
 
 export function DossierThread({ match }: { match: Match }) {
   const [dossier, setDossier] = useState<Dossier | null>(null)
+  const [events, setEvents] = useState<{ id: string; action: string; detail: string | null; created_at: string }[]>([])
 
   useEffect(() => {
     const filters = [
@@ -37,6 +38,13 @@ export function DossierThread({ match }: { match: Match }) {
       .order('updated_at', { ascending: false })
       .limit(1)
       .then(({ data }) => setDossier((data?.[0] as Dossier) || null))
+    if (!match.offerEventId) return
+    void supabaseBrowser()
+      .from('offer_audit')
+      .select('id, action, detail, created_at')
+      .eq('event_id', match.offerEventId)
+      .order('created_at')
+      .then(({ data }) => setEvents(data || []))
   }, [match.companyId, match.id, match.sourcingPlanId, match.rfxProjectId, match.licitacionId, match.offerEventId, match.groupId])
 
   if (!dossier) return null
@@ -60,6 +68,13 @@ export function DossierThread({ match }: { match: Match }) {
           )
         })}
       </ol>
+      {events.length > 0 && (
+        <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+          {events.map(event => (
+            <li key={event.id}>{new Date(event.created_at).toLocaleString('es-CL')} · {event.action}{event.detail ? ` · ${event.detail}` : ''}</li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

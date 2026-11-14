@@ -6,6 +6,13 @@ Fase 1 termina cuando un comprador puede recorrer una oportunidad hasta una adju
 
 Costo incremental de esta etapa: USD 0. Todo se probó en Supabase local. ANA y la extracción de contratos usan el Groq que ya existe; no se enciende un servicio nuevo ni una llamada sin tope.
 
+## Decisiones de producto confirmadas
+
+- Un contrato lo aprueba un administrador o un gerente. Un revisor legal es opcional y cada empresa podrá hacerlo obligatorio. Esa política se configurará cuando se construya Contracts.
+- Contracts tendrá análisis y asistencia de ANA en Fase 1, después de la base documental. No se habilita ninguna llamada a un modelo facturable sin autorización, estimación y tope.
+- El tipo de proceso sigue siendo el catálogo de cuatro valores. La categoría de compra queda en texto. El catálogo podrá crecer después sin reescribir los procesos ya guardados.
+- Contracts no se construye en el incremento de invitaciones y ofertas.
+
 ## Decisiones ya tomadas en el código
 
 - Las observaciones de una iniciativa viven en `sourcing_plans.notes`. `description` sigue siendo el alcance.
