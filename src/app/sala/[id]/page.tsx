@@ -47,6 +47,9 @@ export default function SalaDetailPage() {
   const [inviteEmail, setInviteEmail] = useState<Record<string, string>>({})
   const [accessLink, setAccessLink] = useState<string | null>(null)
   const [submissions, setSubmissions] = useState<{ supplier_id: string; status: string; version: number }[]>([])
+  const [questions, setQuestions] = useState<{ id: string; supplier_id: string; question: string; answer: string | null; visibility: string }[]>([])
+  const [files, setFiles] = useState<{ id: string; supplier_id: string; kind: string; storage_path: string; file_name: string }[]>([])
+  const [answers, setAnswers] = useState<Record<string, string>>({})
   const [ndaText, setNdaText] = useState('')
   const [newSupplier, setNewSupplier] = useState({ fantasy: '', legal: '', rut: '', email: '' })
   const [notice, setNotice] = useState('Bases confidenciales del proceso.')
@@ -73,7 +76,7 @@ export default function SalaDetailPage() {
     setEvent(current)
     setNdaText(current.nda_text || '')
     const contentVisible = buyerCanReadBidContent(current)
-    const [roundRes, inviteRes, supplierRes, bidRes, lineRes, offerRes, submissionRes] = await Promise.all([
+    const [roundRes, inviteRes, supplierRes, bidRes, lineRes, offerRes, submissionRes, questionRes, fileRes] = await Promise.all([
       supabase.from('offer_rounds').select('id, round_number, status').eq('event_id', eventId).order('round_number'),
       supabase.from('offer_invitations').select('id, supplier_id, status, contact_email, supplier:suppliers(fantasy_name)').eq('event_id', eventId),
       appSession.companyId
@@ -87,6 +90,10 @@ export default function SalaDetailPage() {
         ? supabase.from('adhesion_offers').select('id, line_id, supplier_id, unit_price, accepted').eq('event_id', eventId)
         : Promise.resolve({ data: [] }),
       supabase.rpc('list_offer_submissions', { target_event: eventId }),
+      supabase.from('process_questions').select('id, supplier_id, question, answer, visibility').eq('event_id', eventId).order('created_at'),
+      contentVisible
+        ? supabase.from('offer_bid_files').select('id, supplier_id, kind, storage_path, file_name').eq('event_id', eventId)
+        : Promise.resolve({ data: [] }),
     ])
     setRounds(roundRes.data || [])
     setInvites((inviteRes.data || []) as Invite[])
@@ -95,6 +102,8 @@ export default function SalaDetailPage() {
     setLines(lineRes.data || [])
     setOffers(offerRes.data || [])
     setSubmissions(submissionRes.data || [])
+    setQuestions(questionRes.data || [])
+    setFiles(fileRes.data || [])
     setLoading(false)
   }, [eventId, router])
 
@@ -309,6 +318,33 @@ export default function SalaDetailPage() {
     load()
   }
 
+  const reply = async (questionId: string, visibility: 'private' | 'shared') => {
+    const text = (answers[questionId] || '').trim()
+    if (!text) return
+    const { error } = await supabaseBrowser().from('process_questions').update({
+      answer: text,
+      visibility,
+      answered_by: session?.userId,
+      answered_at: new Date().toISOString(),
+    }).eq('id', questionId)
+    if (error) addToast({ type: 'error', title: 'No se respondió', message: error.message })
+    else load()
+  }
+
+  const downloadOfferFile = async (path: string, name: string) => {
+    const { data, error } = await supabaseBrowser().storage.from('documents').download(path)
+    if (error || !data) {
+      addToast({ type: 'error', title: 'No se descargó', message: error?.message || 'El archivo sigue cerrado.' })
+      return
+    }
+    const url = URL.createObjectURL(data)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = name
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
   const acceptOffer = async (offerId: string, accepted: boolean) => {
     await supabaseBrowser().from('adhesion_offers').update({ accepted }).eq('id', offerId)
     load()
@@ -349,6 +385,9 @@ export default function SalaDetailPage() {
             {event.modality === 'sealed' && event.status === 'closed' && !event.offers_opened_at && (
               <Button onClick={openEnvelopes}>Abrir sobres</Button>
             )}
+            {event.offers_opened_at && (
+              <Button variant="outline" onClick={() => router.push(`/sala/${eventId}/evaluacion`)}>Evaluar ofertas</Button>
+            )}
             {event.modality === 'rounds' && event.status === 'open' && (
               <Button variant="secondary" onClick={nextRound}>Abrir siguiente ronda</Button>
             )}
@@ -359,6 +398,42 @@ export default function SalaDetailPage() {
           <Card>
             <CardContent className="p-5 text-sm text-petrol-blue/70">
               Los sobres siguen cerrados. Hay {submissions.length} oferta{submissions.length === 1 ? '' : 's'} presentada{submissions.length === 1 ? '' : 's'}. El contenido se ve después de la apertura.
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader><CardTitle>Consultas y aclaraciones</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {questions.length === 0 && <p className="text-sm text-muted-foreground">No hay consultas.</p>}
+            {questions.map(item => (
+              <div key={item.id} className="space-y-2 text-sm">
+                <p>{supplierName(item.supplier_id)}: {item.question}</p>
+                <p className="text-muted-foreground">{item.answer || 'Sin respuesta'} · {item.visibility === 'shared' ? 'compartida' : 'privada'}</p>
+                {!item.answer && (
+                  <>
+                    <Input value={answers[item.id] || ''} onChange={input => setAnswers(prev => ({ ...prev, [item.id]: input.target.value }))} placeholder="Respuesta" />
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" onClick={() => reply(item.id, 'private')}>Responder en privado</Button>
+                      <Button type="button" variant="outline" onClick={() => reply(item.id, 'shared')}>Publicar aclaración</Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {showAmounts && files.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle>Archivos de las ofertas</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {files.map(item => (
+                <div key={item.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span>{supplierName(item.supplier_id)} · {item.kind === 'economic' ? 'económico' : 'técnico'} · {item.file_name}</span>
+                  <Button type="button" size="sm" variant="outline" onClick={() => downloadOfferFile(item.storage_path, item.file_name)}>Descargar</Button>
+                </div>
+              ))}
             </CardContent>
           </Card>
         )}

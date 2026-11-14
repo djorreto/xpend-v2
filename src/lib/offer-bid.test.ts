@@ -9,6 +9,10 @@ test('el total de la oferta suma partidas y rechaza una línea vacía', () => {
     { description: 'Repuestos', quantity: 1, unit: 'gl', unitPrice: 54000 },
   ]), 150000)
   assert.equal(bidTotal([{ description: '', quantity: 1, unit: 'gl', unitPrice: 10 }]), null)
+  assert.equal(bidTotal([
+    { description: 'Mano de obra parcial', quantity: 12, unit: 'mes', unitPrice: 7500 },
+    { description: '', quantity: 1, unit: 'gl', unitPrice: 0 },
+  ]), 90000)
 })
 
 test('el NDA vigente bloquea documentos y un plazo vencido cierra la recepción', () => {

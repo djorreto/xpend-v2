@@ -10,10 +10,15 @@ export function lineTotal(quantity: number, unitPrice: number) {
   return Math.round(quantity * unitPrice * 100) / 100
 }
 
+function lineIsBlank(line: BidLineInput) {
+  return !line.description.trim() && (!Number.isFinite(line.unitPrice) || line.unitPrice === 0)
+}
+
 export function bidTotal(lines: BidLineInput[]) {
-  if (!lines.length) return null
+  const active = lines.filter(line => !lineIsBlank(line))
+  if (!active.length) return null
   let total = 0
-  for (const line of lines) {
+  for (const line of active) {
     const value = lineTotal(line.quantity, line.unitPrice)
     if (value == null || !line.description.trim() || !line.unit.trim()) return null
     total += value

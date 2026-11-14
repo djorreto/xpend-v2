@@ -18,6 +18,7 @@ type Match = {
 export function DossierThread({ match }: { match: Match }) {
   const [dossier, setDossier] = useState<Dossier | null>(null)
   const [events, setEvents] = useState<{ id: string; action: string; detail: string | null; created_at: string }[]>([])
+  const [report, setReport] = useState<string | null>(null)
 
   useEffect(() => {
     const filters = [
@@ -38,13 +39,27 @@ export function DossierThread({ match }: { match: Match }) {
       .order('updated_at', { ascending: false })
       .limit(1)
       .then(({ data }) => setDossier((data?.[0] as Dossier) || null))
-    if (!match.offerEventId) return
-    void supabaseBrowser()
-      .from('offer_audit')
-      .select('id, action, detail, created_at')
-      .eq('event_id', match.offerEventId)
-      .order('created_at')
-      .then(({ data }) => setEvents(data || []))
+    if (match.offerEventId) {
+      void supabase
+        .from('offer_audit')
+        .select('id, action, detail, created_at')
+        .eq('event_id', match.offerEventId)
+        .order('created_at')
+        .then(({ data }) => setEvents(data || []))
+    }
+    const recommendationEvent = match.offerEventId
+    const recommendationLicitacion = match.licitacionId
+    if (recommendationEvent || recommendationLicitacion) {
+      const recommendation = supabase
+        .from('award_recommendations')
+        .select('report_text')
+        .order('created_at', { ascending: false })
+        .limit(1)
+      const scoped = recommendationEvent
+        ? recommendation.eq('event_id', recommendationEvent)
+        : recommendation.eq('licitacion_id', recommendationLicitacion)
+      void scoped.then(({ data }) => setReport(data?.[0]?.report_text || null))
+    }
   }, [match.companyId, match.id, match.sourcingPlanId, match.rfxProjectId, match.licitacionId, match.offerEventId, match.groupId])
 
   if (!dossier) return null
@@ -74,6 +89,9 @@ export function DossierThread({ match }: { match: Match }) {
             <li key={event.id}>{new Date(event.created_at).toLocaleString('es-CL')} · {event.action}{event.detail ? ` · ${event.detail}` : ''}</li>
           ))}
         </ul>
+      )}
+      {report && (
+        <pre className="mt-3 whitespace-pre-wrap text-xs text-petrol-blue">{report}</pre>
       )}
     </div>
   )

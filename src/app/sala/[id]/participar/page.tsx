@@ -41,7 +41,10 @@ export default function ParticiparPage() {
   const [technical, setTechnical] = useState('')
   const [requirement, setRequirement] = useState('')
   const [partidas, setPartidas] = useState<Partida[]>([{ ...EMPTY_LINE }, { ...EMPTY_LINE, unit: 'gl' }])
-  const [file, setFile] = useState<File | null>(null)
+  const [technicalFile, setTechnicalFile] = useState<File | null>(null)
+  const [economicFile, setEconomicFile] = useState<File | null>(null)
+  const [question, setQuestion] = useState('')
+  const [questions, setQuestions] = useState<{ id: string; question: string; answer: string | null; visibility: string }[]>([])
   const [documentName, setDocumentName] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -94,6 +97,12 @@ export default function ParticiparPage() {
         .maybeSingle()
       setDocumentName(licitacion?.tender_document_name || null)
     }
+    const { data: questionRows } = await supabase
+      .from('process_questions')
+      .select('id, question, answer, visibility')
+      .eq('event_id', eventId)
+      .order('created_at')
+    setQuestions(questionRows || [])
     setLoading(false)
   }, [eventId, router])
 
@@ -207,7 +216,7 @@ export default function ParticiparPage() {
         if (error) throw error
       }
       await supabase.from('offer_bid_lines').delete().eq('bid_id', bidId)
-      const rows = parsedLines.filter(line => line.description.trim() && line.quantity > 0 && line.unitPrice >= 0 && line.unit.trim())
+      const rows = parsedLines.filter(line => line.description.trim() && line.quantity > 0 && line.unitPrice > 0 && line.unit.trim())
       if (rows.length) {
         const { error } = await supabase.from('offer_bid_lines').insert(rows.map((line, index) => ({
           bid_id: bidId,
@@ -233,20 +242,27 @@ export default function ParticiparPage() {
         })
         if (error) throw error
       }
-      if (file && session.companyId) {
-        const path = offerFilePath(session.companyId, eventId, session.supplierId, file.name)
-        const uploaded = await supabase.storage.from('documents').upload(path, file, { upsert: false })
-        if (uploaded.error) throw uploaded.error
-        const { error } = await supabase.from('offer_bid_files').insert({
-          bid_id: bidId,
-          event_id: eventId,
-          supplier_id: session.supplierId,
-          kind: 'technical',
-          storage_path: path,
-          file_name: file.name,
-        })
-        if (error) throw error
-        setFile(null)
+      if (session.companyId) {
+        for (const item of [
+          technicalFile ? { file: technicalFile, kind: 'technical' } : null,
+          economicFile ? { file: economicFile, kind: 'economic' } : null,
+        ]) {
+          if (!item) continue
+          const path = offerFilePath(session.companyId, eventId, session.supplierId, item.file.name)
+          const uploaded = await supabase.storage.from('documents').upload(path, item.file, { upsert: false })
+          if (uploaded.error) throw uploaded.error
+          const { error } = await supabase.from('offer_bid_files').insert({
+            bid_id: bidId,
+            event_id: eventId,
+            supplier_id: session.supplierId,
+            kind: item.kind,
+            storage_path: path,
+            file_name: item.file.name,
+          })
+          if (error) throw error
+        }
+        setTechnicalFile(null)
+        setEconomicFile(null)
       }
       if (present) {
         const { error } = await supabase.from('offer_bids').update({
@@ -355,6 +371,41 @@ export default function ParticiparPage() {
 
         {invitationStatus && invitationStatus !== 'declined' && (
           <Card>
+            <CardHeader><CardTitle>Consultas</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {questions.map(item => (
+                <div key={item.id} className="text-sm">
+                  <p>{item.question}</p>
+                  <p className="text-muted-foreground">{item.answer ? item.answer : 'Sin respuesta todavía.'} {item.visibility === 'shared' ? '· Aclaración compartida' : '· Respuesta privada'}</p>
+                </div>
+              ))}
+              {event.status === 'open' && (
+                <>
+                  <Textarea value={question} onChange={eventInput => setQuestion(eventInput.target.value)} placeholder="Pregunta al comprador. No incluyas tu precio." />
+                  <Button variant="outline" onClick={async () => {
+                    if (!session.supplierId || !question.trim()) return
+                    const { error } = await supabaseBrowser().from('process_questions').insert({
+                      company_id: event.company_id,
+                      event_id: eventId,
+                      supplier_id: session.supplierId,
+                      question: question.trim(),
+                      visibility: 'private',
+                      asked_by: session.userId,
+                    })
+                    if (error) addToast({ type: 'error', title: 'No se envió', message: errorMessage(error, 'No se pudo enviar la consulta.') })
+                    else {
+                      setQuestion('')
+                      load()
+                    }
+                  }}>Enviar consulta</Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {invitationStatus && invitationStatus !== 'declined' && (
+          <Card>
             <CardHeader><CardTitle>{presented ? 'Oferta presentada' : 'Tu propuesta'}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               {presented && (
@@ -387,9 +438,15 @@ export default function ParticiparPage() {
                 <p className="text-sm">Total {total == null ? 'incompleto' : formatCurrency(total, event.currency)}</p>
               </div>
               {canEdit && (
-                <div className="space-y-2">
-                  <Label htmlFor="annex">Anexo técnico o económico</Label>
-                  <Input id="annex" type="file" onChange={eventInput => setFile(eventInput.target.files?.[0] || null)} />
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="technical-file">Anexo técnico</Label>
+                    <Input id="technical-file" type="file" onChange={eventInput => setTechnicalFile(eventInput.target.files?.[0] || null)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="economic-file">Anexo económico</Label>
+                    <Input id="economic-file" type="file" onChange={eventInput => setEconomicFile(eventInput.target.files?.[0] || null)} />
+                  </div>
                 </div>
               )}
               {canEdit && (
