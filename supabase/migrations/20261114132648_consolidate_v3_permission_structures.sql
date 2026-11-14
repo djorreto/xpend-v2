@@ -1,5 +1,5 @@
--- Estructuras que existen en el proyecto Supabase antiguo y que el código ya usa.
--- Idempotente: no altera filas existentes. Los datos históricos se cargan aparte.
+-- Estructuras de permisos y cierre de gasto. No carga historial de gasto.
+-- Idempotente: no altera filas que ya existan.
 
 begin;
 
