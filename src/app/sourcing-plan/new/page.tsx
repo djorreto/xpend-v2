@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { ArrowLeft, Save } from 'lucide-react'
 import { supabaseBrowser } from '@/lib/supabase'
+import { errorMessage } from '@/lib/errors'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { useToast } from '@/components/ui/toast'
 import type { Quarter, InitiativeType, PlanStatus } from '@/types'
@@ -163,7 +164,7 @@ export default function NewSourcingPlanPage() {
       addToast({
         type: 'error',
         title: 'Error al crear iniciativa',
-        message: err instanceof Error ? err.message : 'Error desconocido'
+        message: errorMessage(err, 'No se pudo crear la iniciativa.')
       })
     } finally {
       setSaving(false)

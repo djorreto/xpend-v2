@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Sparkles } from 'lucide-react'
 import { supabaseBrowser } from '@/lib/supabase'
-import { RFX_FIELDS, basesMarkdown } from '@/lib/rfx-sections'
+import { RFX_FIELDS, basesAreReady, basesMarkdown } from '@/lib/rfx-sections'
 import type { RfxProject } from '@/types/rfx-maker'
 
 export function RfxSectionBases({
@@ -61,13 +61,14 @@ export function RfxSectionBases({
     setError('')
     const admin_parameters = { ...project.admin_parameters, ...values }
     const technical_base_content = basesMarkdown(project.title, project.rfx_type, values)
+    const technical_base_is_valid = basesAreReady(values)
     const { error: updateError } = await supabaseBrowser()
       .from('rfx_projects')
       .update({
         admin_parameters,
         admin_parameters_last_modified: new Date().toISOString(),
         technical_base_content,
-        technical_base_is_valid: true,
+        technical_base_is_valid,
         technical_base_manually_edited: true,
         updated_at: new Date().toISOString(),
       })
@@ -80,7 +81,7 @@ export function RfxSectionBases({
     onSaved({
       admin_parameters,
       technical_base_content,
-      technical_base_is_valid: true,
+      technical_base_is_valid,
       technical_base_manually_edited: true,
     })
   }

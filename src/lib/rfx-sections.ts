@@ -21,6 +21,33 @@ export const RFX_FIELDS: RfxField[] = [
   { key: 'exclusiones', section: 'Alcance técnico', label: 'Qué queda fuera', kind: 'technical' },
 ]
 
+export const REQUIRED_BASE_KEYS = ['objeto', 'alcance', 'requisitos', 'ponderacion'] as const
+
+const REQUIRED_BASE_LABELS: Record<(typeof REQUIRED_BASE_KEYS)[number], string> = {
+  objeto: 'Qué se está comprando',
+  alcance: 'Alcance',
+  requisitos: 'Requisitos',
+  ponderacion: 'Cómo se evalúa',
+}
+
+export function sectionValueIsComplete(value?: string | null) {
+  const text = String(value || '').trim()
+  return Boolean(text) && !/^por completar\.?$/i.test(text)
+}
+
+/** Un borrador con secciones vacías no está listo para publicarse. */
+export function basesAreReady(values: Record<string, string | null | undefined>) {
+  return REQUIRED_BASE_KEYS.every(key => sectionValueIsComplete(values[key]))
+}
+
+export function basesTextIsReady(markdown?: string | null) {
+  const text = String(markdown || '')
+  return (Object.values(REQUIRED_BASE_LABELS) as string[]).every(label => {
+    const match = text.match(new RegExp(`- ${label}:\\s*(.+)`))
+    return sectionValueIsComplete(match?.[1])
+  })
+}
+
 export function basesMarkdown(title: string, type: string, values: Record<string, string>) {
   const sections = Array.from(new Set(RFX_FIELDS.map(field => field.section)))
   const body = sections.map(section => {

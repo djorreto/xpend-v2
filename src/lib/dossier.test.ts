@@ -17,7 +17,9 @@ test('la licitación hereda título, gasto y moneda de la iniciativa', () => {
   assert.equal(seed.name, 'Monitores de PC para el holding')
   assert.equal(seed.baselineAmount, '12000000')
   assert.equal(seed.currency, 'CLP')
-  assert.equal(seed.category, 'Tecnología')
+  assert.equal(seed.categoryLabel, 'Tecnología')
+  assert.equal(seed.category, '')
+  assert.equal(seed.baselineSource, 'budget')
   assert.equal(seed.type, 'RFQ')
 })
 

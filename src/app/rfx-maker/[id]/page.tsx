@@ -35,6 +35,7 @@ import { RfxSectionBases } from '@/components/forms/rfx-section-bases'
 import { RfxServiceSheets } from '@/components/forms/rfx-service-sheets'
 import { DossierThread } from '@/components/dossier-thread'
 import { composeBases, saveDossier } from '@/lib/dossier-store'
+import { basesTextIsReady } from '@/lib/rfx-sections'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import type { RfxWizardQuestion } from '@/types/rfx-maker'
@@ -307,6 +308,7 @@ export default function RfxProjectPage({ params }: Props) {
 
       const supabase = supabaseBrowser()
       const published = `${technical}\n\n${composed.administrative}`
+      const basesReady = basesTextIsReady(published)
       const nextContext = {
         ...(project.project_context || {}),
         wizard,
@@ -317,7 +319,7 @@ export default function RfxProjectPage({ params }: Props) {
         .update({
           technical_base_content: technical,
           technical_base_generated_at: new Date().toISOString(),
-          technical_base_is_valid: true,
+          technical_base_is_valid: basesReady,
           technical_base_manually_edited: false,
           project_context: nextContext,
         })
@@ -341,7 +343,7 @@ export default function RfxProjectPage({ params }: Props) {
       setProject({
         ...project,
         technical_base_content: technical,
-        technical_base_is_valid: true,
+        technical_base_is_valid: basesReady,
         technical_base_manually_edited: false,
         project_context: nextContext,
       })
@@ -369,14 +371,11 @@ export default function RfxProjectPage({ params }: Props) {
     if (!project) return
 
     // Validaciones
-    const hasTechnicalDraft =
-      Boolean(project.technical_base_content && project.technical_base_content.trim().length > 80)
-
-    if (newStatus === 'ready' && !project.technical_base_is_valid && !hasTechnicalDraft) {
+    if (newStatus === 'ready' && !basesTextIsReady(project.technical_base_content)) {
       addToast({
         type: 'error',
-        title: 'No se puede marcar como listo',
-        message: 'Genera o escribe una base técnica con contenido suficiente antes de marcar listo',
+        title: 'El borrador sigue incompleto',
+        message: 'Completa qué se compra, el alcance, los requisitos y cómo se evalúa antes de marcar las bases como listas.',
       })
       return
     }

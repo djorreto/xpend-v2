@@ -14,7 +14,8 @@ import { useToast } from '@/components/ui/toast'
 import { ArrowLeft, Save, Loader2, Sparkles } from 'lucide-react'
 import type { RfxTemplate, RfxCompanyPolicy } from '@/types/rfx-maker'
 import { saveDossier } from '@/lib/dossier-store'
-import { RFX_FIELDS, basesMarkdown } from '@/lib/rfx-sections'
+import { RFX_FIELDS, basesAreReady, basesMarkdown } from '@/lib/rfx-sections'
+import { errorMessage } from '@/lib/errors'
 
 export default function NewRfxProjectPage() {
   const router = useRouter()
@@ -213,6 +214,7 @@ export default function NewRfxProjectPage() {
           template_version_snapshot: selectedTemplate.version_number,
           policy_snapshot: activePolicy?.policy_values || {},
           admin_parameters: { ...activePolicy?.policy_values, ...sections },
+          sourcing_plan_id: planId,
           project_context: {
             ...formData.project_context,
             ...(planId ? { sourcing_plan_id: planId } : {}),
@@ -224,7 +226,7 @@ export default function NewRfxProjectPage() {
             },
           },
           technical_base_content: fillMode === 'directo' ? basesMarkdown(formData.title, formData.rfx_type, sections) : null,
-          technical_base_is_valid: fillMode === 'directo',
+          technical_base_is_valid: fillMode === 'directo' && basesAreReady(sections),
           status: 'draft',
           technical_base_manually_edited: fillMode === 'directo',
           responsible_user_id: user.id,
@@ -259,7 +261,7 @@ export default function NewRfxProjectPage() {
       addToast({
         type: 'error',
         title: 'Error',
-        message: 'No se pudo crear el proyecto'
+        message: errorMessage(error, 'No se pudo crear el proyecto')
       })
     } finally {
       setIsSaving(false)

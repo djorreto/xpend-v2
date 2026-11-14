@@ -18,16 +18,32 @@ function moneyCode(value?: string | null, fallback = 'CLP') {
   return /^[A-Z]{3}$/.test(code) ? code : fallback
 }
 
-/** La licitación nace de la iniciativa. La persona confirma; no reescribe el gasto. */
+export const PROCESS_CATEGORIES = ['recurring_service', 'non_recurring_service', 'improvement_project', 'construction_project'] as const
+export const BASELINE_SOURCES = ['historical', 'budget', 'other'] as const
+
+export function isProcessCategory(value: string) {
+  return (PROCESS_CATEGORIES as readonly string[]).includes(value)
+}
+
+export function isBaselineSource(value: string) {
+  return (BASELINE_SOURCES as readonly string[]).includes(value)
+}
+
+/**
+ * La licitación nace de la iniciativa. La categoría escrita no entra al enum
+ * del tipo de proceso. El monto estimado es presupuesto; el origen es el vínculo.
+ */
 export function licitacionSeedFromPlan(plan: PlanSeed) {
+  const spend = Number(plan.estimated_spend)
   return {
     name: String(plan.title || '').trim(),
     description: String(plan.description || '').trim(),
-    category: String(plan.category || '').trim(),
-    baselineAmount: plan.estimated_spend ? String(plan.estimated_spend) : '',
+    categoryLabel: String(plan.category || '').trim(),
+    category: '',
+    baselineAmount: Number.isFinite(spend) && spend > 0 ? String(spend) : '',
     currency: moneyCode(plan.currency),
     type: plan.initiative_type === 'project' ? 'RFP' : 'RFQ',
-    source: 'Iniciativa del plan',
+    baselineSource: Number.isFinite(spend) && spend > 0 ? 'budget' : '',
   }
 }
 

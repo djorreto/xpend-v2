@@ -443,9 +443,14 @@ export default function LicitacionDetailPage() {
               >
                 {statusLabels[licitacion.status as keyof typeof statusLabels]}
               </span>
+              {licitacion.category_label && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Categoría: {licitacion.category_label}
+                </p>
+              )}
               {licitacion.category && (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  {categoryLabels[licitacion.category as keyof typeof categoryLabels]}
+                  Tipo de proceso: {categoryLabels[licitacion.category as keyof typeof categoryLabels]}
                 </p>
               )}
             </CardContent>

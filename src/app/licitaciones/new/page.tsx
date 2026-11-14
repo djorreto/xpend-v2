@@ -17,7 +17,8 @@ import { cn } from '@/lib/utils'
 import { supabaseBrowser } from '@/lib/supabase'
 import { useToast } from '@/components/ui/toast'
 import { awardSavings, statusGateMessage, syncPlanFromLicitacion } from '@/lib/procurement-flow'
-import { licitacionSeedFromPlan } from '@/lib/dossier'
+import { isBaselineSource, isProcessCategory, licitacionSeedFromPlan } from '@/lib/dossier'
+import { errorMessage } from '@/lib/errors'
 import { saveDossier } from '@/lib/dossier-store'
 import { licitacionDocumentPath } from '@/lib/storage-paths'
 import { LoadingSpinner } from '@/components/ui/loading'
@@ -45,6 +46,7 @@ export default function NewLicitacionPage() {
     status: 'planned',
     type: '',
     category: '',
+    category_label: '',
     baseline_currency: 'USD',
     baseline_amount: '',
     baseline_source: '',
@@ -95,9 +97,10 @@ export default function NewLicitacionPage() {
             name: prev.name || seed.name,
             description: prev.description || seed.description,
             category: prev.category || seed.category,
+            category_label: prev.category_label || seed.categoryLabel,
             baseline_amount: prev.baseline_amount || seed.baselineAmount,
             baseline_currency: seed.currency,
-            baseline_source: prev.baseline_source || seed.source,
+            baseline_source: prev.baseline_source || seed.baselineSource,
             type: prev.type || seed.type,
             responsible_user_id: prev.responsible_user_id || plan.responsible_user_id || '',
           }))
@@ -302,10 +305,11 @@ export default function NewLicitacionPage() {
           description: formData.description || null,
           status: formData.status,
           type: formData.type || null,
-          category: formData.category || null,
+          category: isProcessCategory(formData.category) ? formData.category : null,
+          category_label: formData.category_label || null,
           baseline_currency: formData.baseline_currency,
           baseline_amount: formData.baseline_amount ? parseFloat(formData.baseline_amount) : null,
-          baseline_source: formData.baseline_source || null,
+          baseline_source: isBaselineSource(formData.baseline_source) ? formData.baseline_source : null,
           awarded_amount: formData.awarded_amount ? parseFloat(formData.awarded_amount) : null,
           ...awardSavings(
             formData.baseline_amount ? parseFloat(formData.baseline_amount) : null,
@@ -383,7 +387,7 @@ export default function NewLicitacionPage() {
       addToast({
         type: 'error',
         title: 'Error',
-        message: err instanceof Error ? err.message : 'Error al crear la licitación.',
+        message: errorMessage(err, 'No se pudo crear la licitación.'),
       })
     } finally {
       setSaving(false)
@@ -503,10 +507,15 @@ export default function NewLicitacionPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="category">Categoría</Label>
+                  <Label htmlFor="category">Tipo de proceso</Label>
+                  {formData.category_label && (
+                    <p className="text-sm text-muted-foreground">
+                      Categoría de la iniciativa: {formData.category_label}. Se conserva tal como la escribiste.
+                    </p>
+                  )}
                   <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecciona una categoría" />
+                      <SelectValue placeholder="Opcional. No reemplaza la categoría escrita." />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="recurring_service">Servicio recurrente</SelectItem>
@@ -618,6 +627,11 @@ export default function NewLicitacionPage() {
                       <SelectItem value="other">Otro</SelectItem>
                     </SelectContent>
                   </Select>
+                  {searchParams.get('planId') && (
+                    <p className="text-sm text-muted-foreground">
+                      El monto viene del gasto estimado de la iniciativa y queda como presupuesto. El origen del proceso es esa iniciativa, no esta fuente.
+                    </p>
+                  )}
                 </div>
               </div>
 
