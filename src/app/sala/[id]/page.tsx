@@ -11,8 +11,6 @@ import { supabaseBrowser } from '@/lib/supabase'
 import { useToast } from '@/components/ui/toast'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { formatCurrency } from '@/lib/utils'
-import { awardSavings, syncPlanFromLicitacion } from '@/lib/procurement-flow'
-import { saveDossier } from '@/lib/dossier-store'
 import { errorMessage } from '@/lib/errors'
 import { licitacionDocumentPath } from '@/lib/storage-paths'
 import { DossierThread } from '@/components/dossier-thread'
@@ -262,62 +260,6 @@ export default function SalaDetailPage() {
     load()
   }
 
-  const award = async (supplierId: string, amount: number) => {
-    if (!event) return
-    const supabase = supabaseBrowser()
-    const { error } = await supabase
-      .from('offer_events')
-      .update({
-        status: 'awarded',
-        winning_supplier_id: supplierId,
-        winning_amount: amount,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', eventId)
-    if (error) {
-      addToast({ type: 'error', title: 'No se pudo adjudicar', message: error.message })
-      return
-    }
-    let savingsAmount: number | null = null
-    if (event.licitacion_id) {
-      const { data: lic } = await supabase
-        .from('licitaciones')
-        .select('baseline_amount')
-        .eq('id', event.licitacion_id)
-        .limit(1)
-      const savings = awardSavings(lic?.[0]?.baseline_amount, amount)
-      savingsAmount = savings.savings_amount
-      await supabase
-        .from('licitaciones')
-        .update({
-          status: 'awarded',
-          awarded_amount: amount,
-          award_date: new Date().toISOString().slice(0, 10),
-          savings_amount: savings.savings_amount,
-          savings_percentage: savings.savings_percentage,
-        })
-        .eq('id', event.licitacion_id)
-      await syncPlanFromLicitacion(supabase, event.licitacion_id, 'awarded')
-    }
-    if (session?.companyId) {
-      await saveDossier(supabase, {
-        companyId: session.companyId,
-        userId: session.userId,
-        title: event.title,
-        licitacionId: event.licitacion_id,
-        offerEventId: eventId,
-        stage: 'adjudicada',
-        award: { supplier_id: supplierId, amount, savings_amount: savingsAmount },
-      })
-    }
-    addToast({
-      type: 'success',
-      title: 'Adjudicada',
-      message: 'El ahorro volvió a la licitación y queda visible en el comité.',
-    })
-    load()
-  }
-
   const reply = async (questionId: string, visibility: 'private' | 'shared') => {
     const text = (answers[questionId] || '').trim()
     if (!text) return
@@ -519,9 +461,9 @@ export default function SalaDetailPage() {
                     <p className="text-sm text-petrol-blue">{supplierName(bid.supplier_id)}</p>
                     <p className="text-xs text-petrol-blue/50">{formatCurrency(bid.amount, event.currency)}</p>
                   </div>
-                  {event.status !== 'awarded' && (event.status === 'closed' || event.modality === 'reverse_auction') && (
-                    <Button size="sm" variant="outline" onClick={() => award(bid.supplier_id, bid.amount)}>
-                      Adjudicar
+                  {event.status !== 'awarded' && event.offers_opened_at && (
+                    <Button size="sm" variant="outline" onClick={() => router.push(`/sala/${eventId}/decision`)}>
+                      Preparar decisión
                     </Button>
                   )}
                 </div>

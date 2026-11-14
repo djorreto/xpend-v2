@@ -498,6 +498,7 @@ export default function EvaluacionPage() {
                 ))}
               </div>
               {report && <pre className="whitespace-pre-wrap text-sm">{report}</pre>}
+              {report && <Button variant="outline" onClick={() => router.push(`/sala/${eventId}/decision`)}>Preparar comité</Button>}
             </CardContent>
           </Card>
         )}

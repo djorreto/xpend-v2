@@ -7,6 +7,9 @@ export type DossierAward = {
   amount?: number
   savings_amount?: number | null
   savings_percentage?: number | null
+  target_savings?: number | null
+  estimated_savings?: number | null
+  realized_savings?: number | null
 }
 
 export type Dossier = {

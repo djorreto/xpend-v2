@@ -234,17 +234,18 @@ export default function SourcingPlanDetailPage() {
     const val = link.licitacion?.baseline_amount || 0
     return sum + val
   }, 0)
-  const linkedSavings = linkedLicitaciones.reduce((sum, link) => {
-    const val = link.licitacion?.savings_amount || 0
-    return sum + val
-  }, 0)
+  const awardedLinks = linkedLicitaciones.filter(link => link.licitacion?.status === 'awarded' && link.licitacion?.savings_amount != null)
+  const estimatedSavings = awardedLinks.length
+    ? awardedLinks.reduce((sum, link) => sum + Number(link.licitacion?.savings_amount || 0), 0)
+    : null
+  const linkedSavings = estimatedSavings || 0
 
   // Baseline total = propio + suma de licitaciones
   const totalBaseline = (plan.estimated_spend || 0) + linkedBaseline
   // Ahorro proyectado: mantenemos el proyectado propio
   const projected = plan.projected_savings_amount || 0
   // Ahorro real = ahorro propio + ahorro de licitaciones
-  const actual = realizedSavings(plan.actual_savings_amount, linkedSavings)
+  const actual = realizedSavings(plan.actual_savings_amount, estimatedSavings || 0, estimatedSavings != null)
   const achievementRate = projected > 0 ? (actual / projected) * 100 : null
 
   return (
@@ -393,21 +394,21 @@ export default function SourcingPlanDetailPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ahorro comprometido</CardTitle>
+              <CardTitle className="text-sm font-medium">Ahorro estimado</CardTitle>
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             </CardHeader>
             <CardContent>
-              {actual ? (
+              {estimatedSavings == null ? (
+                <div className="text-2xl font-bold text-muted-foreground">-</div>
+              ) : (
                 <>
                   <div className="text-2xl font-bold text-emerald-600">
-                    {formatCurrency(actual, plan.currency)}
+                    {formatCurrency(estimatedSavings, plan.currency)}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {plan.actual_savings_percentage?.toFixed(1) ?? '-'}% del spend
+                    Objetivo {formatCurrency(projected, plan.currency)}. Realizado: sin evidencia posterior.
                   </p>
                 </>
-              ) : (
-                <div className="text-2xl font-bold text-muted-foreground">-</div>
               )}
             </CardContent>
           </Card>

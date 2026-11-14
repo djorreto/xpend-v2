@@ -18,7 +18,12 @@ export function statusGateMessage(role: string | null | undefined, status: strin
  * El monto tipeado en la iniciativa solo vale cuando no hay proceso vinculado.
  * Así el plan no cuenta dos veces el mismo ahorro.
  */
-export function realizedSavings(stored: number | null | undefined, linked?: number | null) {
+export function realizedSavings(
+  stored: number | null | undefined,
+  linked?: number | null,
+  hasAward = false
+) {
+  if (hasAward) return Number(linked) || 0
   const linkedN = Number(linked) || 0
   if (linkedN !== 0) return linkedN
   return Number(stored) || 0
@@ -51,6 +56,7 @@ type LinkMoney = {
   plan_id: string
   savings_amount?: number | null
   currency?: string | null
+  awarded?: boolean
 }
 
 /** Proyectado y adjudicado por moneda. No suma CLP con USD. */
@@ -68,11 +74,10 @@ export function savingsByCurrency(plans: PlanMoney[], links: LinkMoney[]): Curre
     const projectedAmount = Number(plan.projected_savings_amount) || 0
     if (projectedAmount) projected.set(currency, (projected.get(currency) || 0) + projectedAmount)
     const planLinks = linksByPlan.get(plan.id) || []
-    const linkedSum = planLinks.reduce((sum, link) => sum + (Number(link.savings_amount) || 0), 0)
-    if (linkedSum !== 0) {
-      for (const link of planLinks) {
+    const awardedLinks = planLinks.filter(link => link.awarded && link.savings_amount != null)
+    if (awardedLinks.length) {
+      for (const link of awardedLinks) {
         const amount = Number(link.savings_amount) || 0
-        if (!amount) continue
         const code = normalizePlanCurrency(link.currency || plan.currency)
         actual.set(code, (actual.get(code) || 0) + amount)
       }

@@ -63,8 +63,11 @@ test('la política de ofertas y la invitación coinciden con esa regla', () => {
   assert.match(invite, /event\.company_id !== profile\.company_id/)
 
   const sala = fs.readFileSync(new URL('../app/sala/[id]/page.tsx', import.meta.url), 'utf8')
-  assert.match(sala, /awardSavings\(/)
-  assert.match(sala, /saveDossier\(/)
+  assert.match(sala, /Preparar decisión/)
+  assert.equal(sala.includes('winning_supplier_id: supplierId'), false)
+  const awardSql = fs.readFileSync(new URL('../../supabase/migrations/20261114165055_fase_1_committee_award.sql', import.meta.url), 'utf8')
+  assert.match(awardSql, /procurement_dossiers/)
+  assert.match(awardSql, /Quien recomienda no puede aprobar/)
   assert.equal(sala.includes('recordApproval'), false)
 
   const created = fs.readFileSync(new URL('../app/licitaciones/new/page.tsx', import.meta.url), 'utf8')

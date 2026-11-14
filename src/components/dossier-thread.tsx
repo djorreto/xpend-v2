@@ -93,6 +93,12 @@ export function DossierThread({ match }: { match: Match }) {
       {report && (
         <pre className="mt-3 whitespace-pre-wrap text-xs text-petrol-blue">{report}</pre>
       )}
+      {dossier.award && (
+        <p className="mt-3 text-xs">
+          Adjudicación {dossier.award.amount != null ? `${dossier.currency || ''} ${dossier.award.amount}` : ''}.
+          Objetivo {dossier.award.target_savings ?? '—'} · estimado {dossier.award.estimated_savings ?? '—'} · realizado {dossier.award.realized_savings ?? 'sin evidencia'}.
+        </p>
+      )}
     </div>
   )
 }

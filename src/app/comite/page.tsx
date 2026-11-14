@@ -33,7 +33,8 @@ export default function ComitePage() {
   const [monthSpend, setMonthSpend] = useState<MoneyTotal[]>([])
   const [monthLines, setMonthLines] = useState(0)
   const [savings, setSavings] = useState<CurrencySavings[]>([])
-  const [awards, setAwards] = useState<Array<{ id: string; title: string; currency: string | null; award: { supplier_id?: string; amount?: number; savings_amount?: number | null } | null }>>([])
+  const [awards, setAwards] = useState<Array<{ id: string; title: string; currency: string | null; award: { supplier_id?: string; amount?: number; savings_amount?: number | null; estimated_savings?: number | null; target_savings?: number | null } | null }>>([])
+  const [pending, setPending] = useState<Array<{ id: string; licitacion_id: string; event_id?: string }>>([])
   const period = new Date().toISOString().slice(0, 7)
 
   const load = async () => {
@@ -90,7 +91,7 @@ export default function ComitePage() {
     if (planIds.length) {
       const { data: links } = await supabase
         .from('sourcing_plan_licitaciones')
-        .select('plan_id, licitacion:licitaciones(savings_amount, baseline_currency)')
+        .select('plan_id, licitacion:licitaciones(savings_amount, baseline_currency, status)')
         .in('plan_id', planIds)
       for (const link of links || []) {
         const licitacion = Array.isArray(link.licitacion) ? link.licitacion[0] : link.licitacion
@@ -98,6 +99,7 @@ export default function ComitePage() {
           plan_id: link.plan_id,
           savings_amount: licitacion?.savings_amount ?? null,
           currency: licitacion?.baseline_currency ?? null,
+          awarded: licitacion?.status === 'awarded',
         })
       }
     }
@@ -108,6 +110,15 @@ export default function ComitePage() {
       .eq('company_id', profile.company_id)
       .eq('stage', 'adjudicada')
     setAwards(dossierRows || [])
+    const { data: pendingRows } = await supabase
+      .from('award_decisions')
+      .select('id, licitacion_id, packet:decision_packets(event_id)')
+      .eq('company_id', profile.company_id)
+      .eq('outcome', 'pending')
+    setPending((pendingRows || []).map(row => {
+      const packet = Array.isArray(row.packet) ? row.packet[0] : row.packet
+      return { id: row.id, licitacion_id: row.licitacion_id, event_id: packet?.event_id }
+    }))
     setLoading(false)
   }
 
@@ -202,7 +213,7 @@ export default function ComitePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle>Ahorro adjudicado</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Ahorro estimado</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-1 text-2xl font-medium text-petrol-blue">
                 {(savings.length ? savings : [{ currency: 'CLP', projected: 0, actual: 0, rate: 0 }]).map(row => (
@@ -210,11 +221,25 @@ export default function ComitePage() {
                 ))}
               </div>
               <p className="mt-1 text-xs text-petrol-blue/50">
-                {closure ? `Último cierre guardado: ${closure.period}` : 'Todavía no hay un cierre guardado'}
+                Resultado de adjudicaciones en la misma moneda. Un cero es un resultado. El realizado se muestra solo con evidencia posterior.
               </p>
             </CardContent>
           </Card>
         </div>
+
+        {pending.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle>Decisiones pendientes</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {pending.map(item => (
+                <p key={item.id}>
+                  {item.licitacion_id}
+                  {item.event_id && <a className="ml-2 underline" href={`/sala/${item.event_id}/decision`}>Abrir expediente</a>}
+                </p>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
         {awards.length > 0 && (
           <Card>
@@ -225,7 +250,8 @@ export default function ComitePage() {
                   <p className="font-medium">{row.title}</p>
                   <p className="text-xs text-muted-foreground">
                     Oferta ganadora {row.award?.amount != null ? formatCurrency(row.award.amount, row.currency || 'CLP') : 'sin monto'}
-                    {row.award?.savings_amount != null ? ` · ahorro ${formatCurrency(row.award.savings_amount, row.currency || 'CLP')}` : ''}
+                    {row.award?.target_savings != null ? ` · objetivo ${formatCurrency(row.award.target_savings, row.currency || 'CLP')}` : ''}
+                    {row.award?.estimated_savings != null ? ` · estimado ${formatCurrency(row.award.estimated_savings, row.currency || 'CLP')}` : ''}
                     {row.award?.supplier_id ? ` · proveedor ${row.award.supplier_id}` : ''}
                   </p>
                 </div>

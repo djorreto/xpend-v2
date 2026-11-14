@@ -170,6 +170,7 @@ export default function SourcingPlanPage() {
         let countsByPlan: Record<string, number> = {}
         let licBaselineByPlan: Record<string, number> = {}
         let licSavingsByPlan: Record<string, number> = {}
+        let awardedSavingsByPlan: Record<string, number> = {}
         let planLinksData: any[] = []
         if (planIds.length) {
           const { data } = await supabase
@@ -179,7 +180,8 @@ export default function SourcingPlanPage() {
               licitacion:licitaciones(
                 baseline_amount,
                 baseline_currency,
-                savings_amount
+                savings_amount,
+                status
               )
             `)
             .in('plan_id', planIds)
@@ -197,6 +199,9 @@ export default function SourcingPlanPage() {
             const s = link.licitacion?.savings_amount || 0
             licBaselineByPlan[pid] = (licBaselineByPlan[pid] || 0) + b
             licSavingsByPlan[pid] = (licSavingsByPlan[pid] || 0) + s
+            if (link.licitacion?.status === 'awarded' && link.licitacion?.savings_amount != null) {
+              awardedSavingsByPlan[pid] = (awardedSavingsByPlan[pid] ?? 0) + Number(link.licitacion.savings_amount)
+            }
           })
         }
 
@@ -204,7 +209,8 @@ export default function SourcingPlanPage() {
           ...p,
           licitaciones_count: countsByPlan[p.id] || 0,
           lic_baseline_sum: licBaselineByPlan[p.id] || 0,
-          lic_savings_sum: licSavingsByPlan[p.id] || 0
+          lic_savings_sum: licSavingsByPlan[p.id] || 0,
+          estimated_award_savings: Object.prototype.hasOwnProperty.call(awardedSavingsByPlan, p.id) ? awardedSavingsByPlan[p.id] : null
         })))
 
         // Calcular estadísticas incluyendo aportes de licitaciones
@@ -212,6 +218,7 @@ export default function SourcingPlanPage() {
           plan_id: link.plan_id,
           savings_amount: link.licitacion?.savings_amount ?? null,
           currency: link.licitacion?.baseline_currency ?? null,
+          awarded: link.licitacion?.status === 'awarded',
         }))
         calculateStats(plansData || [], licBaselineByPlan, licSavingsByPlan, moneyLinks)
       }
@@ -623,7 +630,10 @@ export default function SourcingPlanPage() {
                 </thead>
                 <tbody>
                   {filteredPlans.map((plan) => {
-                    const actualSavings = realizedSavings(plan.actual_savings_amount, plan.lic_savings_sum)
+                    const estimatedAward = (plan as SourcingPlan & { estimated_award_savings?: number | null }).estimated_award_savings
+                    const actualSavings = estimatedAward == null
+                      ? realizedSavings(plan.actual_savings_amount, plan.lic_savings_sum)
+                      : estimatedAward
                     const achievementRate = plan.projected_savings_amount
                       ? (actualSavings / plan.projected_savings_amount) * 100
                       : null
@@ -689,17 +699,17 @@ export default function SourcingPlanPage() {
 
                         {/* Ahorro Real */}
                         <td className="whitespace-nowrap p-2 text-right tabular-nums">
-                          {realizedSavings(plan.actual_savings_amount, plan.lic_savings_sum) ? (
+                          {estimatedAward == null && !actualSavings ? (
+                            <span className="text-muted-foreground">-</span>
+                          ) : (
                             <div>
                               <div className="font-medium text-emerald-600">
-                                {formatCurrency(realizedSavings(plan.actual_savings_amount, plan.lic_savings_sum), plan.currency)}
+                                {formatCurrency(actualSavings, plan.currency)}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                ({plan.actual_savings_percentage?.toFixed(1)}%)
+                                {estimatedAward == null ? 'sin adjudicación' : 'estimado'}
                               </div>
                             </div>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
                           )}
                         </td>
 
