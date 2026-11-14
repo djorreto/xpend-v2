@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateRfxWizardQuestions } from '@/lib/ai'
 import { recordExternalAiCall, requireExternalAi } from '@/lib/spend-access'
 import { redactOutboundText } from '@/lib/spend-redaction'
+import { evaluateQuota, readGroqUsage } from '@/lib/groq-call'
 
 export const runtime = 'nodejs'
 
@@ -9,6 +10,8 @@ export async function POST(req: NextRequest) {
   try {
     const access = await requireExternalAi('analyst')
     if (!access.ok) return access.response
+    const quota = evaluateQuota(await readGroqUsage(access.supabase, access.profile.company_id, access.profile.id))
+    if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 429 })
 
     const body = await req.json()
     const projectId = body.project_id as string | undefined

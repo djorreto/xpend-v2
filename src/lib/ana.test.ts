@@ -272,3 +272,47 @@ test('ANA lee los registros locales, cita el contrato y no llama a un modelo', a
     end $$;
   `)
 })
+
+test('Groq narra un contrato ficticio y registra los tokens', async () => {
+  if (!process.env.GROQ_API_KEY) throw new Error('Define GROQ_API_KEY para la prueba local')
+  const keys = localKeys()
+  const buyer = createClient(keys.API_URL, keys.ANON_KEY, { auth: { persistSession: false } })
+  const login = await buyer.auth.signInWithPassword({ email: 'buyer.fase0@xpend.test', password: buyerPassword() })
+  assert.equal(login.error, null)
+  const buyerId = login.data.user?.id
+  const { data: profile } = await buyer.from('profiles').select('company_id').eq('id', buyerId).single()
+  const created = await buyer.from('contracts').insert({
+    company_id: profile?.company_id,
+    code: `CTR-ANA-FICT-${Date.now()}`,
+    name: 'Contrato ficticio',
+    origin: 'upload',
+    status: 'draft',
+    created_by: buyerId,
+  }).select('id').single()
+  assert.equal(created.error, null)
+  await buyer.from('contract_versions').insert({
+    contract_id: created.data?.id,
+    company_id: profile?.company_id,
+    version: 1,
+    status: 'draft',
+    body: 'Texto ficticio. Taller Demo debe avisar con 30 dias de anticipacion para no renovar el servicio de prueba.',
+    created_by: buyerId,
+  })
+  try {
+    const result = await runAna(buyer, '¿Con cuánta anticipación hay que avisar?', {
+      module: 'contrato',
+      recordId: created.data?.id,
+      label: 'Contrato ficticio',
+    }, { useModel: true })
+    assert.equal(result.error, undefined)
+    assert.equal(result.answer.modelCalled, true)
+    assert.match(result.answer.text, /30/)
+    const { data: row } = await buyer.from('ana_interactions').select('model, tokens, input_tokens, output_tokens, model_called').eq('id', result.interactionId).single()
+    assert.equal(row?.model_called, true)
+    assert.equal(row?.model, 'qwen/qwen3.8-27b')
+    assert.equal(Number(row?.tokens) > 0, true)
+    assert.equal(Number(row?.tokens), Number(row?.input_tokens) + Number(row?.output_tokens))
+  } finally {
+    await buyer.from('contracts').delete().eq('id', created.data?.id)
+  }
+})

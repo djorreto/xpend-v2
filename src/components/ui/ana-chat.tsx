@@ -18,6 +18,7 @@ interface Message {
   proposal?: AnaProposal | null
   interactionId?: string | null
   contextLabel?: string
+  modelCalled?: boolean
 }
 
 export function AnaChat() {
@@ -67,6 +68,7 @@ export function AnaChat() {
         proposal: payload.proposal,
         interactionId,
         contextLabel: payload.contextLabel,
+        modelCalled: Boolean(payload.modelCalled),
       }])
       if (interactionId && payload.proposal?.body) {
         setDrafts(prev => ({ ...prev, [interactionId]: payload.proposal.body }))
@@ -136,7 +138,7 @@ export function AnaChat() {
               </div>
               <div>
                 <CardTitle className="text-base font-bold text-white">ANA</CardTitle>
-                <p className="text-xs text-gray-300">{context.label}. Sin modelo externo.</p>
+                <p className="text-xs text-gray-300">{context.label}</p>
               </div>
             </div>
             <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="text-white hover:bg-white/10">
@@ -152,7 +154,7 @@ export function AnaChat() {
                     {message.role === 'user' ? <User className="h-4 w-4 text-white" /> : <Sparkles className="h-4 w-4 text-white" />}
                   </div>
                   <div className={`rounded-lg p-3 ${message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'}`}>
-                    {message.contextLabel && <p className="mb-1 text-xs opacity-70">{message.contextLabel}</p>}
+                    {message.contextLabel && <p className="mb-1 text-xs opacity-70">{message.contextLabel}{message.modelCalled ? ' · Groq' : ''}</p>}
                     <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
                     {message.evidence && message.evidence.length > 0 && (
                       <ul className="mt-2 space-y-1 text-xs">

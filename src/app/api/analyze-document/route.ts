@@ -4,11 +4,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import mammoth from 'mammoth'
 import { recordExternalAiCall, requireExternalAi } from '@/lib/spend-access'
 import { redactOutboundText } from '@/lib/spend-redaction'
+import { evaluateQuota, readGroqUsage } from '@/lib/groq-call'
 
 export async function POST(req: NextRequest) {
   try {
     const access = await requireExternalAi('analyst')
     if (!access.ok) return access.response
+    const quota = evaluateQuota(await readGroqUsage(access.supabase, access.profile.company_id, access.profile.id))
+    if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 429 })
 
     const formData = await req.formData()
     const file = formData.get('file') as File

@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createOpenAI } from '@ai-sdk/openai'
-import { generateText } from 'ai'
 import { RFX_FIELDS } from '@/lib/rfx-sections'
 import { recordExternalAiCall, requireExternalAi } from '@/lib/spend-access'
 import { redactOutboundText } from '@/lib/spend-redaction'
+import { completeGroq, evaluateQuota, GROQ_MODEL, readGroqUsage } from '@/lib/groq-call'
 
 export const runtime = 'nodejs'
-
-const groq = createOpenAI({
-  apiKey: process.env.GROQ_API_KEY || '',
-  baseURL: 'https://api.groq.com/openai/v1',
-})
 
 export async function POST(request: NextRequest) {
   const access = await requireExternalAi('analyst')
   if (!access.ok) return access.response
   if (!process.env.GROQ_API_KEY) return NextResponse.json({ error: 'ANA no está configurada' }, { status: 503 })
+  const quota = evaluateQuota(await readGroqUsage(access.supabase, access.profile.company_id, access.profile.id))
+  if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 429 })
 
   const body = await request.json()
   const title = String(body.title || '').trim()
@@ -41,7 +37,7 @@ export async function POST(request: NextRequest) {
       user_id: access.profile.id,
       outcome: 'blocked',
       block_reason: 'listado',
-      model: 'qwen/qwen3.8-27b',
+      model: GROQ_MODEL,
       payload_chars: description.length,
     })
     return NextResponse.json({ error: 'El texto parece un listado de gasto. No se envió a la IA.' }, { status: 422 })
@@ -50,7 +46,7 @@ export async function POST(request: NextRequest) {
     company_id: access.profile.company_id,
     user_id: access.profile.id,
     outcome: 'sent',
-    model: 'qwen/qwen3.8-27b',
+    model: GROQ_MODEL,
     payload_chars: safeDescription.text.length,
   })
   if (!recorded) {
@@ -59,8 +55,7 @@ export async function POST(request: NextRequest) {
 
   const fields = RFX_FIELDS.map(field => `${field.key}: ${field.label}`).join('\n')
   try {
-    const { text } = await generateText({
-      model: groq('qwen/qwen3.8-27b'),
+    const result = await completeGroq({
       temperature: 0.3,
       maxOutputTokens: 700,
       prompt: `Eres ANA, de compras. Prellena las bases de un ${type} en español, listas para que una persona las corrija. Cada campo: una o dos frases.
@@ -72,6 +67,7 @@ Categoría: ${plan.category || 'sin categoría'}
 Campos, responde solo JSON con estas claves:
 ${fields}`,
     })
+    const text = result.text
     const match = text.match(/\{[\s\S]*\}/)
     if (!match) return NextResponse.json({ error: 'ANA no devolvió los campos' }, { status: 502 })
     const raw = JSON.parse(match[0]) as Record<string, unknown>

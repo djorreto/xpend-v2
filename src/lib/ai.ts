@@ -1,25 +1,8 @@
 // src/lib/ai.ts
-import { createOpenAI } from '@ai-sdk/openai'
-import { generateText, streamText } from 'ai'
 import type { RfxWizardQuestion } from '@/types/rfx-maker'
+import { completeGroq, GROQ_MODEL } from './groq-call.ts'
 
-// Función para obtener la API key (compatible con Edge Runtime)
-function getGroqApiKey() {
-  if (typeof process !== 'undefined' && process.env) {
-    return process.env.GROQ_API_KEY || ''
-  }
-  return ''
-}
-
-// Groq es compatible con la API de OpenAI
-const groq = createOpenAI({
-  apiKey: getGroqApiKey(),
-  baseURL: 'https://api.groq.com/openai/v1',
-})
-
-// llama-3.3-70b-versatile ya no está en la cuenta Groq (octubre 2026).
-// qwen3.8-27b es el modelo de texto que sí responde en esta key.
-const model = groq('qwen/qwen3.8-27b')
+export { GROQ_MODEL }
 
 /**
  * Contexto y personalidad de ANA
@@ -112,15 +95,13 @@ IMPORTANTE:
  */
 export async function generateAnaResponse(userMessage: string, conversationHistory: string = '') {
   try {
-    const { text } = await generateText({
-      model,
+    const result = await completeGroq({
       system: ANA_SYSTEM_PROMPT,
       prompt: `${conversationHistory}\n\nUsuario: ${userMessage}\n\nANA:`,
       temperature: 0.7,
-      maxOutputTokens: 800, // Reducido para respuestas más concisas
+      maxOutputTokens: 700,
     })
-
-    return text
+    return result.text
   } catch (error) {
     console.error('Error generating ANA response:', error)
     throw new Error('No pude generar una respuesta. ¿Está configurada la API key de Groq?')
@@ -131,20 +112,7 @@ export async function generateAnaResponse(userMessage: string, conversationHisto
  * Genera una respuesta de ANA (con streaming para chat en tiempo real)
  */
 export async function streamAnaResponse(userMessage: string, conversationHistory: string = '') {
-  try {
-    const result = await streamText({
-      model,
-      system: ANA_SYSTEM_PROMPT,
-      prompt: `${conversationHistory}\n\nUsuario: ${userMessage}\n\nANA:`,
-      temperature: 0.7,
-      maxOutputTokens: 800, // Reducido para respuestas más concisas
-    })
-
-    return result
-  } catch (error) {
-    console.error('Error streaming ANA response:', error)
-    throw new Error('No pude generar una respuesta. ¿Está configurada la API key de Groq?')
-  }
+  return generateAnaResponse(userMessage, conversationHistory)
 }
 
 // Mantener compatibilidad con código legacy
@@ -162,14 +130,13 @@ No repitas verbatim bloques legales genéricos sin contenido; prioriza especific
  */
 export async function generateRfxTechnicalBaseContent(fullPrompt: string): Promise<string> {
   try {
-    const { text } = await generateText({
-      model,
+    const result = await completeGroq({
       system: RFX_TECHNICAL_WRITER_SYSTEM,
       prompt: fullPrompt,
       temperature: 0.35,
-      maxOutputTokens: 12_000,
+      maxOutputTokens: 700,
     })
-    return text
+    return result.text
   } catch (error) {
     console.error('Error generating RFX technical base:', error)
     throw new Error('No se pudo generar la base técnica. Verifica GROQ_API_KEY y límites del modelo.')
@@ -209,13 +176,13 @@ Reglas:
 - preguntas concretas, en español
 - no repitas lo ya explícito en contexto`
 
-  const { text } = await generateText({
-    model,
+  const result = await completeGroq({
     system: RFX_WIZARD_JSON_SYSTEM,
     prompt,
     temperature: 0.35,
-    maxOutputTokens: 2500,
+    maxOutputTokens: 700,
   })
+  const text = result.text
 
   const cleaned = text
     .trim()
@@ -288,15 +255,13 @@ RESPONDE EN ESTE FORMATO:
 **RIESGO:**
 [Bajo / Medio / Alto] - Justifica el nivel de riesgo si se publica así`
 
-    const { text } = await generateText({
-      model,
+    const result = await completeGroq({
       system: ANA_SYSTEM_PROMPT,
       prompt,
-      temperature: 0.5, // Más determinístico para análisis
-      maxOutputTokens: 1200, // Más conciso
+      temperature: 0.5,
+      maxOutputTokens: 700,
     })
-
-    return text
+    return result.text
   } catch (error) {
     console.error('Error analyzing document:', error)
     throw new Error('No pude analizar el documento. Intenta de nuevo.')

@@ -1,23 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createOpenAI } from '@ai-sdk/openai'
-import { generateText } from 'ai'
 import { assessmentPrompt, classifySpendLine, modelNeedsReview, parseAssessment } from '@/lib/spend-assessment'
 import { BASE_TAXONOMY, knownFamily, taxonomyFromRules } from '@/lib/spend-taxonomy'
 import { requireSpendAccess } from '@/lib/spend-access'
 import { EXTERNAL_AI_DISABLED, externalAiAllowed } from '@/lib/spend-privacy'
 import { REDACTION_MESSAGES, redactSpendDescription } from '@/lib/spend-redaction'
+import { completeGroq, evaluateQuota, GROQ_MODEL, readGroqUsage } from '@/lib/groq-call'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const MODEL_NAME = 'qwen/qwen3.8-27b'
-
-function getGroq() {
-  return createOpenAI({
-    apiKey: process.env.GROQ_API_KEY || '',
-    baseURL: 'https://api.groq.com/openai/v1',
-  })
-}
+const MODEL_NAME = GROQ_MODEL
 
 export async function POST(request: NextRequest) {
   try {
@@ -79,6 +71,8 @@ export async function POST(request: NextRequest) {
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: 'La categorización externa no está configurada' }, { status: 503 })
     }
+    const quota = evaluateQuota(await readGroqUsage(supabase, profile.company_id, profile.id))
+    if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 429 })
 
     const redacted = redactSpendDescription(line.description, line.supplier_name)
     const audit = {
@@ -113,11 +107,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No se pudo registrar el envío. La línea no salió de Xpend.' }, { status: 503 })
     }
 
-    const { text } = await generateText({
-      model: getGroq()(MODEL_NAME),
+    const result = await completeGroq({
       prompt: assessmentPrompt(redacted.text),
       temperature: 0.2,
+      maxOutputTokens: 400,
     })
+    const text = result.text
 
     const classification = parseAssessment(text, nodes)
     const familyKnown = knownFamily(nodes.length ? nodes : BASE_TAXONOMY, classification.category)

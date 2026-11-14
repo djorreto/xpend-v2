@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     compareId: typeof body.compareId === 'string' ? body.compareId : undefined,
     label: typeof body.label === 'string' ? body.label : fromPath.label,
   }
-  const result = await runAna(supabase, question, context)
+  const result = await runAna(supabase, question, context, { useModel: true })
   if (result.error === 'No autorizado') return NextResponse.json({ error: result.error }, { status: 401 })
   return NextResponse.json({
     interactionId: result.interactionId,

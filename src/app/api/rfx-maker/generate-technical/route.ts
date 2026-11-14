@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server'
 import type { GenerateTechnicalBaseRequest } from '@/types/rfx-maker'
 import { recordExternalAiCall, requireExternalAi } from '@/lib/spend-access'
 import { redactOutboundText } from '@/lib/spend-redaction'
+import { evaluateQuota, readGroqUsage } from '@/lib/groq-call'
 
 export const runtime = 'nodejs'
 
@@ -15,6 +16,8 @@ export async function POST(req: NextRequest) {
   try {
     const access = await requireExternalAi('analyst')
     if (!access.ok) return access.response
+    const quota = evaluateQuota(await readGroqUsage(access.supabase, access.profile.company_id, access.profile.id))
+    if (!quota.ok) return new Response(JSON.stringify({ success: false, error: quota.reason }), { status: 429 })
 
     const body: GenerateTechnicalBaseRequest = await req.json()
     const {

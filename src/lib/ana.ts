@@ -23,7 +23,7 @@ export type AnaAnswer = {
   evidence: AnaEvidence[]
   proposal: AnaProposal | null
   contextLabel: string
-  modelCalled: false
+  modelCalled: boolean
 }
 
 export type SpendLine = {

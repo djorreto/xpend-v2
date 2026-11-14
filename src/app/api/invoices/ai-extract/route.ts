@@ -1,26 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import mammoth from 'mammoth'
-import { createOpenAI } from '@ai-sdk/openai'
-import { generateText } from 'ai'
 import { recordExternalAiCall, requireExternalAi } from '@/lib/spend-access'
 import { stripContactData } from '@/lib/spend-redaction'
+import { completeGroq, evaluateQuota, GROQ_MODEL, readGroqUsage } from '@/lib/groq-call'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
-
-function getGroqApiKey() {
-  if (typeof process !== 'undefined' && process.env) {
-    return process.env.GROQ_API_KEY || ''
-  }
-  return ''
-}
-
-const groq = createOpenAI({
-  apiKey: getGroqApiKey(),
-  baseURL: 'https://api.groq.com/openai/v1',
-})
-
-const model = groq('qwen/qwen3.8-27b')
 
 async function extractTextFromFile(file: File): Promise<string> {
   if (file.type === 'text/plain') {
@@ -45,6 +30,8 @@ export async function POST(request: NextRequest) {
   try {
     const access = await requireExternalAi('analyst')
     if (!access.ok) return access.response
+    const quota = evaluateQuota(await readGroqUsage(access.supabase, access.profile.company_id, access.profile.id))
+    if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 429 })
 
     const formData = await request.formData()
     const file = formData.get('file') as File | null
@@ -60,7 +47,7 @@ export async function POST(request: NextRequest) {
       company_id: access.profile.company_id,
       user_id: access.profile.id,
       outcome: 'sent',
-      model: 'qwen/qwen3.8-27b',
+      model: GROQ_MODEL,
       payload_chars: sourceText.length,
     })
     if (!recorded) {
@@ -83,11 +70,12 @@ TEXTO A ANALIZAR:
 ${sourceText.slice(0, 8000)}
 `
 
-    const { text } = await generateText({
-      model,
+    const result = await completeGroq({
       prompt,
       temperature: 0.2,
+      maxOutputTokens: 500,
     })
+    const text = result.text
 
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
