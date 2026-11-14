@@ -1018,25 +1018,25 @@ export default function HomePage() {
               {
                 name: 'Xinergy',
                 description: 'Consultora de eficiencias, procurement y operaciones.',
-                logo: 'https://vlyqrosqapwgzyovbqpg.supabase.co/storage/v1/object/public/Partners/Xinergy.png',
+                logo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/Partners/Xinergy.png`,
                 website: 'https://xinergy.cl'
               },
               {
                 name: 'Dux Partners',
                 description: 'Consultora de optimización de operaciones logísticas y productivas.',
-                logo: 'https://vlyqrosqapwgzyovbqpg.supabase.co/storage/v1/object/public/Partners/Dux.png',
+                logo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/Partners/Dux.png`,
                 website: 'https://duxpartners.cl/'
               },
               {
                 name: 'Opticks',
                 description: 'SaaS de gestión de inventarios y optimización de capital de trabajo.',
-                logo: 'https://vlyqrosqapwgzyovbqpg.supabase.co/storage/v1/object/public/Partners/Opticks.png',
+                logo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/Partners/Opticks.png`,
                 website: 'https://opticks.cl/'
               },
               {
                 name: 'Reverse',
                 description: 'SaaS de venta de activos (Reverse sourcing).',
-                logo: 'https://vlyqrosqapwgzyovbqpg.supabase.co/storage/v1/object/public/Partners/Reverse.png',
+                logo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/Partners/Reverse.png`,
                 website: ''
               }
             ].map((partner) => (

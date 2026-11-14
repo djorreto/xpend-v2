@@ -10,7 +10,7 @@ Copia y pega estas variables en Vercel (o tu plataforma de deployment):
 NEXT_PUBLIC_SUPABASE_URL
 ```
 
-**Valor:** `https://vlyqrosqapwgzyovbqpg.supabase.co` (proyecto **XPEND V3** en Supabase)
+**Valor:** la URL del proyecto Supabase conectado a este despliegue. Producción usa `https://qtncgtqgvilbjhrvzoxe.supabase.co`.
 **Dónde obtenerlo:** Supabase Dashboard → Settings → API → Project URL
 
 ---
@@ -116,7 +116,7 @@ Antes de hacer deploy, verifica que tengas:
 Si quieres correr el proyecto localmente, crea un archivo `.env.local` en la raíz:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://vlyqrosqapwgzyovbqpg.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://qtncgtqgvilbjhrvzoxe.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
 SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
 GROQ_API_KEY=gsk_tu-groq-key

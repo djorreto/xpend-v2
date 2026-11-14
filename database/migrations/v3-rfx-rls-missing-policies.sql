@@ -1,5 +1,6 @@
 -- XPEND V3: Políticas RLS faltantes en tablas RFx (RLS activo sin policies = 0 filas visibles)
--- Ejecutar en proyecto vlyqrosqapwgzyovbqpg (o cualquier V3)
+-- Referencia histórica. No ejecutar sobre el proyecto antiguo.
+-- La base definitiva es qtncgtqgvilbjhrvzoxe.
 
 -- rfx_company_policies
 DROP POLICY IF EXISTS "Users can view rfx policies from their company" ON rfx_company_policies;

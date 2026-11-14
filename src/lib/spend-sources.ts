@@ -182,15 +182,17 @@ export async function closeSpendPeriod(
     }
   }
   const total = totals[0]?.amount || 0
+  const currency = totals[0]?.currency || 'CLP'
   const { error } = await supabase.from('spend_closures').upsert({
     company_id: companyId,
     period,
+    currency,
     source: sourceName,
     line_count: monthRows.length,
     total_amount: total,
     closed_by: userId,
     closed_at: new Date().toISOString(),
-  }, { onConflict: 'company_id,period' })
+  }, { onConflict: 'company_id,period,currency' })
 
   return {
     error: error?.message || null,
