@@ -19,6 +19,7 @@ export function DossierThread({ match }: { match: Match }) {
   const [dossier, setDossier] = useState<Dossier | null>(null)
   const [events, setEvents] = useState<{ id: string; action: string; detail: string | null; created_at: string }[]>([])
   const [report, setReport] = useState<string | null>(null)
+  const [linkedContract, setLinkedContract] = useState<{ id: string; code: string; status: string } | null>(null)
 
   useEffect(() => {
     const filters = [
@@ -60,6 +61,16 @@ export function DossierThread({ match }: { match: Match }) {
         : recommendation.eq('licitacion_id', recommendationLicitacion)
       void scoped.then(({ data }) => setReport(data?.[0]?.report_text || null))
     }
+    if (match.licitacionId) {
+      void supabase
+        .from('contracts')
+        .select('id, code, status')
+        .eq('licitacion_id', match.licitacionId)
+        .neq('status', 'terminated')
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => setLinkedContract(data || null))
+    }
   }, [match.companyId, match.id, match.sourcingPlanId, match.rfxProjectId, match.licitacionId, match.offerEventId, match.groupId])
 
   if (!dossier) return null
@@ -92,6 +103,11 @@ export function DossierThread({ match }: { match: Match }) {
       )}
       {report && (
         <pre className="mt-3 whitespace-pre-wrap text-xs text-petrol-blue">{report}</pre>
+      )}
+      {linkedContract && (
+        <p className="mt-3 text-xs">
+          Contrato <Link className="underline" href={`/contratos/${linkedContract.id}`}>{linkedContract.code}</Link> · {linkedContract.status}
+        </p>
       )}
       {dossier.award && (
         <p className="mt-3 text-xs">

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -35,7 +36,8 @@ type Finding = {
   confidence: string
   review_status: string
 }
-type Version = { id: string; version: number; status: string; body: string; approved_at: string | null; created_by: string }
+type Version = { id: string; version: number; status: string; body: string; approved_at: string | null; created_by: string; return_note: string | null }
+type Review = { id: string; version_id: string; action: string; note: string | null; created_at: string }
 
 const FIELD_COLUMN: Record<string, string> = {
   currency: 'currency',
@@ -61,9 +63,14 @@ export default function ContratoPage() {
   const [extractions, setExtractions] = useState<Extraction[]>([])
   const [findings, setFindings] = useState<Finding[]>([])
   const [versions, setVersions] = useState<Version[]>([])
+  const [reviews, setReviews] = useState<Review[]>([])
   const [needle, setNeedle] = useState('')
   const [correction, setCorrection] = useState<Record<string, string>>({})
+  const [legalRequired, setLegalRequired] = useState(false)
+  const [legalNote, setLegalNote] = useState('')
   const [variance, setVariance] = useState('')
+  const [returnNote, setReturnNote] = useState('')
+  const [draftBody, setDraftBody] = useState('')
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
@@ -74,18 +81,25 @@ export default function ContratoPage() {
     }
     setSession(appSession)
     const supabase = supabaseBrowser()
-    const [{ data: row }, { data: docs }, { data: fields }, { data: found }, { data: history }] = await Promise.all([
+    const [{ data: row }, { data: docs }, { data: fields }, { data: found }, { data: history }, { data: policy }] = await Promise.all([
       supabase.from('contracts').select('*').eq('id', contractId).single(),
       supabase.from('contract_documents').select('*').eq('contract_id', contractId).order('created_at'),
       supabase.from('contract_extractions').select('*').eq('contract_id', contractId).order('created_at'),
       supabase.from('contract_findings').select('*').eq('contract_id', contractId).order('created_at'),
-      supabase.from('contract_versions').select('id, version, status, body, approved_at, created_by').eq('contract_id', contractId).order('version'),
+      supabase.from('contract_versions').select('id, version, status, body, approved_at, created_by, return_note').eq('contract_id', contractId).order('version'),
+      supabase.from('contract_policies').select('legal_review_required').eq('company_id', appSession.companyId).maybeSingle(),
     ])
+    const versionIds = (history || []).map(version => version.id)
+    const { data: reviewRows } = versionIds.length
+      ? await supabase.from('contract_reviews').select('id, version_id, action, note, created_at').in('version_id', versionIds).order('created_at')
+      : { data: [] as Review[] }
     setContract(row)
+    setReviews(reviewRows || [])
     setDocuments(docs || [])
     setExtractions(fields || [])
     setFindings(found || [])
     setVersions(history || [])
+    setLegalRequired(Boolean(policy?.legal_review_required))
     setLoading(false)
   }, [contractId, router])
 
@@ -158,6 +172,7 @@ export default function ContratoPage() {
     const { error } = await supabaseBrowser().from('contract_versions').update({
       status: 'approved',
       variance_justification: variance.trim() || null,
+      legal_note: legalNote.trim() || null,
     }).eq('id', versionId)
     if (error) addToast({ type: 'error', title: 'No se aprobó', message: errorMessage(error, 'La versión sigue en revisión.') })
     else {
@@ -166,14 +181,58 @@ export default function ContratoPage() {
     }
   }
 
-  const exportApproved = () => {
-    const approved = [...versions].reverse().find(version => version.status === 'approved')
-    if (!approved) return
-    const blob = new Blob([approved.body], { type: 'text/plain;charset=utf-8' })
+  const saveVersion = async (source: Version) => {
+    if (!session?.companyId || !draftBody.trim()) return
+    const next = Math.max(...versions.map(version => version.version)) + 1
+    const { error } = await supabaseBrowser().from('contract_versions').insert({
+      contract_id: contractId,
+      company_id: session.companyId,
+      version: next,
+      body: draftBody.trim(),
+      status: 'draft',
+      created_by: session.userId,
+    })
+    if (error) addToast({ type: 'error', title: 'No se guardó la versión', message: error.message })
+    else {
+      addToast({ type: 'success', title: `Versión ${next} guardada`, message: `La versión ${source.version} no cambió.` })
+      setDraftBody('')
+      load()
+    }
+  }
+
+  const sendReview = async (versionId: string) => {
+    const { error } = await supabaseBrowser().from('contract_versions').update({ status: 'in_review' }).eq('id', versionId)
+    if (error) addToast({ type: 'error', title: 'No se envió', message: error.message })
+    else {
+      await supabaseBrowser().from('contracts').update({ status: 'in_review', updated_at: new Date().toISOString() }).eq('id', contractId)
+      load()
+    }
+  }
+
+  const returnVersion = async (versionId: string) => {
+    const { error } = await supabaseBrowser().from('contract_versions').update({
+      status: 'returned',
+      return_note: returnNote.trim(),
+    }).eq('id', versionId)
+    if (error) addToast({ type: 'error', title: 'No se devolvió', message: errorMessage(error, 'La devolución necesita una observación.') })
+    else {
+      setReturnNote('')
+      load()
+    }
+  }
+
+  const exportFile = async (format: 'docx' | 'pdf') => {
+    const response = await fetch(`/api/contracts/${contractId}/export?format=${format}`)
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}))
+      addToast({ type: 'error', title: 'No se exportó', message: payload.error || 'Solo se exporta la versión aprobada.' })
+      return
+    }
+    const blob = await response.blob()
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = `${contract?.code || 'contrato'}-v${approved.version}.txt`
+    anchor.download = `${contract?.code || 'contrato'}.${format}`
     anchor.click()
     URL.revokeObjectURL(url)
   }
@@ -189,7 +248,10 @@ export default function ContratoPage() {
   return (
     <MainLayout user={{ name: session.name, email: session.email, role: session.role }} companyName={session.companyName}>
       <div className="space-y-5">
-        <Button variant="outline" onClick={() => router.push('/contratos')}>Volver</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => router.push('/contratos')}>Volver</Button>
+          {contract.licitacion_id ? <Button variant="outline" asChild><Link href={`/licitaciones/${String(contract.licitacion_id)}`}>Ver licitación</Link></Button> : null}
+        </div>
         <div>
           <h1>{String(contract.code)} · {String(contract.name)}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -207,7 +269,23 @@ export default function ContratoPage() {
             <p>Pago: {String(contract.payment_terms || 'pendiente de confirmación')}</p>
             <p>Reajuste: {String(contract.adjustment_terms || 'pendiente de confirmación')}</p>
             <p>Observaciones: {String(contract.notes || 'sin observaciones')}</p>
-            {contract.award_id ? <p>Vinculado a la adjudicación {String(contract.award_id)}. Cambiar este monto no cambia el ahorro de la licitación.</p> : null}
+            {session.role === 'admin' && (
+              <label className="block text-sm">
+                <input type="checkbox" checked={legalRequired} onChange={async event => {
+                  const required = event.target.checked
+                  setLegalRequired(required)
+                  if (!session.companyId) return
+                  const { error } = await supabaseBrowser().from('contract_policies').upsert({
+                    company_id: session.companyId,
+                    legal_review_required: required,
+                    updated_by: session.userId,
+                    updated_at: new Date().toISOString(),
+                  })
+                  if (error) addToast({ type: 'error', title: 'No se guardó la política', message: error.message })
+                }} /> Exigir nota de revisión legal antes de aprobar
+              </label>
+            )}
+            {contract.award_id ? <p>Vinculado a la adjudicación. Cambiar este monto no cambia el ahorro de la licitación.</p> : null}
           </CardContent>
         </Card>
         <Card>
@@ -280,35 +358,51 @@ export default function ContratoPage() {
             <CardHeader><CardTitle>Versiones redactadas</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
               {versions.map(version => (
-                <div key={version.id}>
-                  <p>Versión {version.version} · {version.status}</p>
+                <div key={version.id} className="space-y-2 rounded-md border p-2">
+                  <p>Versión {version.version} · {version.status}{version.approved_at ? ` · aprobada ${new Date(version.approved_at).toLocaleString('es-CL')}` : ''}</p>
+                  {version.return_note && <p>Observación de devolución: {version.return_note}</p>}
                   <pre className="whitespace-pre-wrap text-xs">{version.body}</pre>
-                  {version.status !== 'approved' && contract.award_id && (
-                    <Textarea value={variance} onChange={event => setVariance(event.target.value)} placeholder="Si el monto, la moneda o el proveedor ya no coinciden con la adjudicación, explica la diferencia." />
+                  {version.status === 'draft' && (
+                    <>
+                      <Textarea value={draftBody} onChange={event => setDraftBody(event.target.value)} placeholder="Texto de la nueva versión. La anterior no se modifica." />
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={() => saveVersion(version)}>Guardar nueva versión</Button>
+                        <Button size="sm" onClick={() => sendReview(version.id)}>Enviar esta versión a revisión</Button>
+                      </div>
+                    </>
                   )}
-                  {version.status !== 'approved' && <Button size="sm" onClick={() => approve(version.id)}>Aprobar versión</Button>}
+                  {version.status === 'returned' && (
+                    <Button size="sm" variant="outline" onClick={() => setDraftBody(version.body)}>Usar este texto para corregir</Button>
+                  )}
+                  {version.status === 'in_review' && version.created_by !== session.userId && (
+                    <div className="space-y-2">
+                      <Textarea value={returnNote} onChange={event => setReturnNote(event.target.value)} placeholder="Observación para devolver esta versión" />
+                      {legalRequired && <Textarea value={legalNote} onChange={event => setLegalNote(event.target.value)} placeholder="Nota de revisión legal" />}
+                      {contract.award_id && (
+                        <Textarea value={variance} onChange={event => setVariance(event.target.value)} placeholder="Si el monto, la moneda o el proveedor ya no coinciden con la adjudicación, explica la diferencia." />
+                      )}
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => returnVersion(version.id)}>Devolver</Button>
+                        <Button size="sm" onClick={() => approve(version.id)}>Aprobar esta versión</Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
-              <Button variant="outline" onClick={exportApproved}>Exportar versión aprobada</Button>
+              {reviews.length > 0 && (
+                <div className="space-y-1">
+                  {reviews.map(review => {
+                    const version = versions.find(item => item.id === review.version_id)
+                    return <p key={review.id}>Revisión versión {version?.version ?? '—'} · {review.action}{review.note ? ` · ${review.note}` : ''}</p>
+                  })}
+                </div>
+              )}
               {versions.some(version => version.status === 'approved') && (
-                <Button variant="outline" onClick={async () => {
-                  const approved = [...versions].reverse().find(version => version.status === 'approved')
-                  if (!approved || !session.companyId) return
-                  const next = Math.max(...versions.map(version => version.version)) + 1
-                  const { error } = await supabaseBrowser().from('contract_versions').insert({
-                    contract_id: contractId,
-                    company_id: session.companyId,
-                    version: next,
-                    body: `${approved.body}\n\nEdición posterior. La versión ${approved.version} aprobada no cambia.`,
-                    status: 'draft',
-                    created_by: session.userId,
-                  })
-                  if (error) addToast({ type: 'error', title: 'No se creó la versión', message: error.message })
-                  else {
-                    addToast({ type: 'success', title: 'Nueva versión', message: 'La aprobada sigue igual.' })
-                    load()
-                  }
-                }}>Crear versión siguiente</Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={() => exportFile('docx')}>Exportar DOCX</Button>
+                  <Button variant="outline" onClick={() => exportFile('pdf')}>Exportar PDF</Button>
+                  <p className="w-full text-xs text-muted-foreground">El archivo sale de la última versión aprobada. No se guarda una segunda copia.</p>
+                </div>
               )}
             </CardContent>
           </Card>

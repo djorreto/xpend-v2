@@ -30,4 +30,6 @@ test('el borrador hereda el monto adjudicado y deja pendientes las fechas que no
   assert.ok(draft.pending.some(field => field.key === 'inicio'))
   assert.ok(draft.confirmed.some(fact => fact.label === 'Monto adjudicado'))
   assert.equal(draft.body.includes('cláusula de multa'), false)
+  assert.equal(draft.body.includes('Datos confirmados'), false)
+  assert.ok(draft.pending.some(field => field.key === 'renovacion'))
 })

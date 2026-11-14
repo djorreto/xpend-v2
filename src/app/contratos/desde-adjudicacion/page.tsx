@@ -108,7 +108,7 @@ function DesdeAdjudicacionForm() {
   }, [awardId, router])
 
   useEffect(() => {
-    if (!packet || !templateId) return
+    if (!packet) return
     const template = templates.find(item => item.id === templateId)
     const chosen = clauses.filter(clause => selected[clause.id]).map(clause => `${clause.title}. ${clause.body}`)
     const draft = awardContractDraft({ ...packet, templateBody: template?.body || packet.templateBody, variables, clauses: chosen })
@@ -129,9 +129,13 @@ function DesdeAdjudicacionForm() {
       amount: packet.amount,
       currency: packet.currency,
       supplierId: (packet as { supplierId?: string }).supplierId,
+      supplierName: packet.supplierName,
+      supplierRut: packet.supplierRut,
+      buyer: packet.companyName,
       licitacionId: packet.licitacionId,
       bidId: (packet as { bidId?: string }).bidId,
       scope: packet.scope,
+      lines: packet.lines,
     }
     const { data, error } = await supabaseBrowser().from('contracts').insert({
       company_id: session.companyId,
@@ -140,7 +144,7 @@ function DesdeAdjudicacionForm() {
       contract_type: 'Servicio',
       supplier_id: snapshot.supplierId,
       counterparty_name: packet.supplierName,
-      status: 'in_review',
+      status: 'draft',
       origin: 'award',
       award_id: awardId,
       licitacion_id: packet.licitacionId,
@@ -170,7 +174,7 @@ function DesdeAdjudicacionForm() {
       company_id: session.companyId,
       version: 1,
       body: preview,
-      status: 'in_review',
+      status: 'draft',
       created_by: session.userId,
     })
     if (version.error) {

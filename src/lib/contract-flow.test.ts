@@ -149,7 +149,7 @@ test('un contrato cargado se confirma, se versiona y no altera la adjudicación'
   assert.notEqual(approved.data?.approved_by, buyerId)
 
   const rewrite = await buyer.from('contract_versions').update({ body: 'texto distinto' }).eq('id', version.id)
-  assert.match(rewrite.error?.message || '', /no se reescribe/)
+  assert.match(rewrite.error?.message || '', /ya no se edita/)
   const next = await buyer.from('contract_versions').insert({
     contract_id: draft.id,
     company_id: profile.company_id,
@@ -157,7 +157,7 @@ test('un contrato cargado se confirma, se versiona y no altera la adjudicación'
     body: 'Edición posterior.',
     status: 'draft',
     created_by: buyerId,
-  })
+  }).select('id').single()
   assert.equal(next.error, null)
   const { data: still } = await buyer.from('contract_versions').select('body, status').eq('id', version.id).single()
   assert.equal(still?.status, 'approved')
@@ -165,9 +165,26 @@ test('un contrato cargado se confirma, se versiona y no altera la adjudicación'
 
   const { data: award } = await buyer.from('process_awards').select('id, estimated_savings').eq('licitacion_id', 'LIC-F1B-MANT').single()
   if (award?.id) {
-    await buyer.from('contracts').update({ award_id: award.id, amount: 10 }).eq('id', draft.id)
+    const linked = await buyer.from('contracts').update({
+      amount: 10,
+      currency: 'USD',
+      supplier_id: 'supplier-1794671438413',
+      source_snapshot: { amount: '150000', currency: 'USD', supplierId: 'supplier-1794671438413' },
+    }).eq('id', draft.id).select('amount').single()
+    assert.equal(linked.error, null)
+    assert.equal(Number(linked.data?.amount), 10)
     const { data: same } = await buyer.from('process_awards').select('estimated_savings').eq('id', award.id).single()
     assert.equal(Number(same?.estimated_savings), 0)
+    await buyer.from('contract_versions').update({ status: 'in_review' }).eq('id', next.data?.id)
+    const ownReturn = await buyer.from('contract_versions').update({ status: 'returned', return_note: 'Falta el plazo.' }).eq('id', next.data?.id)
+    assert.match(ownReturn.error?.message || '', /no devuelve/)
+    const denied = await manager.from('contract_versions').update({ status: 'approved' }).eq('id', next.data?.id)
+    assert.match(denied.error?.message || '', /difieren de la adjudicación/)
+    const allowed = await manager.from('contract_versions').update({
+      status: 'approved',
+      variance_justification: 'El borrador de prueba usa otro monto. La adjudicación y el ahorro no cambian.',
+    }).eq('id', next.data?.id)
+    assert.equal(allowed.error, null)
     const changed = await buyer.from('process_awards').update({ amount: 1 }).eq('id', award.id).select('amount')
     assert.equal(changed.data?.length || 0, 0)
     const { data: untouched } = await buyer.from('process_awards').select('amount, estimated_savings').eq('id', award.id).single()

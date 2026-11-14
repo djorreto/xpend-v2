@@ -51,6 +51,7 @@ export function awardContractDraft(input: {
   if (!input.variables.termino?.trim()) pending.push({ key: 'termino', label: 'Fecha de término' })
   if (!input.variables.preaviso?.trim()) pending.push({ key: 'preaviso', label: 'Plazo de preaviso' })
   if (!input.variables.periodicidad?.trim()) pending.push({ key: 'periodicidad', label: 'Periodicidad' })
+  if (!input.variables.renovacion?.trim()) pending.push({ key: 'renovacion', label: 'Renovación' })
 
   const rendered = renderContract(input.templateBody, {
     contratante: input.companyName || '',
@@ -70,23 +71,10 @@ export function awardContractDraft(input: {
     : 'Sin partidas registradas en la oferta.'
   const body = [
     rendered,
-    '',
-    'Anexo comercial. Estas partidas se copian de la oferta adjudicada. No se convierten en cláusulas jurídicas.',
-    partidas,
-    '',
-    'Anexo técnico. Texto de la oferta, sujeto a revisión.',
-    input.technical?.trim() || 'La oferta no tiene resumen técnico.',
-    input.answers.length ? input.answers.map(answer => `- ${answer}`).join('\n') : '',
-    '',
-    'Documentos citados del expediente. No se transcribe su contenido.',
-    input.files.length ? input.files.map(file => `- ${file}`).join('\n') : 'No hay archivos de oferta asociados.',
-    '',
-    'Datos confirmados:',
-    ...confirmed.map(fact => `- ${fact.label}: ${fact.value} (${fact.source})`),
-    pending.length
-      ? `Pendientes de validación: ${pending.map(field => field.label).join(', ')}.`
-      : 'Las variables esenciales indicadas quedaron completadas.',
-  ].filter(part => part !== '').join('\n')
+    `Anexo comercial. Estas partidas se copian de la oferta adjudicada. No se convierten en cláusulas jurídicas.\n${partidas}`,
+    `Anexo técnico. Texto de la oferta, sujeto a revisión.\n${input.technical?.trim() || 'La oferta no tiene resumen técnico.'}${input.answers.length ? `\n${input.answers.map(answer => `- ${answer}`).join('\n')}` : ''}`,
+    `Documentos citados del expediente. No se transcribe su contenido.\n${input.files.length ? input.files.map(file => `- ${file}`).join('\n') : 'No hay archivos de oferta asociados.'}`,
+  ].join('\n\n')
 
   return { body, confirmed, pending }
 }

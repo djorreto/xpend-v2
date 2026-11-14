@@ -61,6 +61,7 @@ export default function DecisionPage() {
   const [decisions, setDecisions] = useState<DecisionRow[]>([])
   const [votes, setVotes] = useState<VoteRow[]>([])
   const [awardId, setAwardId] = useState<string | null>(null)
+  const [awardContractId, setAwardContractId] = useState<string | null>(null)
   const [risks, setRisks] = useState('')
   const [exceptions, setExceptions] = useState('')
   const [observations, setObservations] = useState('')
@@ -93,7 +94,7 @@ export default function DecisionPage() {
       supabase.from('evaluations').select('*').eq('event_id', eventId).maybeSingle(),
       supabase.from('award_policies').select('*').eq('company_id', event.company_id).maybeSingle(),
       supabase.from('decision_packets').select('*').eq('event_id', eventId).order('version'),
-      supabase.from('process_awards').select('id').eq('event_id', eventId).maybeSingle(),
+      supabase.from('process_awards').select('id, contract_id').eq('event_id', eventId).maybeSingle(),
     ])
     if (policyRow) {
       setPolicy({
@@ -105,6 +106,7 @@ export default function DecisionPage() {
     }
     setPackets((packetRows || []) as PacketRow[])
     setAwardId(award?.id || null)
+    setAwardContractId(award?.contract_id || null)
     const packetIds = (packetRows || []).map(row => row.id)
     if (packetIds.length) {
       const { data: decisionRows } = await supabase.from('award_decisions').select('*').in('packet_id', packetIds)
@@ -342,7 +344,7 @@ export default function DecisionPage() {
           <Button variant="outline" onClick={() => router.push(`/sala/${eventId}`)}>Volver a la sala</Button>
           <Button variant="outline" onClick={download}>Descargar informe</Button>
           <Button variant="outline" onClick={() => window.print()}>Imprimir o guardar PDF</Button>
-          {awardId && <Button variant="outline" onClick={() => router.push(`/contratos/desde-adjudicacion?award=${awardId}`)}>Generar contrato</Button>}
+          {awardId && <Button variant="outline" onClick={() => router.push(awardContractId ? `/contratos/${awardContractId}` : `/contratos/desde-adjudicacion?award=${awardId}`)}>{awardContractId ? 'Abrir contrato' : 'Generar contrato'}</Button>}
         </div>
         <div>
           <h1>Decisión · {shown.title}</h1>
