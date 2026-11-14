@@ -35,7 +35,6 @@ function NuevoContratoForm() {
   const [counterparty, setCounterparty] = useState('')
   const [notes, setNotes] = useState('')
   const [file, setFile] = useState<File | null>(null)
-  const [awardId, setAwardId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -47,14 +46,9 @@ function NuevoContratoForm() {
       setSession(appSession)
       const { data } = await supabaseBrowser().from('suppliers').select('id, fantasy_name').eq('company_id', appSession.companyId)
       setSuppliers(data || [])
-      const award = params.get('award')
-      if (!award) return
-      const { data: won } = await supabaseBrowser().from('process_awards').select('id, supplier_id, amount, currency, scope_summary').eq('id', award).maybeSingle()
-      if (!won) return
-      setAwardId(won.id)
-      setSupplierId(won.supplier_id)
-      setName(`Contrato desde adjudicación ${won.currency} ${won.amount}`)
-      setNotes(`Borrador copiado de la adjudicación. Monto de origen ${won.currency} ${won.amount}. ${won.scope_summary || ''}`)
+      if (params.get('award')) {
+        router.replace(`/contratos/desde-adjudicacion?award=${params.get('award')}`)
+      }
     })
   }, [params, router])
 
@@ -68,8 +62,7 @@ function NuevoContratoForm() {
       contract_type: type,
       supplier_id: supplierId || null,
       counterparty_name: counterparty.trim() || null,
-      origin: awardId ? 'award' : 'upload',
-      award_id: awardId,
+      origin: 'upload',
       owner_id: session.userId,
       notes: notes.trim() || null,
       created_by: session.userId,

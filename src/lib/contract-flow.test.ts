@@ -168,6 +168,23 @@ test('un contrato cargado se confirma, se versiona y no altera la adjudicación'
     await buyer.from('contracts').update({ award_id: award.id, amount: 10 }).eq('id', draft.id)
     const { data: same } = await buyer.from('process_awards').select('estimated_savings').eq('id', award.id).single()
     assert.equal(Number(same?.estimated_savings), 0)
+    const changed = await buyer.from('process_awards').update({ amount: 1 }).eq('id', award.id).select('amount')
+    assert.equal(changed.data?.length || 0, 0)
+    const { data: untouched } = await buyer.from('process_awards').select('amount, estimated_savings').eq('id', award.id).single()
+    assert.equal(Number(untouched?.amount), 150000)
+    assert.equal(Number(untouched?.estimated_savings), 0)
+    const duplicate = await buyer.from('contracts').insert({
+      company_id: profile.company_id,
+      code: `${code}-DUP`,
+      name: 'Duplicado',
+      origin: 'award',
+      award_id: award.id,
+      currency: 'USD',
+      amount: 150000,
+      supplier_id: 'supplier-1794671438413',
+      created_by: buyerId,
+    })
+    assert.ok(duplicate.error)
   }
 
   execSync(`docker exec -i supabase_db_xpend-v3-local psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "DO \\$\\$ DECLARE n int; BEGIN PERFORM set_config('request.jwt.claims', json_build_object('sub','919218a5-34d0-4746-b299-c9abe8f804ca','role','authenticated')::text, true); PERFORM set_config('role','authenticated', true); SELECT count(*) INTO n FROM public.contracts WHERE id = '${contractId}'; IF n <> 0 THEN RAISE EXCEPTION 'el proveedor vio el contrato'; END IF; END \\$\\$;"`, { stdio: 'pipe' })

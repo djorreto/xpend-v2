@@ -63,6 +63,7 @@ export default function ContratoPage() {
   const [versions, setVersions] = useState<Version[]>([])
   const [needle, setNeedle] = useState('')
   const [correction, setCorrection] = useState<Record<string, string>>({})
+  const [variance, setVariance] = useState('')
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
@@ -154,7 +155,10 @@ export default function ContratoPage() {
   }
 
   const approve = async (versionId: string) => {
-    const { error } = await supabaseBrowser().from('contract_versions').update({ status: 'approved' }).eq('id', versionId)
+    const { error } = await supabaseBrowser().from('contract_versions').update({
+      status: 'approved',
+      variance_justification: variance.trim() || null,
+    }).eq('id', versionId)
     if (error) addToast({ type: 'error', title: 'No se aprobó', message: errorMessage(error, 'La versión sigue en revisión.') })
     else {
       addToast({ type: 'success', title: 'Versión aprobada', message: 'Quedó congelada. Una edición posterior crea otra versión.' })
@@ -279,6 +283,9 @@ export default function ContratoPage() {
                 <div key={version.id}>
                   <p>Versión {version.version} · {version.status}</p>
                   <pre className="whitespace-pre-wrap text-xs">{version.body}</pre>
+                  {version.status !== 'approved' && contract.award_id && (
+                    <Textarea value={variance} onChange={event => setVariance(event.target.value)} placeholder="Si el monto, la moneda o el proveedor ya no coinciden con la adjudicación, explica la diferencia." />
+                  )}
                   {version.status !== 'approved' && <Button size="sm" onClick={() => approve(version.id)}>Aprobar versión</Button>}
                 </div>
               ))}

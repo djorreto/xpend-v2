@@ -342,7 +342,7 @@ export default function DecisionPage() {
           <Button variant="outline" onClick={() => router.push(`/sala/${eventId}`)}>Volver a la sala</Button>
           <Button variant="outline" onClick={download}>Descargar informe</Button>
           <Button variant="outline" onClick={() => window.print()}>Imprimir o guardar PDF</Button>
-          {awardId && <Button variant="outline" onClick={() => router.push(`/contratos/nuevo?award=${awardId}`)}>Crear contrato desde la adjudicación</Button>}
+          {awardId && <Button variant="outline" onClick={() => router.push(`/contratos/desde-adjudicacion?award=${awardId}`)}>Generar contrato</Button>}
         </div>
         <div>
           <h1>Decisión · {shown.title}</h1>
