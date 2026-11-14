@@ -350,7 +350,7 @@ export default function ContratoPage() {
             <Input value={needle} onChange={event => setNeedle(event.target.value)} placeholder="Palabra o frase del documento" />
             {needle && hit < 0 && <p>Esa frase no está en el texto extraído.</p>}
             {hit >= 0 && <p>Encontrada en los caracteres {hit + 1}-{hit + needle.length}: …{snippet}…</p>}
-            <p className="text-xs text-muted-foreground">ANA no responde todavía. Esta búsqueda usa el texto guardado y no llama a un modelo.</p>
+            <p className="text-xs text-muted-foreground">ANA lee este contrato desde el chat y cita el texto guardado. No llama a un modelo.</p>
           </CardContent>
         </Card>
         {versions.length > 0 && (

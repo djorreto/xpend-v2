@@ -1,214 +1,118 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { MessageCircle, X, Send, FileText, Loader2, Sparkles, User } from 'lucide-react'
-import { supabaseBrowser } from '@/lib/supabase'
-import { useToast } from '@/components/ui/toast'
+import { Textarea } from '@/components/ui/textarea'
+import { Loader2, MessageCircle, Send, Sparkles, User, X } from 'lucide-react'
+import { contextFromPath, type AnaEvidence, type AnaProposal } from '@/lib/ana'
 
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  evidence?: AnaEvidence[]
+  proposal?: AnaProposal | null
+  interactionId?: string | null
+  contextLabel?: string
 }
 
 export function AnaChat() {
+  const pathname = usePathname() || '/'
+  const context = contextFromPath(pathname)
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '0',
       role: 'assistant',
-      content:
-        'Hola! Soy ANA (Asistente de Negociaciones y Abastecimiento) 👋\n\nTe ayudo con sourcing de forma rápida y práctica:\n\n• Estrategia de categorías\n• Negociación con proveedores\n• RFP, RFQ, RFI\n• Análisis de costos\n\n¿En qué te puedo ayudar?',
+      content: 'Leo el registro abierto y los datos autorizados de tu empresa. No llamo a un modelo y no guardo nada hasta que lo confirmes.',
       timestamp: new Date(),
+      contextLabel: context.label,
     },
   ])
   const [input, setInput] = useState('')
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const { addToast } = useToast()
 
-  // Scroll automático al último mensaje
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Obtener userId
-  useEffect(() => {
-    const getUserId = async () => {
-      const supabase = supabaseBrowser()
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      if (session?.user) {
-        setUserId(session.user.id)
-      }
-    }
-    getUserId()
-  }, [])
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!input.trim() || isLoading) return
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-      timestamp: new Date(),
-    }
-
-    setMessages((prev) => [...prev, userMessage])
+  const handleSendMessage = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const question = input.trim()
+    if (!question || isLoading) return
+    setMessages(prev => [...prev, { id: `${Date.now()}`, role: 'user', content: question, timestamp: new Date() }])
     setInput('')
     setIsLoading(true)
-
     try {
-      // Construir historial de conversación
-      const conversationHistory = messages
-        .slice(-5) // Últimos 5 mensajes para contexto
-        .map((m) => `${m.role === 'user' ? 'Usuario' : 'ANA'}: ${m.content}`)
-        .join('\n')
-
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/api/ana', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: input,
-          conversationHistory,
-          userId,
-        }),
+        body: JSON.stringify({ question, path: pathname, module: context.module, recordId: context.recordId }),
       })
-
-      if (!response.ok) {
-        throw new Error('Error al obtener respuesta')
-      }
-
-      // Leer el stream (texto plano)
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      let assistantMessage = ''
-
-      const assistantMessageId = Date.now().toString()
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: assistantMessageId,
-          role: 'assistant',
-          content: '',
-          timestamp: new Date(),
-        },
-      ])
-
-      while (reader) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-        assistantMessage += chunk
-
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantMessageId ? { ...m, content: assistantMessage } : m
-          )
-        )
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload.error || 'No pude consultar')
+      const interactionId = payload.interactionId as string | null
+      setMessages(prev => [...prev, {
+        id: `${Date.now()}-ana`,
+        role: 'assistant',
+        content: payload.text,
+        timestamp: new Date(),
+        evidence: payload.evidence || [],
+        proposal: payload.proposal,
+        interactionId,
+        contextLabel: payload.contextLabel,
+      }])
+      if (interactionId && payload.proposal?.body) {
+        setDrafts(prev => ({ ...prev, [interactionId]: payload.proposal.body }))
       }
     } catch (error) {
-      console.error('Error sending message:', error)
-      addToast({
-        type: 'error',
-        title: 'Error',
-        message: 'No pude procesar tu mensaje. Intenta de nuevo.',
-      })
+      setMessages(prev => [...prev, {
+        id: `${Date.now()}-error`,
+        role: 'assistant',
+        content: error instanceof Error ? error.message : 'No pude consultar el registro.',
+        timestamp: new Date(),
+      }])
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Validar tamaño (máx 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      addToast({
-        type: 'error',
-        title: 'Archivo muy grande',
-        message: 'El archivo no puede superar los 5MB',
-      })
-      return
-    }
-
-    setIsAnalyzing(true)
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('documentType', 'Especificación Técnica')
-
+  const confirm = async (message: Message) => {
+    if (!message.interactionId || !message.proposal) return
+    setIsLoading(true)
     try {
-      const response = await fetch('/api/analyze-document', {
+      const response = await fetch('/api/ana/confirm', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          interactionId: message.interactionId,
+          body: drafts[message.interactionId] || message.proposal.body,
+        }),
       })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al analizar el documento')
-      }
-
-      // Agregar mensaje del usuario
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        role: 'user',
-        content: `📄 He subido el documento: **${file.name}** (${(file.size / 1024).toFixed(1)} KB)\n\n¿Puedes revisarlo y decirme si está completo?`,
-        timestamp: new Date(),
-      }
-
-      // Agregar respuesta de ANA
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+      const payload = await response.json()
+      setMessages(prev => [...prev, {
+        id: `${Date.now()}-saved`,
         role: 'assistant',
-        content: `📊 **Análisis del documento: ${data.fileName}**\n\n${data.analysis}`,
+        content: response.ok ? payload.detail : (payload.error || 'No se guardó'),
         timestamp: new Date(),
-      }
-
-      setMessages((prev) => [...prev, userMessage, assistantMessage])
-
-      addToast({
-        type: 'success',
-        title: 'Documento analizado',
-        message: `He revisado tu documento (${data.wordCount} palabras)`,
-      })
-    } catch (error) {
-      console.error('Error analyzing document:', error)
-      addToast({
-        type: 'error',
-        title: 'Error al analizar',
-        message: error instanceof Error ? error.message : 'No pude analizar el documento',
-      })
+      }])
     } finally {
-      setIsAnalyzing(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
+      setIsLoading(false)
     }
   }
 
   return (
     <>
-      {/* Botón flotante - Ajustado para móvil */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 group"
+          className="fixed bottom-4 right-4 z-50 group md:bottom-6 md:right-6"
           aria-label="Abrir chat de ANA"
         >
           <div
@@ -220,151 +124,83 @@ export function AnaChat() {
         </button>
       )}
 
-      {/* Chat window - Responsive: casi fullscreen en móvil, ventana flotante en desktop */}
       {isOpen && (
-        <Card
-          className="fixed z-50 shadow-2xl flex flex-col
-                     bottom-0 right-0 left-0 md:bottom-6 md:right-6 md:left-auto
-                     w-full md:w-[400px]
-                     h-[calc(100vh-60px)] md:h-[600px]
-                     md:max-h-[calc(100vh-100px)]
-                     rounded-t-xl md:rounded-xl"
-        >
-          {/* Header */}
+        <Card className="fixed bottom-0 left-0 right-0 z-50 flex h-[calc(100vh-60px)] w-full flex-col rounded-t-xl shadow-2xl md:bottom-6 md:left-auto md:right-6 md:h-[600px] md:max-h-[calc(100vh-100px)] md:w-[400px] md:rounded-xl">
           <CardHeader
-            className="flex flex-row items-center justify-between space-y-0 pb-4 border-b"
-            style={{
-              background: 'linear-gradient(135deg, #2D3E3D 0%, #1a2625 100%)',
-            }}
+            className="flex flex-row items-center justify-between space-y-0 border-b pb-4"
+            style={{ background: 'linear-gradient(135deg, #2D3E3D 0%, #1a2625 100%)' }}
           >
             <div className="flex items-center space-x-3">
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: '#3BE7AE' }}
-              >
-                <Sparkles className="w-5 h-5" style={{ color: '#2D3E3D' }} />
+              <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: '#3BE7AE' }}>
+                <Sparkles className="h-5 w-5" style={{ color: '#2D3E3D' }} />
               </div>
               <div>
                 <CardTitle className="text-base font-bold text-white">ANA</CardTitle>
-                <p className="text-xs text-gray-300">Asistente de Negociaciones y Abastecimiento</p>
+                <p className="text-xs text-gray-300">{context.label}. Sin modelo externo.</p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsOpen(false)}
-              className="text-white hover:bg-white/10"
-            >
+            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="text-white hover:bg-white/10">
               <X className="h-4 w-4" />
             </Button>
           </CardHeader>
 
-          {/* Messages */}
-          <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`flex items-start space-x-2 max-w-[85%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}
-                >
-                  <div
-                    className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                      message.role === 'user'
-                        ? 'bg-blue-500'
-                        : 'bg-gradient-to-br from-teal-400 to-green-400'
-                    }`}
-                  >
-                    {message.role === 'user' ? (
-                      <User className="w-4 h-4 text-white" />
-                    ) : (
-                      <Sparkles className="w-4 h-4 text-white" />
-                    )}
+          <CardContent className="flex-1 space-y-4 overflow-y-auto p-4">
+            {messages.map(message => (
+              <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`flex max-w-[85%] items-start space-x-2 ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                  <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${message.role === 'user' ? 'bg-blue-500' : 'bg-gradient-to-br from-teal-400 to-green-400'}`}>
+                    {message.role === 'user' ? <User className="h-4 w-4 text-white" /> : <Sparkles className="h-4 w-4 text-white" />}
                   </div>
-                  <div
-                    className={`rounded-lg p-3 ${
-                      message.role === 'user'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-100 text-gray-900'
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                    <p className="text-xs mt-1 opacity-70">
-                      {message.timestamp.toLocaleTimeString('es-CL', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
+                  <div className={`rounded-lg p-3 ${message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'}`}>
+                    {message.contextLabel && <p className="mb-1 text-xs opacity-70">{message.contextLabel}</p>}
+                    <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
+                    {message.evidence && message.evidence.length > 0 && (
+                      <ul className="mt-2 space-y-1 text-xs">
+                        {message.evidence.map((item, index) => (
+                          <li key={`${item.source}-${index}`}>{item.source}: {item.quote || item.value || item.label}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {message.proposal && message.interactionId && (
+                      <div className="mt-2 space-y-2">
+                        <Textarea
+                          value={drafts[message.interactionId] || ''}
+                          onChange={event => setDrafts(prev => ({ ...prev, [message.interactionId || '']: event.target.value }))}
+                        />
+                        <Button type="button" size="sm" onClick={() => confirm(message)}>Guardar con mi confirmación</Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-lg p-3 flex items-center space-x-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-teal-500" />
-                  <span className="text-sm text-gray-600">ANA está escribiendo...</span>
+                <div className="flex items-center space-x-2 rounded-lg bg-gray-100 p-3">
+                  <Loader2 className="h-4 w-4 animate-spin text-teal-500" />
+                  <span className="text-sm text-gray-600">ANA está leyendo el registro...</span>
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </CardContent>
 
-          {/* Input */}
-          <div className="border-t p-4 space-y-2">
+          <div className="border-t p-4">
             <form onSubmit={handleSendMessage} className="flex space-x-2">
               <Input
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Pregúntame sobre sourcing..."
-                disabled={isLoading || isAnalyzing}
+                onChange={event => setInput(event.target.value)}
+                placeholder="Pregunta por este registro..."
+                disabled={isLoading}
                 className="flex-1"
               />
-              <Button
-                type="submit"
-                size="icon"
-                disabled={isLoading || isAnalyzing || !input.trim()}
-                style={{ backgroundColor: '#3BE7AE', color: '#2D3E3D' }}
-              >
+              <Button type="submit" size="icon" disabled={isLoading || !input.trim()} style={{ backgroundColor: '#3BE7AE', color: '#2D3E3D' }}>
                 <Send className="h-4 w-4" />
               </Button>
             </form>
-            <div className="flex items-center justify-between">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".txt,.docx"
-                onChange={handleFileUpload}
-                className="hidden"
-                id="file-upload"
-              />
-              <label htmlFor="file-upload">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={isLoading || isAnalyzing}
-                  className="cursor-pointer"
-                  onClick={() => fileInputRef.current?.click()}
-                  asChild
-                >
-                  <span>
-                    {isAnalyzing ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <FileText className="h-4 w-4 mr-2" />
-                    )}
-                    Subir Doc (.docx, .txt)
-                  </span>
-                </Button>
-              </label>
-              <p className="text-xs text-gray-500">Máx 5MB</p>
-            </div>
           </div>
         </Card>
       )}
     </>
   )
 }
-
