@@ -3,7 +3,6 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { createHash } from 'crypto'
 import mammoth from 'mammoth'
-import { PDFParse } from 'pdf-parse'
 import { extractContractSignals } from '@/lib/contract-extract'
 import { contractFilePath } from '@/lib/storage-paths'
 
@@ -16,6 +15,7 @@ async function readText(fileName: string, buffer: Buffer) {
     return { text: result.value || '', format: 'docx' as const }
   }
   if (lower.endsWith('.pdf')) {
+    const { PDFParse } = await import('pdf-parse')
     const parser = new PDFParse({ data: buffer })
     const result = await parser.getText()
     const pages = (result.pages || []).map(page => `Página ${page.num}\n${page.text}`).join('\n')

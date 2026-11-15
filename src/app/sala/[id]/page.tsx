@@ -292,10 +292,18 @@ export default function SalaDetailPage() {
     load()
   }
 
-  if (loading || !session || !event) {
+  if (loading || !session) {
     return (
       <MainLayout>
         <LoadingSpinner />
+      </MainLayout>
+    )
+  }
+
+  if (!event) {
+    return (
+      <MainLayout user={{ name: session.name, email: session.email, role: session.role }} companyName={session.companyName}>
+        <p className="text-sm">Esta sala no está disponible.</p>
       </MainLayout>
     )
   }

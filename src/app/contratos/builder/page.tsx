@@ -101,7 +101,7 @@ export default function BuilderPage() {
       amount: vars.monto ? Number(vars.monto) : null,
       periodicity: vars.periodicidad || null,
       object_text: vars.objeto || null,
-      status: 'in_review',
+      status: 'draft',
       created_by: session.userId,
     }).select('id').single()
     if (error || !contract) {
@@ -113,7 +113,7 @@ export default function BuilderPage() {
       company_id: session.companyId,
       version: 1,
       body,
-      status: 'in_review',
+      status: 'draft',
       created_by: session.userId,
     })
     if (versionError) {

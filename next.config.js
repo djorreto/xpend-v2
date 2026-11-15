@@ -17,6 +17,7 @@ const nextConfig = {
     ],
   },
   experimental: {
+    serverComponentsExternalPackages: ['pdf-parse', 'pdfjs-dist', 'mammoth'],
     outputFileTracingIncludes: {
       '/api/si/classify': ['./data/xpend-taxonomia-v1.json'],
       '/api/si/classify-batch': ['./data/xpend-taxonomia-v1.json'],

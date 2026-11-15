@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
@@ -72,6 +72,7 @@ export default function ContratoPage() {
   const [returnNote, setReturnNote] = useState('')
   const [draftBody, setDraftBody] = useState('')
   const [loading, setLoading] = useState(true)
+  const seededVersion = useRef('')
 
   const load = useCallback(async () => {
     const appSession = await loadAppSession()
@@ -104,6 +105,13 @@ export default function ContratoPage() {
   }, [contractId, router])
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    const latest = [...versions].reverse().find(version => version.status === 'draft' || version.status === 'returned')
+    if (!latest || seededVersion.current === latest.id) return
+    seededVersion.current = latest.id
+    setDraftBody(latest.body)
+  }, [versions])
 
   const confirmField = async (field: Extraction, status: 'confirmed' | 'corrected' | 'rejected') => {
     const value = status === 'rejected' ? null : (correction[field.id] || field.proposed_value)
@@ -195,7 +203,6 @@ export default function ContratoPage() {
     if (error) addToast({ type: 'error', title: 'No se guardó la versión', message: error.message })
     else {
       addToast({ type: 'success', title: `Versión ${next} guardada`, message: `La versión ${source.version} no cambió.` })
-      setDraftBody('')
       load()
     }
   }
@@ -350,7 +357,7 @@ export default function ContratoPage() {
             <Input value={needle} onChange={event => setNeedle(event.target.value)} placeholder="Palabra o frase del documento" />
             {needle && hit < 0 && <p>Esa frase no está en el texto extraído.</p>}
             {hit >= 0 && <p>Encontrada en los caracteres {hit + 1}-{hit + needle.length}: …{snippet}…</p>}
-            <p className="text-xs text-muted-foreground">ANA lee este contrato desde el chat y cita el texto guardado. No llama a un modelo.</p>
+            <p className="text-xs text-muted-foreground">ANA lee este contrato desde el chat y cita el texto guardado. Si narra con Groq, solo usa esas citas.</p>
           </CardContent>
         </Card>
         {versions.length > 0 && (
@@ -362,17 +369,14 @@ export default function ContratoPage() {
                   <p>Versión {version.version} · {version.status}{version.approved_at ? ` · aprobada ${new Date(version.approved_at).toLocaleString('es-CL')}` : ''}</p>
                   {version.return_note && <p>Observación de devolución: {version.return_note}</p>}
                   <pre className="whitespace-pre-wrap text-xs">{version.body}</pre>
-                  {version.status === 'draft' && (
+                  {version.version === Math.max(...versions.map(item => item.version)) && (version.status === 'draft' || version.status === 'returned') && (
                     <>
                       <Textarea value={draftBody} onChange={event => setDraftBody(event.target.value)} placeholder="Texto de la nueva versión. La anterior no se modifica." />
                       <div className="flex flex-wrap gap-2">
                         <Button size="sm" variant="outline" onClick={() => saveVersion(version)}>Guardar nueva versión</Button>
-                        <Button size="sm" onClick={() => sendReview(version.id)}>Enviar esta versión a revisión</Button>
+                        {version.status === 'draft' && <Button size="sm" onClick={() => sendReview(version.id)}>Enviar esta versión a revisión</Button>}
                       </div>
                     </>
-                  )}
-                  {version.status === 'returned' && (
-                    <Button size="sm" variant="outline" onClick={() => setDraftBody(version.body)}>Usar este texto para corregir</Button>
                   )}
                   {version.status === 'in_review' && version.created_by !== session.userId && (
                     <div className="space-y-2">

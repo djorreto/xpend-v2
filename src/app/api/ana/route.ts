@@ -29,6 +29,5 @@ export async function POST(request: Request) {
   return NextResponse.json({
     interactionId: result.interactionId,
     ...result.answer,
-    modelCalled: false,
   })
 }

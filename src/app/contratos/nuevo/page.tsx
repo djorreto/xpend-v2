@@ -79,7 +79,7 @@ function NuevoContratoForm() {
       body.set('contractId', data.id)
       body.set('kind', 'original')
       const response = await fetch('/api/contracts/ingest', { method: 'POST', body })
-      const payload = await response.json()
+      const payload = await response.json().catch(() => ({ error: 'No se pudo leer la respuesta del procesamiento.' }))
       if (!response.ok) {
         addToast({ type: 'error', title: 'El contrato quedó sin archivo', message: payload.error || 'No se procesó el documento.' })
       } else if (payload.processing === 'unprocessable') {
