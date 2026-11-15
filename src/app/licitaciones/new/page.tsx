@@ -646,7 +646,7 @@ export default function NewLicitacionPage() {
                   placeholder="95000.00"
                 />
                 <p className="text-sm text-muted-foreground">
-                  El ahorro se calculará automáticamente al comparar con el baseline
+                  Se guarda como ahorro declarado, sin validación, salvo que el comité de XPEND adjudique este proceso. No es ahorro realizado.
                 </p>
               </div>
             </CardContent>

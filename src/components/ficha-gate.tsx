@@ -48,8 +48,8 @@ export function FichaGate({
     href = `/licitaciones/${licitacion.id}/edit`
     cta = 'Ir a la nota'
   } else if (status === 'awarded' || status === 'contract_signed') {
-    title = 'Adjudicada. El ahorro está comprometido'
-    detail = 'Todavía no es caja. El expediente guarda el acta y las cartas.'
+    title = 'Adjudicada. El ahorro está pendiente de validación'
+    detail = 'El ahorro negociado es una estimación. El realizado todavía no se mide. El expediente guarda el acta y las cartas.'
     href = `/licitaciones/${licitacion.id}`
     cta = 'Ver expediente'
   }

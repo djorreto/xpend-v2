@@ -414,10 +414,10 @@ export default function EditSourcingPlanPage() {
                 </div>
               </div>
 
-              {/* Ahorros Proyectados y Reales */}
+              {/* Ahorro objetivo y ahorro declarado (sin validación) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="projected_savings_percentage">Ahorro Proyectado (%)</Label>
+                  <Label htmlFor="projected_savings_percentage">Ahorro objetivo (%)</Label>
                   <Input
                     id="projected_savings_percentage"
                     type="number"
@@ -436,7 +436,7 @@ export default function EditSourcingPlanPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="actual_savings_percentage">Ahorro comprometido (%)</Label>
+                  <Label htmlFor="actual_savings_percentage">Ahorro declarado, sin validación (%)</Label>
                   <Input
                     id="actual_savings_percentage"
                     type="number"
@@ -452,6 +452,9 @@ export default function EditSourcingPlanPage() {
                       ${((parseFloat(formData.actual_spend) * parseFloat(formData.actual_savings_percentage)) / 100).toLocaleString('es-CL')} {formData.currency}
                     </p>
                   )}
+                  <p className="text-xs text-muted-foreground">
+                    Es una cifra que declaras tú. No cuenta como ahorro negociado ni realizado.
+                  </p>
                 </div>
               </div>
 

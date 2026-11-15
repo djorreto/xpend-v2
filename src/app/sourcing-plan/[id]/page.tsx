@@ -21,7 +21,15 @@ import {
   Plus,
   Scale,
 } from 'lucide-react'
-import { realizedSavings } from '@/lib/procurement-flow'
+import {
+  SAVINGS_LABELS,
+  classifyLinkSavings,
+  planSavings,
+  realizedSavingsLabel,
+  toSavingsLinks,
+  validatedSavingsLabel,
+  type SavingsLink,
+} from '@/lib/procurement-flow'
 import { FichaGate } from '@/components/ficha-gate'
 import { DossierThread } from '@/components/dossier-thread'
 import { formatCurrency, formatDate } from '@/lib/utils'
@@ -41,6 +49,7 @@ type SPLLink = {
     baseline_currency?: string | null
     awarded_amount?: number | null
     savings_amount?: number | null
+    award?: { estimated_savings?: number | null; currency?: string | null } | { estimated_savings?: number | null; currency?: string | null }[] | null
   }
 }
 
@@ -91,6 +100,7 @@ export default function SourcingPlanDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [linkedDocs, setLinkedDocs] = useState<{ id: string; title: string; href: string; detail: string }[]>([])
   const [linkedLicitaciones, setLinkedLicitaciones] = useState<SPLLink[]>([])
+  const [savingsLinks, setSavingsLinks] = useState<SavingsLink[]>([])
 
   useEffect(() => {
     loadPlan()
@@ -159,7 +169,8 @@ export default function SourcingPlanDetailPage() {
               baseline_amount,
               baseline_currency,
               awarded_amount,
-              savings_amount
+              savings_amount,
+              award:process_awards(estimated_savings, currency)
             )
           `)
           .eq('plan_id', planId)
@@ -173,6 +184,7 @@ export default function SourcingPlanDetailPage() {
           }
         })
         setLinkedLicitaciones(normalizedLinks)
+        setSavingsLinks(toSavingsLinks(linkData))
 
         const [{ data: rfxRows }, { data: salaRows }] = await Promise.all([
           supabase.from('rfx_projects').select('id, title, status, project_context').eq('company_id', profile.company_id),
@@ -234,19 +246,12 @@ export default function SourcingPlanDetailPage() {
     const val = link.licitacion?.baseline_amount || 0
     return sum + val
   }, 0)
-  const awardedLinks = linkedLicitaciones.filter(link => link.licitacion?.status === 'awarded' && link.licitacion?.savings_amount != null)
-  const estimatedSavings = awardedLinks.length
-    ? awardedLinks.reduce((sum, link) => sum + Number(link.licitacion?.savings_amount || 0), 0)
-    : null
-  const linkedSavings = estimatedSavings || 0
 
   // Baseline total = propio + suma de licitaciones
   const totalBaseline = (plan.estimated_spend || 0) + linkedBaseline
-  // Ahorro proyectado: mantenemos el proyectado propio
-  const projected = plan.projected_savings_amount || 0
-  // Ahorro real = ahorro propio + ahorro de licitaciones
-  const actual = realizedSavings(plan.actual_savings_amount, estimatedSavings || 0, estimatedSavings != null)
-  const achievementRate = projected > 0 ? (actual / projected) * 100 : null
+  // Ahorros: objetivo, negociado (solo adjudicación de comité) y declarado. El realizado no se mide todavía.
+  const savings = planSavings(plan, savingsLinks)
+  const hasNegotiated = savings.negotiated.length > 0
 
   return (
     <MainLayout user={user} companyName={company?.name}>
@@ -324,7 +329,7 @@ export default function SourcingPlanDetailPage() {
               ['1. Gasto base', formatCurrency(plan.estimated_spend || 0, plan.currency)],
               ['2. Bases', linkedDocs.filter(doc => doc.detail.startsWith('Bases')).length ? `${linkedDocs.filter(doc => doc.detail.startsWith('Bases')).length} proyecto(s) de bases` : 'Todavía no hay bases.'],
               ['3. Proceso', linkedLicitaciones.length ? `${linkedLicitaciones.length} licitación(es)` : 'Todavía no hay proceso.'],
-              ['4. Sala y comprometido', `${linkedDocs.filter(doc => doc.detail.startsWith('Sala')).length} sala(s) · ${formatCurrency(actual, plan.currency)}`],
+              ['4. Sala', `${linkedDocs.filter(doc => doc.detail.startsWith('Sala')).length} sala(s)`],
             ].map(([title, detail]) => (
               <div key={title} className="glass-chip px-3 py-3">
                 <p className="text-[12px] font-medium text-petrol-blue/55">{title}</p>
@@ -373,68 +378,73 @@ export default function SourcingPlanDetailPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ahorro Proyectado</CardTitle>
-              <TrendingUp className="h-4 w-4 text-green-600" />
+              <CardTitle className="text-sm font-medium">{SAVINGS_LABELS.target}</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {plan.projected_savings_amount ? (
+              {savings.target != null ? (
                 <>
-                  <div className="text-2xl font-bold text-green-600">
-                    {formatCurrency(plan.projected_savings_amount, plan.currency)}
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(savings.target, plan.currency)}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {plan.projected_savings_percentage?.toFixed(1)}% del spend
+                    {plan.projected_savings_percentage?.toFixed(1)}% del spend. Meta, no resultado.
                   </p>
                 </>
               ) : (
-                <div className="text-2xl font-bold text-muted-foreground">-</div>
+                <div className="text-lg font-medium text-muted-foreground">{SAVINGS_LABELS.noInfo}</div>
               )}
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-dashed">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ahorro estimado</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <CardTitle className="text-sm font-medium">{SAVINGS_LABELS.negotiated}</CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {estimatedSavings == null ? (
-                <div className="text-2xl font-bold text-muted-foreground">-</div>
-              ) : (
+              {hasNegotiated ? (
                 <>
-                  <div className="text-2xl font-bold text-emerald-600">
-                    {formatCurrency(estimatedSavings, plan.currency)}
-                  </div>
+                  {savings.negotiated.map(row => (
+                    <div key={row.currency} className="text-2xl font-bold">
+                      {formatCurrency(row.amount, row.currency)}
+                    </div>
+                  ))}
                   <p className="text-xs text-muted-foreground">
-                    Objetivo {formatCurrency(projected, plan.currency)}. Realizado: sin evidencia posterior.
+                    Adjudicación de comité. Validado: {validatedSavingsLabel(true)}.
                   </p>
                 </>
+              ) : (
+                <>
+                  <div className="text-lg font-medium text-muted-foreground">
+                    {savings.withoutComparableBase > 0 ? 'Sin base comparable' : SAVINGS_LABELS.noInfo}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {savings.withoutComparableBase > 0
+                      ? 'La adjudicación no tiene línea base, moneda o alcance comparables.'
+                      : 'Aparece cuando el comité adjudica con una línea base comparable.'}
+                  </p>
+                </>
+              )}
+              {savings.declared.length > 0 && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {SAVINGS_LABELS.declared}: {savings.declared.map(row => formatCurrency(row.amount, row.currency)).join(' · ')}
+                </p>
               )}
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-dashed">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Cumplimiento</CardTitle>
-              <Target className="h-4 w-4 text-purple-600" />
+              <CardTitle className="text-sm font-medium">{SAVINGS_LABELS.realized}</CardTitle>
+              <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {achievementRate !== null ? (
-                <>
-                  <div className={`text-2xl font-bold ${
-                    achievementRate >= 100 ? 'text-green-600' :
-                    achievementRate >= 80 ? 'text-yellow-600' :
-                    'text-red-600'
-                  }`}>
-                    {achievementRate.toFixed(0)}%
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    vs proyectado
-                  </p>
-                </>
-              ) : (
-                <div className="text-2xl font-bold text-muted-foreground">-</div>
-              )}
+              <div className="text-lg font-medium text-muted-foreground">{realizedSavingsLabel()}</div>
+              <p className="text-xs text-muted-foreground">
+                Todavía no se mide. Se reconocerá solo con evidencia posterior a la adjudicación.
+                {savings.negotiatedVsTarget != null && ` ${SAVINGS_LABELS.negotiatedVsTarget}: ${savings.negotiatedVsTarget.toFixed(0)}%.`}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -514,34 +524,52 @@ export default function SourcingPlanDetailPage() {
                 <div className="text-sm font-medium mb-3">Ahorros</div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-xs text-muted-foreground mb-1">Proyectado</div>
-                {(projected + linkedSavings) ? (
+                    <div className="text-xs text-muted-foreground mb-1">{SAVINGS_LABELS.target}</div>
+                    {savings.target != null ? (
                       <>
-                        <p className="font-bold text-green-600">
-                      {formatCurrency(projected + linkedSavings, plan.currency)}
-                        </p>
+                        <p className="font-bold">{formatCurrency(savings.target, plan.currency)}</p>
                         <p className="text-xs text-muted-foreground">
-                      {plan.projected_savings_percentage?.toFixed(1) ?? '-'}%
+                          {plan.projected_savings_percentage?.toFixed(1) ?? '-'}%
                         </p>
                       </>
                     ) : (
-                      <p className="text-muted-foreground">-</p>
+                      <p className="text-muted-foreground">{SAVINGS_LABELS.noInfo}</p>
                     )}
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground mb-1">Real</div>
-                {actual ? (
+                    <div className="text-xs text-muted-foreground mb-1">{SAVINGS_LABELS.negotiated}</div>
+                    {hasNegotiated ? (
+                      savings.negotiated.map(row => (
+                        <p key={row.currency} className="font-bold">{formatCurrency(row.amount, row.currency)}</p>
+                      ))
+                    ) : (
+                      <p className="text-muted-foreground">
+                        {savings.withoutComparableBase > 0 ? 'Sin base comparable' : SAVINGS_LABELS.noInfo}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">{SAVINGS_LABELS.declared}</div>
+                    {savings.declared.length > 0 ? (
                       <>
-                        <p className="font-bold text-emerald-600">
-                      {formatCurrency(actual, plan.currency)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                      {plan.actual_savings_percentage?.toFixed(1) ?? '-'}%
-                        </p>
+                        {savings.declared.map(row => (
+                          <p key={row.currency} className="font-bold">{formatCurrency(row.amount, row.currency)}</p>
+                        ))}
+                        {plan.actual_savings_percentage != null && (
+                          <p className="text-xs text-muted-foreground">{plan.actual_savings_percentage.toFixed(1)}% declarado</p>
+                        )}
                       </>
                     ) : (
-                      <p className="text-muted-foreground">-</p>
+                      <p className="text-muted-foreground">{SAVINGS_LABELS.noInfo}</p>
                     )}
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">{SAVINGS_LABELS.validated}</div>
+                    <p className="text-muted-foreground">{validatedSavingsLabel(hasNegotiated)}</p>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">{SAVINGS_LABELS.realized}</div>
+                    <p className="text-muted-foreground">{realizedSavingsLabel()}</p>
                   </div>
                 </div>
               </div>
@@ -578,7 +606,7 @@ export default function SourcingPlanDetailPage() {
                       <th className="text-left py-2">Estado</th>
                       <th className="text-right py-2">Baseline</th>
                       <th className="text-right py-2">Adjudicado</th>
-                      <th className="text-right py-2">Ahorro</th>
+                      <th className="text-right py-2">Ahorro negociado (est.)</th>
                       <th className="text-center py-2">Acciones</th>
                     </tr>
                   </thead>
@@ -603,9 +631,23 @@ export default function SourcingPlanDetailPage() {
                             : '-'}
                         </td>
                         <td className="py-2 text-right">
-                          {link.licitacion?.savings_amount
-                            ? formatCurrency(link.licitacion.savings_amount, link.licitacion.baseline_currency || plan.currency)
-                            : '-'}
+                          {(() => {
+                            const source = savingsLinks.find(item => item.licitacion_id === link.licitacion_id)
+                            const result = source ? classifyLinkSavings(source) : null
+                            if (result?.kind === 'negotiated') return formatCurrency(result.amount, result.currency)
+                            if (result?.kind === 'declared') {
+                              return (
+                                <span className="text-muted-foreground">
+                                  {SAVINGS_LABELS.declared}: {formatCurrency(result.amount, result.currency)}
+                                </span>
+                              )
+                            }
+                            return (
+                              <span className="text-muted-foreground">
+                                {result?.reason === 'not_comparable' ? 'Sin base comparable' : SAVINGS_LABELS.noInfo}
+                              </span>
+                            )
+                          })()}
                         </td>
                         <td className="py-2 text-center">
                           <Button size="sm" variant="outline" onClick={() => router.push(`/licitaciones/${link.licitacion_id}`)}>

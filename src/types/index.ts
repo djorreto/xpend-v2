@@ -122,8 +122,14 @@ export interface Licitacion {
   baseline_amount?: number
   baseline_source?: BaselineSource
   awarded_amount?: number
+  /** Con adjudicación de comité es el ahorro negociado (estimado). Sin ella, lo tipeó una persona: declarado. */
   savings_amount?: number
   savings_percentage?: number
+  /** Adjudicación de comité (`process_awards`). Solo existe si el comité adjudicó. */
+  award?:
+    | { estimated_savings?: number | null; estimated_percentage?: number | null; currency?: string | null }
+    | { estimated_savings?: number | null; estimated_percentage?: number | null; currency?: string | null }[]
+    | null
 
   // Gerencia y responsable
   department_id?: string
@@ -436,7 +442,8 @@ export interface SourcingPlan {
   actual_savings_percentage?: number
   licitaciones_count?: number
   lic_baseline_sum?: number
-  lic_savings_sum?: number
+  /** Objetivo, negociado y declarado de la iniciativa, cada uno por separado. */
+  plan_savings?: import('@/lib/procurement-flow').PlanSavings
 
   // Asociación con ejecución
   linked_licitacion_id?: string
@@ -522,11 +529,13 @@ export interface SourcingPlanStats {
   total_estimated_spend: number
   total_actual_spend: number
   total_projected_savings: number
-  total_actual_savings: number
+  /** Estimado por adjudicación de comité. No es ahorro realizado. */
+  total_negotiated_savings: number
 
   // Cumplimiento
   completion_rate: number // % de completados sobre planificados
-  savings_achievement_rate: number // % de ahorro real sobre proyectado
+  /** Negociado sobre objetivo. El realizado todavía no se mide. */
+  negotiated_vs_target_rate: number
 
   // Por trimestre
   by_quarter: Array<{
@@ -534,8 +543,8 @@ export interface SourcingPlanStats {
     planned: number
     completed: number
     projected_savings: number
-    actual_savings: number
-    achievement_rate: number
+    negotiated_savings: number
+    negotiated_vs_target_rate: number
   }>
 
   // Por tipo
@@ -543,7 +552,7 @@ export interface SourcingPlanStats {
     type: InitiativeType
     count: number
     projected_savings: number
-    actual_savings: number
+    negotiated_savings: number
   }>
 }
 
@@ -553,8 +562,8 @@ export interface DashboardWithPlan extends DashboardMetrics {
     current_year_stats: SourcingPlanStats
     comparison_previous_years: Array<{
       year: number
-      total_savings: number
-      achievement_rate: number
+      total_negotiated_savings: number
+      negotiated_vs_target_rate: number
     }>
     upcoming_initiatives: Array<SourcingPlan>
     at_risk_initiatives: Array<SourcingPlan>

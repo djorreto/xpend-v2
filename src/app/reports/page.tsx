@@ -22,6 +22,14 @@ import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
 import { ReportsService, ReportParameters } from '@/lib/reports-service'
+import {
+  SAVINGS_LABELS,
+  loadPlanSavingsLinks,
+  moneyListText,
+  planSavings,
+  realizedSavingsLabel,
+  validatedSavingsLabel,
+} from '@/lib/procurement-flow'
 
 interface Report {
   id: string
@@ -162,17 +170,29 @@ export default function ReportsPage() {
       } else {
         const { data, error: planError } = await supabase
           .from('sourcing_plans')
-          .select('title, status, plan_year, quarter, currency, estimated_spend, actual_spend, projected_savings_amount, actual_savings_amount')
+          .select('id, title, status, plan_year, quarter, currency, estimated_spend, actual_spend, projected_savings_amount, actual_savings_amount')
           .eq('company_id', company.id)
           .order('plan_year', { ascending: false })
         if (planError) throw planError
+        const savingsLinks = await loadPlanSavingsLinks(supabase, (data || []).map(plan => plan.id))
         downloadCsv(type === 'budget_tracking' ? 'presupuesto-iniciativas.csv' : 'estado-iniciativas.csv', [
-          ['Iniciativa', 'Estado', 'Año', 'Trimestre', 'Moneda', 'Gasto estimado', 'Gasto real', 'Ahorro proyectado', 'Ahorro registrado'],
-          ...(data || []).map(plan => [
-            plan.title, plan.status, plan.plan_year, plan.quarter || '', plan.currency || '',
-            plan.estimated_spend || 0, plan.actual_spend || 0,
-            plan.projected_savings_amount || 0, plan.actual_savings_amount || 0,
-          ]),
+          [
+            'Iniciativa', 'Estado', 'Año', 'Trimestre', 'Moneda', 'Gasto estimado', 'Gasto real',
+            SAVINGS_LABELS.target, SAVINGS_LABELS.negotiated, SAVINGS_LABELS.declared,
+            SAVINGS_LABELS.validated, SAVINGS_LABELS.realized,
+          ],
+          ...(data || []).map(plan => {
+            const savings = planSavings(plan, savingsLinks)
+            return [
+              plan.title, plan.status, plan.plan_year, plan.quarter || '', plan.currency || '',
+              plan.estimated_spend || 0, plan.actual_spend || 0,
+              savings.target ?? SAVINGS_LABELS.noInfo,
+              moneyListText(savings.negotiated),
+              moneyListText(savings.declared),
+              validatedSavingsLabel(savings.negotiated.length > 0),
+              realizedSavingsLabel(),
+            ]
+          }),
         ])
       }
 

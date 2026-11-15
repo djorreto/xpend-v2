@@ -8,7 +8,16 @@ import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { useToast } from '@/components/ui/toast'
 import { formatCurrency } from '@/lib/utils'
-import { loadMorningQueue, savingsByCurrency, type CurrencySavings, type MorningQueue } from '@/lib/procurement-flow'
+import {
+  SAVINGS_LABELS,
+  loadMorningQueue,
+  loadPlanSavingsLinks,
+  realizedSavingsLabel,
+  savingsByCurrency,
+  validatedSavingsLabel,
+  type CurrencySavings,
+  type MorningQueue,
+} from '@/lib/procurement-flow'
 import {
   describeSpendSource,
   fetchUnifiedSpendForCompany,
@@ -87,22 +96,7 @@ export default function ComitePage() {
 
     const planRows = plans.data || []
     const planIds = planRows.map(plan => plan.id)
-    const linkRows: { plan_id: string; savings_amount: number | null; currency: string | null; awarded?: boolean }[] = []
-    if (planIds.length) {
-      const { data: links } = await supabase
-        .from('sourcing_plan_licitaciones')
-        .select('plan_id, licitacion:licitaciones(savings_amount, baseline_currency, status)')
-        .in('plan_id', planIds)
-      for (const link of links || []) {
-        const licitacion = Array.isArray(link.licitacion) ? link.licitacion[0] : link.licitacion
-        linkRows.push({
-          plan_id: link.plan_id,
-          savings_amount: licitacion?.savings_amount ?? null,
-          currency: licitacion?.baseline_currency ?? null,
-          awarded: licitacion?.status === 'awarded',
-        })
-      }
-    }
+    const linkRows = await loadPlanSavingsLinks(supabase, planIds)
     setSavings(savingsByCurrency(planRows, linkRows))
     const { data: dossierRows } = await supabase
       .from('procurement_dossiers')
@@ -202,26 +196,32 @@ export default function ComitePage() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle>Ahorro comprometido</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{SAVINGS_LABELS.target}</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-1 text-2xl font-medium text-petrol-blue">
-                {(savings.length ? savings : [{ currency: 'CLP', projected: 0, actual: 0, rate: 0 }]).map(row => (
-                  <p key={row.currency}>{formatCurrency(row.projected, row.currency)}</p>
-                ))}
+                {savings.filter(row => row.target != null).length === 0
+                  ? <p className="text-base font-normal text-petrol-blue/55">{SAVINGS_LABELS.noInfo}</p>
+                  : savings.filter(row => row.target != null).map(row => (
+                      <p key={row.currency}>{formatCurrency(row.target as number, row.currency)}</p>
+                    ))}
               </div>
-              <p className="mt-1 text-xs text-petrol-blue/50">Meta del plan de este año, por moneda</p>
+              <p className="mt-1 text-xs text-petrol-blue/50">Meta del plan de este año, por moneda. No es un resultado.</p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle>Ahorro estimado</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{SAVINGS_LABELS.negotiated}</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-1 text-2xl font-medium text-petrol-blue">
-                {(savings.length ? savings : [{ currency: 'CLP', projected: 0, actual: 0, rate: 0 }]).map(row => (
-                  <p key={row.currency}>{formatCurrency(row.actual, row.currency)}</p>
-                ))}
+                {savings.filter(row => row.negotiated != null).length === 0
+                  ? <p className="text-base font-normal text-petrol-blue/55">{SAVINGS_LABELS.noInfo}</p>
+                  : savings.filter(row => row.negotiated != null).map(row => (
+                      <p key={row.currency}>{formatCurrency(row.negotiated as number, row.currency)}</p>
+                    ))}
               </div>
               <p className="mt-1 text-xs text-petrol-blue/50">
-                Resultado de adjudicaciones en la misma moneda. Un cero es un resultado. El realizado se muestra solo con evidencia posterior.
+                Línea base menos monto adjudicado por el comité, en la misma moneda. Un cero es un resultado de la adjudicación.
+                {' '}Validado: {validatedSavingsLabel(savings.some(row => row.negotiated != null))}.
+                {' '}Realizado: {realizedSavingsLabel()}.
               </p>
             </CardContent>
           </Card>
@@ -250,8 +250,8 @@ export default function ComitePage() {
                   <p className="font-medium">{row.title}</p>
                   <p className="text-xs text-muted-foreground">
                     Oferta ganadora {row.award?.amount != null ? formatCurrency(row.award.amount, row.currency || 'CLP') : 'sin monto'}
-                    {row.award?.target_savings != null ? ` · objetivo ${formatCurrency(row.award.target_savings, row.currency || 'CLP')}` : ''}
-                    {row.award?.estimated_savings != null ? ` · estimado ${formatCurrency(row.award.estimated_savings, row.currency || 'CLP')}` : ''}
+                    {row.award?.target_savings != null ? ` · ${SAVINGS_LABELS.target.toLowerCase()} ${formatCurrency(row.award.target_savings, row.currency || 'CLP')}` : ''}
+                    {row.award?.estimated_savings != null ? ` · ${SAVINGS_LABELS.negotiated.toLowerCase()} ${formatCurrency(row.award.estimated_savings, row.currency || 'CLP')}` : ''}
                     {row.award?.supplier_id ? ` · proveedor ${row.award.supplier_id}` : ''}
                   </p>
                 </div>

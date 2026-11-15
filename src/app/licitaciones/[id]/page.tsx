@@ -19,12 +19,16 @@ import {
   Building2,
   Download,
   ExternalLink,
-  TrendingDown,
-  TrendingUp,
   Plus,
   LinkIcon,
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import {
+  SAVINGS_LABELS,
+  licitacionSavingsView,
+  realizedSavingsLabel,
+  validatedSavingsLabel,
+} from '@/lib/procurement-flow'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
@@ -151,6 +155,7 @@ export default function LicitacionDetailPage() {
         .select(
           `
           *,
+            award:process_awards(estimated_savings, estimated_percentage, currency),
           department:departments(id, name),
           responsible_user:profiles!responsible_user_id(id, full_name, email),
           created_by_user:profiles!created_by(id, full_name, email)
@@ -511,63 +516,50 @@ export default function LicitacionDetailPage() {
             </CardContent>
           </Card>
 
-          <Card
-            className={
-              licitacion.savings_amount && licitacion.savings_amount > 0
-                ? 'border-green-200'
-                : licitacion.savings_amount && licitacion.savings_amount < 0
-                  ? 'border-red-200'
-                  : ''
-            }
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ahorro</CardTitle>
-              {licitacion.savings_amount && licitacion.savings_amount > 0 ? (
-                <TrendingDown className="h-4 w-4 text-green-600" />
-              ) : licitacion.savings_amount && licitacion.savings_amount < 0 ? (
-                <TrendingUp className="h-4 w-4 text-red-600" />
-              ) : (
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              )}
-            </CardHeader>
-            <CardContent>
-              {licitacion.savings_amount !== undefined && licitacion.savings_amount !== null ? (
-                <>
-                  <div
-                    className={`text-2xl font-bold ${
-                      licitacion.savings_amount > 0
-                        ? 'text-green-600'
-                        : licitacion.savings_amount < 0
-                          ? 'text-red-600'
-                          : ''
-                    }`}
-                  >
-                    {formatCurrency(
-                      Math.abs(licitacion.savings_amount),
-                      licitacion.baseline_currency
-                    )}
-                  </div>
-                  {licitacion.savings_percentage !== undefined &&
-                    licitacion.savings_percentage !== null && (
-                      <p
-                        className={`text-xs font-medium ${
-                          licitacion.savings_amount > 0
-                            ? 'text-green-600'
-                            : licitacion.savings_amount < 0
-                              ? 'text-red-600'
-                              : 'text-muted-foreground'
-                        }`}
-                      >
-                        {Math.abs(licitacion.savings_percentage).toFixed(2)}%{' '}
-                        {licitacion.savings_amount > 0 ? 'ahorro' : 'sobrecosto'}
+          {(() => {
+            const view = licitacionSavingsView(licitacion)
+            return (
+              <Card className="border-dashed">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {view.kind === 'declared' ? SAVINGS_LABELS.declared : SAVINGS_LABELS.negotiated}
+                  </CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  {view.kind === 'none' ? (
+                    <>
+                      <div className="text-lg font-medium text-muted-foreground">
+                        {view.reason === 'not_comparable' ? 'Sin base comparable' : SAVINGS_LABELS.noInfo}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {view.reason === 'not_comparable'
+                          ? 'La adjudicación no tiene línea base, moneda o alcance comparables.'
+                          : 'Aparece cuando el comité adjudica con una línea base comparable.'}
                       </p>
-                    )}
-                </>
-              ) : (
-                <div className="text-2xl font-bold text-muted-foreground">N/A</div>
-              )}
-            </CardContent>
-          </Card>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">
+                        {view.amount < 0 ? '-' : ''}
+                        {formatCurrency(Math.abs(view.amount), view.currency)}
+                      </div>
+                      {view.percentage !== null && (
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {Math.abs(view.percentage).toFixed(2)}% {view.amount < 0 ? 'sobrecosto' : 'bajo la línea base'}
+                        </p>
+                      )}
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {view.kind === 'negotiated'
+                          ? `Estimado por adjudicación de comité. Validado: ${validatedSavingsLabel(true)}. Realizado: ${realizedSavingsLabel()}.`
+                          : 'Monto tipeado en el formulario, sin pasar por comité ni validación. No es ahorro realizado.'}
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })()}
         </div>
 
         {/* Tabs for Details */}

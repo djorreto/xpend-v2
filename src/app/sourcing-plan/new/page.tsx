@@ -350,9 +350,9 @@ export default function NewSourcingPlanPage() {
                 </div>
               </div>
 
-              {/* Ahorro Proyectado */}
+              {/* Ahorro objetivo */}
               <div className="space-y-2">
-                <Label htmlFor="projected_savings_percentage">Ahorro Proyectado (%)</Label>
+                <Label htmlFor="projected_savings_percentage">Ahorro objetivo (%)</Label>
                 <Input
                   id="projected_savings_percentage"
                   type="number"
@@ -365,7 +365,7 @@ export default function NewSourcingPlanPage() {
                 />
                 {formData.estimated_spend && formData.projected_savings_percentage && (
                   <p className="text-sm text-muted-foreground">
-                    Ahorro proyectado: ${((parseFloat(formData.estimated_spend) * parseFloat(formData.projected_savings_percentage)) / 100).toLocaleString('es-CL')} {formData.currency}
+                    Ahorro objetivo: ${((parseFloat(formData.estimated_spend) * parseFloat(formData.projected_savings_percentage)) / 100).toLocaleString('es-CL')} {formData.currency}
                   </p>
                 )}
               </div>

@@ -14,19 +14,177 @@ export function statusGateMessage(role: string | null | undefined, status: strin
 }
 
 /**
- * Si el proceso ya tiene licitaciones adjudicadas, el ahorro real es esa suma.
- * El monto tipeado en la iniciativa solo vale cuando no hay proceso vinculado.
- * Así el plan no cuenta dos veces el mismo ahorro.
+ * Cinco conceptos de ahorro. Ninguno se presta el nombre de otro.
+ * - Objetivo: meta de la iniciativa.
+ * - Negociado: línea base menos monto adjudicado. Solo nace de una adjudicación de comité
+ *   (`process_awards`) con base comparable. Es una estimación.
+ * - Declarado: número que alguien tipeó (iniciativa o formulario de licitación). Sin validación.
+ * - Validado: todavía no existe en XPEND.
+ * - Realizado: todavía no existe en XPEND. Solo habrá con evidencia posterior.
  */
-export function realizedSavings(
-  stored: number | null | undefined,
-  linked?: number | null,
-  hasAward = false
-) {
-  if (hasAward) return Number(linked) || 0
-  const linkedN = Number(linked) || 0
-  if (linkedN !== 0) return linkedN
-  return Number(stored) || 0
+export const SAVINGS_LABELS = {
+  target: 'Ahorro objetivo',
+  negotiated: 'Ahorro negociado (estimado)',
+  declared: 'Ahorro declarado, sin validación',
+  validated: 'Ahorro validado',
+  realized: 'Ahorro realizado',
+  negotiatedVsTarget: 'Negociado vs objetivo',
+  noInfo: 'Sin información',
+  pendingValidation: 'Pendiente de validación',
+} as const
+
+/** El realizado no se mide todavía. Nunca se muestra como cero. */
+export function realizedSavingsLabel() {
+  return SAVINGS_LABELS.noInfo
+}
+
+/** El validado no existe todavía: hay algo por validar solo si hay un negociado. */
+export function validatedSavingsLabel(hasNegotiated: boolean) {
+  return hasNegotiated ? SAVINGS_LABELS.pendingValidation : SAVINGS_LABELS.noInfo
+}
+
+export type MoneyAmount = { currency: string; amount: number }
+
+/** Texto plano para CSV: «5000 USD; 100 CLP», o «Sin información» si no hay ninguna cifra. */
+export function moneyListText(list: MoneyAmount[]) {
+  if (!list.length) return SAVINGS_LABELS.noInfo
+  return list.map(row => `${row.amount} ${row.currency}`).join('; ')
+}
+
+/** Una licitación vinculada a una iniciativa, con su adjudicación de comité si existe. */
+export type SavingsLink = {
+  plan_id: string
+  licitacion_id?: string | null
+  status?: string | null
+  /** moneda de la línea base de la licitación */
+  currency?: string | null
+  /** licitaciones.savings_amount. Puede venir del comité o de un formulario tipeado. */
+  savings_amount?: number | null
+  /** process_awards de la licitación. Solo existe si el comité adjudicó. */
+  award?: { estimated_savings?: number | null; currency?: string | null } | null
+}
+
+export type LinkSavings =
+  | { kind: 'negotiated'; amount: number; currency: string }
+  | { kind: 'declared'; amount: number; currency: string }
+  | { kind: 'none'; reason: 'not_comparable' | 'no_amount' }
+
+/**
+ * Clasifica el ahorro de una licitación.
+ * Con adjudicación de comité manda `estimated_savings`, que la base calcula solo si la moneda y el alcance
+ * son comparables. Sin adjudicación de comité, lo que haya en `savings_amount` lo tipeó una persona.
+ * El estado de la licitación (adjudicada o con contrato firmado) no cambia la clasificación.
+ */
+export function classifyLinkSavings(link: SavingsLink): LinkSavings {
+  const currency = normalizePlanCurrency(link.award?.currency || link.currency)
+  if (link.award) {
+    const estimated = link.award.estimated_savings
+    if (estimated == null || !Number.isFinite(Number(estimated))) {
+      return { kind: 'none', reason: 'not_comparable' }
+    }
+    return { kind: 'negotiated', amount: Number(estimated), currency }
+  }
+  const typed = link.savings_amount
+  if (typed == null || !Number.isFinite(Number(typed))) return { kind: 'none', reason: 'no_amount' }
+  return { kind: 'declared', amount: Number(typed), currency: normalizePlanCurrency(link.currency) }
+}
+
+type LicitacionSavingsInput = {
+  status?: string | null
+  baseline_currency?: string | null
+  savings_amount?: number | null
+  savings_percentage?: number | null
+  award?:
+    | { estimated_savings?: number | null; estimated_percentage?: number | null; currency?: string | null }
+    | { estimated_savings?: number | null; estimated_percentage?: number | null; currency?: string | null }[]
+    | null
+}
+
+export type LicitacionSavingsView =
+  | { kind: 'negotiated' | 'declared'; amount: number; percentage: number | null; currency: string }
+  | { kind: 'none'; reason: 'not_comparable' | 'no_amount' }
+
+/** Lo que una licitación puede mostrar como ahorro, con su nombre correcto. */
+export function licitacionSavingsView(lic: LicitacionSavingsInput): LicitacionSavingsView {
+  const award = Array.isArray(lic.award) ? lic.award[0] ?? null : lic.award ?? null
+  const result = classifyLinkSavings({
+    plan_id: '',
+    status: lic.status,
+    currency: lic.baseline_currency,
+    savings_amount: lic.savings_amount,
+    award,
+  })
+  if (result.kind === 'none') return result
+  const percentage = result.kind === 'negotiated' ? award?.estimated_percentage : lic.savings_percentage
+  return {
+    kind: result.kind,
+    amount: result.amount,
+    percentage: percentage == null || !Number.isFinite(Number(percentage)) ? null : Number(percentage),
+    currency: result.currency,
+  }
+}
+
+function addTo(map: Map<string, number>, currency: string, amount: number) {
+  map.set(currency, (map.get(currency) || 0) + amount)
+}
+
+function toMoney(map: Map<string, number>): MoneyAmount[] {
+  return Array.from(map.entries())
+    .map(([currency, amount]) => ({ currency, amount }))
+    .sort((a, b) => a.currency.localeCompare(b.currency))
+}
+
+export type PlanSavings = {
+  currency: string
+  target: number | null
+  negotiated: MoneyAmount[]
+  declared: MoneyAmount[]
+  /** adjudicaciones de comité sin base comparable: no hay ahorro negociado que mostrar */
+  withoutComparableBase: number
+  /** porcentaje solo en la moneda de la iniciativa; null si falta objetivo o negociado */
+  negotiatedVsTarget: number | null
+}
+
+type PlanMoney = {
+  id: string
+  currency?: string | null
+  projected_savings_amount?: number | null
+  actual_savings_amount?: number | null
+}
+
+/**
+ * Ahorros de una iniciativa. El monto tipeado en la iniciativa se muestra como declarado solo si
+ * ninguna licitación vinculada trae uno tipeado, para no contar dos veces la misma cifra.
+ */
+export function planSavings(plan: PlanMoney, links: SavingsLink[]): PlanSavings {
+  const currency = normalizePlanCurrency(plan.currency)
+  const negotiated = new Map<string, number>()
+  const linkDeclared = new Map<string, number>()
+  let withoutComparableBase = 0
+  for (const link of links) {
+    if (link.plan_id !== plan.id) continue
+    const result = classifyLinkSavings(link)
+    if (result.kind === 'negotiated') addTo(negotiated, result.currency, result.amount)
+    else if (result.kind === 'declared') addTo(linkDeclared, result.currency, result.amount)
+    else if (result.reason === 'not_comparable') withoutComparableBase += 1
+  }
+  const declared = new Map(linkDeclared)
+  const typed = Number(plan.actual_savings_amount)
+  if (!declared.size && Number.isFinite(typed) && plan.actual_savings_amount != null && typed !== 0) {
+    addTo(declared, currency, typed)
+  }
+  const targetRaw = Number(plan.projected_savings_amount)
+  const target = plan.projected_savings_amount != null && Number.isFinite(targetRaw) && targetRaw !== 0 ? targetRaw : null
+  const negotiatedHere = negotiated.get(currency)
+  return {
+    currency,
+    target,
+    negotiated: toMoney(negotiated),
+    declared: toMoney(declared),
+    withoutComparableBase,
+    negotiatedVsTarget:
+      target != null && target > 0 && negotiatedHere != null ? (negotiatedHere / target) * 100 : null,
+  }
 }
 
 /** Ahorro de una licitación: línea base menos lo adjudicado. */
@@ -43,60 +201,88 @@ export function awardSavings(baseline: number | null | undefined, awarded: numbe
   }
 }
 
-export type CurrencySavings = { currency: string; projected: number; actual: number; rate: number }
-
-type PlanMoney = {
-  id: string
-  currency?: string | null
-  projected_savings_amount?: number | null
-  actual_savings_amount?: number | null
+/**
+ * Una fila por moneda. `negotiated` y `declared` son null cuando no hay ninguna cifra en esa moneda:
+ * la pantalla muestra «Sin información», nunca cero. No se suma CLP con USD.
+ */
+export type CurrencySavings = {
+  currency: string
+  target: number | null
+  negotiated: number | null
+  declared: number | null
+  /** negociado / objetivo en esa moneda. null si falta alguno. */
+  negotiatedVsTarget: number | null
 }
 
-type LinkMoney = {
-  plan_id: string
-  savings_amount?: number | null
-  currency?: string | null
-  awarded?: boolean
-}
-
-/** Proyectado y adjudicado por moneda. No suma CLP con USD. */
-export function savingsByCurrency(plans: PlanMoney[], links: LinkMoney[]): CurrencySavings[] {
-  const projected = new Map<string, number>()
-  const actual = new Map<string, number>()
-  const linksByPlan = new Map<string, LinkMoney[]>()
-  for (const link of links) {
-    const list = linksByPlan.get(link.plan_id) || []
-    list.push(link)
-    linksByPlan.set(link.plan_id, list)
-  }
+export function savingsByCurrency(plans: PlanMoney[], links: SavingsLink[]): CurrencySavings[] {
+  const target = new Map<string, number>()
+  const negotiated = new Map<string, number>()
+  const declared = new Map<string, number>()
   for (const plan of plans) {
-    const currency = normalizePlanCurrency(plan.currency)
-    const projectedAmount = Number(plan.projected_savings_amount) || 0
-    if (projectedAmount) projected.set(currency, (projected.get(currency) || 0) + projectedAmount)
-    const planLinks = linksByPlan.get(plan.id) || []
-    const awardedLinks = planLinks.filter(link => link.awarded && link.savings_amount != null)
-    if (awardedLinks.length) {
-      for (const link of awardedLinks) {
-        const amount = Number(link.savings_amount) || 0
-        const code = normalizePlanCurrency(link.currency || plan.currency)
-        actual.set(code, (actual.get(code) || 0) + amount)
-      }
-    } else {
-      const stored = Number(plan.actual_savings_amount) || 0
-      if (stored) actual.set(currency, (actual.get(currency) || 0) + stored)
-    }
+    const summary = planSavings(plan, links)
+    if (summary.target != null) addTo(target, summary.currency, summary.target)
+    for (const row of summary.negotiated) addTo(negotiated, row.currency, row.amount)
+    for (const row of summary.declared) addTo(declared, row.currency, row.amount)
   }
-  const currencies = Array.from(new Set(Array.from(projected.keys()).concat(Array.from(actual.keys()))))
-  return currencies.sort().map(currency => {
-    const projectedAmount = projected.get(currency) || 0
-    const actualAmount = actual.get(currency) || 0
+  const currencies = Array.from(
+    new Set([...Array.from(target.keys()), ...Array.from(negotiated.keys()), ...Array.from(declared.keys())])
+  ).sort()
+  return currencies.map(currency => {
+    const goal = target.get(currency) ?? null
+    const negotiatedAmount = negotiated.get(currency) ?? null
     return {
       currency,
-      projected: projectedAmount,
-      actual: actualAmount,
-      rate: projectedAmount > 0 ? (actualAmount / projectedAmount) * 100 : 0,
+      target: goal,
+      negotiated: negotiatedAmount,
+      declared: declared.get(currency) ?? null,
+      negotiatedVsTarget:
+        goal != null && goal > 0 && negotiatedAmount != null ? (negotiatedAmount / goal) * 100 : null,
     }
   })
+}
+
+type LinkRow = {
+  plan_id: string
+  licitacion?: unknown
+}
+
+function one<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return (value[0] as T) ?? null
+  return value ?? null
+}
+
+/** Convierte las filas de `sourcing_plan_licitaciones` con su licitación y adjudicación en `SavingsLink`. */
+export function toSavingsLinks(rows: LinkRow[] | null | undefined): SavingsLink[] {
+  const links: SavingsLink[] = []
+  for (const row of rows || []) {
+    const lic = one(row.licitacion as Record<string, unknown> | Record<string, unknown>[] | null)
+    if (!lic) continue
+    const award = one(lic.award as Record<string, unknown> | Record<string, unknown>[] | null)
+    links.push({
+      plan_id: row.plan_id,
+      licitacion_id: (lic.id as string | undefined) ?? null,
+      status: (lic.status as string | undefined) ?? null,
+      currency: (lic.baseline_currency as string | undefined) ?? null,
+      savings_amount: (lic.savings_amount as number | null | undefined) ?? null,
+      award: award
+        ? {
+            estimated_savings: (award.estimated_savings as number | null | undefined) ?? null,
+            currency: (award.currency as string | undefined) ?? null,
+          }
+        : null,
+    })
+  }
+  return links
+}
+
+/** Selección común: licitaciones vinculadas con su adjudicación de comité. */
+export const SAVINGS_LINK_SELECT =
+  'plan_id, licitacion:licitaciones(id, name, status, baseline_amount, baseline_currency, awarded_amount, savings_amount, award:process_awards(estimated_savings, currency))'
+
+export async function loadPlanSavingsLinks(supabase: SupabaseClient, planIds: string[]): Promise<SavingsLink[]> {
+  if (!planIds.length) return []
+  const { data } = await supabase.from('sourcing_plan_licitaciones').select(SAVINGS_LINK_SELECT).in('plan_id', planIds)
+  return toSavingsLinks(data as LinkRow[] | null)
 }
 
 function normalizePlanCurrency(value?: string | null) {

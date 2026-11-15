@@ -17,11 +17,10 @@ import {
   Edit,
   Trash2,
   FileText,
-  TrendingDown,
-  TrendingUp,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { SAVINGS_LABELS, licitacionSavingsView } from '@/lib/procurement-flow'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
@@ -137,6 +136,7 @@ export default function LicitacionesPage() {
           .select(
             `
             *,
+            award:process_awards(estimated_savings, estimated_percentage, currency),
             department:departments(id, name),
             responsible_user:profiles!responsible_user_id(id, full_name, email)
           `
@@ -295,7 +295,7 @@ export default function LicitacionesPage() {
                     <th className="p-4 text-left font-medium">Categoría</th>
                     <th className="p-4 text-right font-medium">Baseline</th>
                     <th className="p-4 text-right font-medium">Adjudicado</th>
-                    <th className="p-4 text-right font-medium">Ahorro</th>
+                    <th className="p-4 text-right font-medium">Ahorro negociado (est.)</th>
                     <th className="p-4 text-left font-medium">Fechas</th>
                     <th className="p-4 text-center font-medium">Iniciativas</th>
                     <th className="p-4 text-center font-medium">Acciones</th>
@@ -398,36 +398,34 @@ export default function LicitacionesPage() {
                         )}
                       </td>
 
-                      {/* Ahorro */}
+                      {/* Ahorro negociado (estimado) o declarado. Nunca ahorro realizado. */}
                       <td className="p-4 text-right">
-                        {licitacion.savings_amount !== undefined &&
-                        licitacion.savings_amount !== null ? (
-                          <div
-                            className={`flex items-center justify-end gap-1 ${
-                              licitacion.savings_amount > 0 ? 'text-green-600' : 'text-red-600'
-                            }`}
-                          >
-                            {licitacion.savings_amount > 0 ? (
-                              <TrendingDown className="h-3 w-3" />
-                            ) : (
-                              <TrendingUp className="h-3 w-3" />
-                            )}
-                            <span className="font-semibold">
-                              {formatCurrency(
-                                Math.abs(licitacion.savings_amount),
-                                licitacion.baseline_currency
-                              )}
-                              {licitacion.savings_percentage !== undefined &&
-                                licitacion.savings_percentage !== null && (
-                                  <span className="ml-1 text-xs">
-                                    ({Math.abs(licitacion.savings_percentage).toFixed(1)}%)
-                                  </span>
+                        {(() => {
+                          const view = licitacionSavingsView(licitacion)
+                          if (view.kind === 'none') {
+                            return (
+                              <span className="text-muted-foreground">
+                                {view.reason === 'not_comparable' ? 'Sin base comparable' : SAVINGS_LABELS.noInfo}
+                              </span>
+                            )
+                          }
+                          return (
+                            <div className="flex flex-col items-end">
+                              <span className={view.kind === 'negotiated' ? 'font-semibold' : 'font-medium text-muted-foreground'}>
+                                {view.amount < 0 ? '-' : ''}
+                                {formatCurrency(Math.abs(view.amount), view.currency)}
+                                {view.percentage !== null && (
+                                  <span className="ml-1 text-xs">({Math.abs(view.percentage).toFixed(1)}%)</span>
                                 )}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
+                              </span>
+                              <span className="text-[11px] text-muted-foreground">
+                                {view.kind === 'negotiated'
+                                  ? `${view.amount < 0 ? 'Sobrecosto' : 'Negociado'} (estimado)`
+                                  : 'Declarado, sin validación'}
+                              </span>
+                            </div>
+                          )
+                        })()}
                       </td>
 
                       {/* Fechas */}

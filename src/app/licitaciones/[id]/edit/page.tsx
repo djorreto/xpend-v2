@@ -805,7 +805,7 @@ export default function EditLicitacionPage() {
                   placeholder="95000.00"
                 />
                 <p className="text-sm text-muted-foreground">
-                  El número queda como ahorro comprometido. Todavía no es caja.
+                  Se guarda como ahorro declarado, sin validación, salvo que el comité de XPEND adjudique este proceso. No es ahorro realizado.
                 </p>
               </div>
             </CardContent>

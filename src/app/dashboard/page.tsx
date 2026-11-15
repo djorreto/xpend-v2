@@ -13,7 +13,16 @@ import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
 import { SpendByCategoryChart, SpendDistributionChart, MonthlyTrendChart } from '@/components/ui/charts'
 import { fetchUnifiedSpendForCompany, describeSpendSource, totalsByCurrency, primaryCurrency, type SpendSourceInfo, type MoneyTotal } from '@/lib/spend-sources'
-import { loadMorningQueue, savingsByCurrency, type MorningQueue, type CurrencySavings } from '@/lib/procurement-flow'
+import {
+  SAVINGS_LABELS,
+  loadMorningQueue,
+  loadPlanSavingsLinks,
+  realizedSavingsLabel,
+  savingsByCurrency,
+  validatedSavingsLabel,
+  type MorningQueue,
+  type CurrencySavings,
+} from '@/lib/procurement-flow'
 
 interface DashboardMetrics {
   totalLicitaciones: number
@@ -168,21 +177,7 @@ export default function DashboardPage() {
       let sourcingPlanMetrics
       if (!sourcingPlanError && sourcingPlans) {
         const planIds = sourcingPlans.map(plan => plan.id)
-        const linkRows: { plan_id: string; savings_amount: number | null; currency: string | null }[] = []
-        if (planIds.length) {
-          const { data: links } = await supabase
-            .from('sourcing_plan_licitaciones')
-            .select('plan_id, licitacion:licitaciones(savings_amount, baseline_currency)')
-            .in('plan_id', planIds)
-          for (const link of links || []) {
-            const licitacion = Array.isArray(link.licitacion) ? link.licitacion[0] : link.licitacion
-            linkRows.push({
-              plan_id: link.plan_id,
-              savings_amount: licitacion?.savings_amount ?? null,
-              currency: licitacion?.baseline_currency ?? null,
-            })
-          }
-        }
+        const linkRows = await loadPlanSavingsLinks(supabase, planIds)
         const totalPlanned = sourcingPlans.filter(p => p.status === 'planned' && !p.is_spot).length
         const inProgress = sourcingPlans.filter(p => p.status === 'in_progress').length
         const completed = sourcingPlans.filter(p => p.status === 'completed').length
@@ -352,25 +347,27 @@ export default function DashboardPage() {
             <Card className="hover:-translate-y-0.5 hover:bg-white/72">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
-                  <p className="text-[12px] font-medium tracking-wide text-petrol-blue/55">Cumplimiento del plan</p>
+                  <p className="text-[12px] font-medium tracking-wide text-petrol-blue/55">{SAVINGS_LABELS.negotiatedVsTarget}</p>
                   <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent-turquoise text-petrol-blue shadow-sm shadow-accent-turquoise/40">
                     <Target className="h-4 w-4" />
                   </span>
                 </div>
                 <div className="mt-4 space-y-1 text-[1.35rem] font-medium tracking-tight text-petrol-blue">
                   {metrics.sourcingPlan.byCurrency.length === 0 ? (
-                    <div>0%</div>
+                    <div className="text-base font-normal text-petrol-blue/55">{SAVINGS_LABELS.noInfo}</div>
                   ) : (
                     metrics.sourcingPlan.byCurrency.map(row => (
                       <div key={row.currency}>
-                        {row.projected > 0 ? `${row.rate.toFixed(0)}%` : 'Sin meta'}
+                        {row.negotiatedVsTarget != null
+                          ? `${row.negotiatedVsTarget.toFixed(0)}%`
+                          : <span className="text-base font-normal text-petrol-blue/55">{row.target == null ? 'Sin objetivo' : SAVINGS_LABELS.noInfo}</span>}
                         <span className="ml-2 text-xs font-normal text-petrol-blue/45">{row.currency}</span>
                       </div>
                     ))
                   )}
                 </div>
                 <p className="mt-1 text-xs text-petrol-blue/45">
-                  {metrics.sourcingPlan.byCurrency.map(row => `comprometido ${formatCurrency(row.actual, row.currency)}`).join(' · ') || 'sin ahorro comprometido'}
+                  Estimación de adjudicaciones de comité. {SAVINGS_LABELS.realized}: {realizedSavingsLabel()}.
                 </p>
               </CardContent>
             </Card>
@@ -396,7 +393,7 @@ export default function DashboardPage() {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
                 <div className="glass-chip flex flex-col items-center px-3 py-4">
                   <div className="text-2xl font-medium tracking-tight text-petrol-blue">{metrics.sourcingPlan.totalPlanned}</div>
                   <p className="mt-1 text-[11px] tracking-wide text-petrol-blue/50">Planificadas</p>
@@ -414,19 +411,31 @@ export default function DashboardPage() {
                 </div>
                 <div className="glass-chip flex flex-col items-center px-3 py-4">
                   <div className="space-y-1 text-center text-sm font-medium tracking-tight text-petrol-blue">
-                    {metrics.sourcingPlan.byCurrency.length === 0 ? formatCurrency(0, 'CLP') : metrics.sourcingPlan.byCurrency.map(row => (
-                      <div key={row.currency}>{formatCurrency(row.projected, row.currency)}</div>
-                    ))}
+                    {metrics.sourcingPlan.byCurrency.filter(row => row.target != null).length === 0
+                      ? SAVINGS_LABELS.noInfo
+                      : metrics.sourcingPlan.byCurrency.filter(row => row.target != null).map(row => (
+                          <div key={row.currency}>{formatCurrency(row.target as number, row.currency)}</div>
+                        ))}
                   </div>
-                  <p className="mt-1 text-[11px] tracking-wide text-petrol-blue/50">Ahorro proyectado</p>
+                  <p className="mt-1 text-[11px] tracking-wide text-petrol-blue/50">{SAVINGS_LABELS.target}</p>
                 </div>
-                <div className="glass-chip col-span-2 flex flex-col items-center border-accent-mint/50 px-3 py-4 md:col-span-1">
+                <div className="glass-chip flex flex-col items-center border-dashed px-3 py-4">
                   <div className="space-y-1 text-center text-sm font-medium tracking-tight text-petrol-blue">
-                    {metrics.sourcingPlan.byCurrency.length === 0 ? formatCurrency(0, 'CLP') : metrics.sourcingPlan.byCurrency.map(row => (
-                      <div key={row.currency}>{formatCurrency(row.actual, row.currency)}</div>
-                    ))}
+                    {metrics.sourcingPlan.byCurrency.filter(row => row.negotiated != null).length === 0
+                      ? SAVINGS_LABELS.noInfo
+                      : metrics.sourcingPlan.byCurrency.filter(row => row.negotiated != null).map(row => (
+                          <div key={row.currency}>{formatCurrency(row.negotiated as number, row.currency)}</div>
+                        ))}
                   </div>
-                  <p className="mt-1 text-[11px] tracking-wide text-petrol-blue/50">Ahorro comprometido</p>
+                  <p className="mt-1 text-[11px] tracking-wide text-petrol-blue/50">{SAVINGS_LABELS.negotiated}</p>
+                  <p className="text-[10px] text-petrol-blue/40">
+                    {validatedSavingsLabel(metrics.sourcingPlan.byCurrency.some(row => row.negotiated != null))}
+                  </p>
+                </div>
+                <div className="glass-chip flex flex-col items-center border-dashed px-3 py-4">
+                  <div className="text-center text-sm font-medium tracking-tight text-petrol-blue/60">{realizedSavingsLabel()}</div>
+                  <p className="mt-1 text-[11px] tracking-wide text-petrol-blue/50">{SAVINGS_LABELS.realized}</p>
+                  <p className="text-[10px] text-petrol-blue/40">Aún no se mide</p>
                 </div>
               </div>
             </CardContent>

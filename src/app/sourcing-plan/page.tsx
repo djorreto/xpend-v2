@@ -29,7 +29,18 @@ import {
   Grid
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { realizedSavings, savingsByCurrency } from '@/lib/procurement-flow'
+import {
+  SAVINGS_LABELS,
+  SAVINGS_LINK_SELECT,
+  moneyListText,
+  planSavings,
+  realizedSavingsLabel,
+  savingsByCurrency,
+  toSavingsLinks,
+  validatedSavingsLabel,
+  type CurrencySavings,
+  type SavingsLink,
+} from '@/lib/procurement-flow'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
@@ -169,21 +180,11 @@ export default function SourcingPlanPage() {
         const planIds = (plansData || []).map(p => p.id)
         let countsByPlan: Record<string, number> = {}
         let licBaselineByPlan: Record<string, number> = {}
-        let licSavingsByPlan: Record<string, number> = {}
-        let awardedSavingsByPlan: Record<string, number> = {}
         let planLinksData: any[] = []
         if (planIds.length) {
           const { data } = await supabase
             .from('sourcing_plan_licitaciones')
-            .select(`
-              plan_id,
-              licitacion:licitaciones(
-                baseline_amount,
-                baseline_currency,
-                savings_amount,
-                status
-              )
-            `)
+            .select(SAVINGS_LINK_SELECT)
             .in('plan_id', planIds)
           planLinksData = data || []
           const currencyByPlan = Object.fromEntries(
@@ -195,32 +196,22 @@ export default function SourcingPlanPage() {
             const planCurrency = currencyByPlan[pid] || 'CLP'
             const licCurrency = String(link.licitacion?.baseline_currency || planCurrency).toUpperCase()
             if (licCurrency !== planCurrency) return
-            const b = link.licitacion?.baseline_amount || 0
-            const s = link.licitacion?.savings_amount || 0
+            const lic = Array.isArray(link.licitacion) ? link.licitacion[0] : link.licitacion
+            const b = lic?.baseline_amount || 0
             licBaselineByPlan[pid] = (licBaselineByPlan[pid] || 0) + b
-            licSavingsByPlan[pid] = (licSavingsByPlan[pid] || 0) + s
-            if (link.licitacion?.status === 'awarded' && link.licitacion?.savings_amount != null) {
-              awardedSavingsByPlan[pid] = (awardedSavingsByPlan[pid] ?? 0) + Number(link.licitacion.savings_amount)
-            }
           })
         }
 
+        // Ahorros: objetivo, negociado (solo adjudicación de comité) y declarado, cada uno por su lado
+        const savingsLinks = toSavingsLinks(planLinksData)
         setPlans((plansData || []).map(p => ({
           ...p,
           licitaciones_count: countsByPlan[p.id] || 0,
           lic_baseline_sum: licBaselineByPlan[p.id] || 0,
-          lic_savings_sum: licSavingsByPlan[p.id] || 0,
-          estimated_award_savings: Object.prototype.hasOwnProperty.call(awardedSavingsByPlan, p.id) ? awardedSavingsByPlan[p.id] : null
+          plan_savings: planSavings(p, savingsLinks),
         })))
 
-        // Calcular estadísticas incluyendo aportes de licitaciones
-        const moneyLinks = planLinksData.map(link => ({
-          plan_id: link.plan_id,
-          savings_amount: link.licitacion?.savings_amount ?? null,
-          currency: link.licitacion?.baseline_currency ?? null,
-          awarded: link.licitacion?.status === 'awarded',
-        }))
-        calculateStats(plansData || [], licBaselineByPlan, licSavingsByPlan, moneyLinks)
+        calculateStats(plansData || [], licBaselineByPlan, savingsLinks)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar el plan')
@@ -237,8 +228,7 @@ export default function SourcingPlanPage() {
   const calculateStats = (
     plansData: SourcingPlan[],
     licBaselineByPlan: Record<string, number>,
-    licSavingsByPlan: Record<string, number>,
-    moneyLinks: { plan_id: string; savings_amount: number | null; currency: string | null }[]
+    savingsLinks: SavingsLink[]
   ) => {
     const planned = plansData.filter(p => p.status === 'planned' && !p.is_spot).length
     const inProgress = plansData.filter(p => p.status === 'in_progress').length
@@ -250,15 +240,8 @@ export default function SourcingPlanPage() {
       return sum + (p.estimated_spend || 0) + licBaseline
     }, 0)
     const totalActual = plansData.reduce((sum, p) => sum + (p.actual_spend || 0), 0)
-    const totalProjectedSavings = plansData.reduce((sum, p) => sum + (p.projected_savings_amount || 0), 0)
-    const totalActualSavings = plansData.reduce((sum, plan) => {
-      const licSavings = licSavingsByPlan[plan.id] || 0
-      return sum + realizedSavings(plan.actual_savings_amount, licSavings)
-    }, 0)
-
     const completionRate = planned > 0 ? (completed / planned) * 100 : 0
-    const achievementRate = totalProjectedSavings > 0 ? (totalActualSavings / totalProjectedSavings) * 100 : 0
-    const byCurrency = savingsByCurrency(plansData, moneyLinks)
+    const byCurrency = savingsByCurrency(plansData, savingsLinks)
 
     setStats({
       total_planned: planned,
@@ -267,10 +250,7 @@ export default function SourcingPlanPage() {
       total_spot: spot,
       total_estimated_spend: totalEstimated,
       total_actual_spend: totalActual,
-      total_projected_savings: totalProjectedSavings,
-      total_actual_savings: totalActualSavings,
       completion_rate: completionRate,
-      savings_achievement_rate: achievementRate,
       savings_by_currency: byCurrency,
     })
   }
@@ -286,14 +266,6 @@ export default function SourcingPlanPage() {
       plan.category?.toLowerCase().includes(query)
     )
   })
-
-  const getAchievementColor = (actual?: number, projected?: number) => {
-    if (!actual || !projected) return 'text-gray-500'
-    const rate = (actual / projected) * 100
-    if (rate >= 100) return 'text-green-600'
-    if (rate >= 80) return 'text-yellow-600'
-    return 'text-red-600'
-  }
 
   const handleDuplicateYear = async () => {
     // Función para duplicar el plan del año anterior
@@ -319,19 +291,19 @@ export default function SourcingPlanPage() {
         'Spend Estimado',
         'Spend Real',
         'Moneda',
-        'Ahorro Proyectado %',
-        'Ahorro Proyectado Monto',
-        'Ahorro comprometido %',
-        'Ahorro comprometido monto',
-        'Cumplimiento %',
+        'Ahorro objetivo %',
+        'Ahorro objetivo monto',
+        'Ahorro negociado (estimado)',
+        'Negociado vs objetivo %',
+        'Ahorro declarado, sin validación',
+        'Ahorro validado',
+        'Ahorro realizado',
         'Notas'
       ].join(',')
 
       const csvRows = filteredPlans.map(plan => {
-        const actual = realizedSavings(plan.actual_savings_amount, plan.lic_savings_sum)
-        const achievementRate = plan.projected_savings_amount
-          ? ((actual / plan.projected_savings_amount) * 100).toFixed(1)
-          : ''
+        const savings = plan.plan_savings
+        const negotiatedVsTarget = savings?.negotiatedVsTarget != null ? savings.negotiatedVsTarget.toFixed(1) : SAVINGS_LABELS.noInfo
 
         return [
           plan.plan_year,
@@ -347,9 +319,11 @@ export default function SourcingPlanPage() {
           plan.currency,
           plan.projected_savings_percentage || '',
           plan.projected_savings_amount || '',
-          plan.actual_savings_percentage || '',
-          actual || '',
-          achievementRate,
+          `"${moneyListText(savings?.negotiated || [])}"`,
+          negotiatedVsTarget,
+          `"${moneyListText(savings?.declared || [])}"`,
+          validatedSavingsLabel((savings?.negotiated || []).length > 0),
+          realizedSavingsLabel(),
           `"${(plan.notes || '').replace(/"/g, '""')}"`
         ].join(',')
       }).join('\n')
@@ -447,32 +421,43 @@ export default function SourcingPlanPage() {
 
             <Card>
               <CardContent className="p-3">
-                <p className="text-[11px] text-muted-foreground">Ahorro proyectado</p>
-                <div className="text-sm font-semibold leading-tight text-green-700">
-                  {(stats.savings_by_currency || []).length === 0
-                    ? formatCurrency(0, 'CLP')
-                    : stats.savings_by_currency.map((row: { currency: string; projected: number }) => (
-                        <div key={row.currency}>{formatCurrency(row.projected, row.currency)}</div>
-                      ))}
+                <p className="text-[11px] text-muted-foreground">{SAVINGS_LABELS.target}</p>
+                <div className="text-sm font-semibold leading-tight">
+                  {(stats.savings_by_currency || []).filter((row: CurrencySavings) => row.target != null).length === 0
+                    ? SAVINGS_LABELS.noInfo
+                    : stats.savings_by_currency
+                        .filter((row: CurrencySavings) => row.target != null)
+                        .map((row: CurrencySavings) => (
+                          <div key={row.currency}>{formatCurrency(row.target as number, row.currency)}</div>
+                        ))}
                 </div>
+                <p className="text-[11px] text-muted-foreground">Meta, no resultado</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardContent className="p-3">
-                <p className="text-[11px] text-muted-foreground">Ahorro comprometido</p>
+                <p className="text-[11px] text-muted-foreground">{SAVINGS_LABELS.negotiated}</p>
                 <div className="text-sm font-semibold leading-tight">
-                  {(stats.savings_by_currency || []).length === 0
-                    ? formatCurrency(0, 'CLP')
-                    : stats.savings_by_currency.map((row: { currency: string; actual: number; rate: number; projected: number }) => (
-                        <div key={row.currency}>
-                          {formatCurrency(row.actual, row.currency)}
-                          <span className="ml-1 text-[11px] font-normal text-muted-foreground">
-                            {row.projected > 0 ? `${row.rate.toFixed(0)}%` : ''}
-                          </span>
-                        </div>
-                      ))}
+                  {(stats.savings_by_currency || []).filter((row: CurrencySavings) => row.negotiated != null).length === 0
+                    ? SAVINGS_LABELS.noInfo
+                    : stats.savings_by_currency
+                        .filter((row: CurrencySavings) => row.negotiated != null)
+                        .map((row: CurrencySavings) => (
+                          <div key={row.currency}>
+                            {formatCurrency(row.negotiated as number, row.currency)}
+                            {row.negotiatedVsTarget != null && (
+                              <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                                {row.negotiatedVsTarget.toFixed(0)}% del objetivo
+                              </span>
+                            )}
+                          </div>
+                        ))}
                 </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Validado: {validatedSavingsLabel((stats.savings_by_currency || []).some((row: CurrencySavings) => row.negotiated != null))}
+                  {' · '}Realizado: {realizedSavingsLabel()}
+                </p>
               </CardContent>
             </Card>
 
@@ -622,21 +607,18 @@ export default function SourcingPlanPage() {
                     <th className="w-[12%] p-2 text-left font-medium">Estado</th>
                     <th className="w-[6%] p-2 text-center font-medium">Lic.</th>
                     <th className="w-[12%] p-2 text-right font-medium">Spend</th>
-                    <th className="w-[11%] p-2 text-right font-medium">Ahorro</th>
-                    <th className="w-[11%] p-2 text-right font-medium">Real</th>
-                    <th className="w-[5%] p-2 text-center font-medium">%</th>
+                    <th className="w-[11%] p-2 text-right font-medium">Objetivo</th>
+                    <th className="w-[11%] p-2 text-right font-medium">Negociado (est.)</th>
+                    <th className="w-[5%] p-2 text-center font-medium" title="Negociado sobre objetivo. El realizado no se mide todavía.">Neg./obj.</th>
                     <th className="w-[4%] p-2 text-center font-medium" />
                   </tr>
                 </thead>
                 <tbody>
                   {filteredPlans.map((plan) => {
-                    const estimatedAward = (plan as SourcingPlan & { estimated_award_savings?: number | null }).estimated_award_savings
-                    const actualSavings = estimatedAward == null
-                      ? realizedSavings(plan.actual_savings_amount, plan.lic_savings_sum)
-                      : estimatedAward
-                    const achievementRate = plan.projected_savings_amount
-                      ? (actualSavings / plan.projected_savings_amount) * 100
-                      : null
+                    const savings = plan.plan_savings
+                    const negotiatedList = savings?.negotiated || []
+                    const declaredList = savings?.declared || []
+                    const negotiatedVsTarget = savings?.negotiatedVsTarget ?? null
 
                     return (
                       <tr key={plan.id} className="border-b hover:bg-muted/30 transition-colors">
@@ -685,7 +667,7 @@ export default function SourcingPlanPage() {
                         <td className="whitespace-nowrap p-2 text-right tabular-nums">
                           {plan.projected_savings_amount ? (
                             <div>
-                              <div className="font-medium text-green-600">
+                              <div className="font-medium">
                                 {formatCurrency(plan.projected_savings_amount, plan.currency)}
                               </div>
                               <div className="text-xs text-muted-foreground">
@@ -693,32 +675,38 @@ export default function SourcingPlanPage() {
                               </div>
                             </div>
                           ) : (
-                            <span className="text-muted-foreground">-</span>
+                            <span className="text-muted-foreground">{SAVINGS_LABELS.noInfo}</span>
                           )}
                         </td>
 
-                        {/* Ahorro Real */}
+                        {/* Ahorro negociado (estimado). Nunca es ahorro realizado. */}
                         <td className="whitespace-nowrap p-2 text-right tabular-nums">
-                          {estimatedAward == null && !actualSavings ? (
-                            <span className="text-muted-foreground">-</span>
-                          ) : (
+                          {negotiatedList.length > 0 ? (
                             <div>
-                              <div className="font-medium text-emerald-600">
-                                {formatCurrency(actualSavings, plan.currency)}
-                              </div>
+                              {negotiatedList.map(row => (
+                                <div key={row.currency} className="font-medium">
+                                  {formatCurrency(row.amount, row.currency)}
+                                </div>
+                              ))}
                               <div className="text-xs text-muted-foreground">
-                                {estimatedAward == null ? 'sin adjudicación' : 'estimado'}
+                                {validatedSavingsLabel(true)}
                               </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {(savings?.withoutComparableBase || 0) > 0 ? 'Sin base comparable' : SAVINGS_LABELS.noInfo}
+                            </span>
+                          )}
+                          {declaredList.length > 0 && (
+                            <div className="mt-1 text-[11px] text-muted-foreground">
+                              Declarado: {declaredList.map(row => formatCurrency(row.amount, row.currency)).join(' · ')} (sin validar)
                             </div>
                           )}
                         </td>
 
-                        {/* Cumplimiento */}
                         <td className="p-2 text-center tabular-nums">
-                          {achievementRate !== null ? (
-                            <div className={`font-semibold ${getAchievementColor(actualSavings, plan.projected_savings_amount)}`}>
-                              {achievementRate.toFixed(0)}%
-                            </div>
+                          {negotiatedVsTarget !== null ? (
+                            <div className="font-medium">{negotiatedVsTarget.toFixed(0)}%</div>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}
