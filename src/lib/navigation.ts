@@ -86,6 +86,7 @@ export const NAV_SECTIONS: NavSection[] = [
     description: 'Tu centro de trabajo',
     items: [
       { id: 'inicio', label: 'Inicio', href: '/dashboard', description: 'Lo que requiere tu atención hoy', match: ['/dashboard'] },
+      { id: 'gestion', label: 'Panel de gestión', href: '/gestion', description: 'Cumplimiento, carga y ahorros del equipo', match: ['/gestion'], requires: 'manageTeams' },
     ],
   },
   {

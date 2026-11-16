@@ -13,6 +13,7 @@ import { supabaseBrowser } from '@/lib/supabase'
 import { formatCurrency } from '@/lib/utils'
 import { describeSpendSource, type SpendSourceInfo } from '@/lib/spend-sources'
 import { can, roleLabel } from '@/lib/navigation'
+import { MyPortfolio } from '@/components/my-portfolio'
 import {
   SAVINGS_LABELS,
   loadPlanSavingsLinks,
@@ -255,6 +256,8 @@ export default function InicioPage() {
             )}
           </section>
         )}
+
+        {!readOnly && viewer.companyId && <MyPortfolio userId={viewer.id} role={role} companyId={viewer.companyId} />}
 
         {noData && (
           <BlockCard title="Primeros pasos con XPEND" description="Tres módulos, un mismo hilo: del gasto a la adjudicación y el contrato.">

@@ -109,6 +109,12 @@ export default function SourcingPlanPage() {
   // Estadísticas
   const [stats, setStats] = useState<any>(null)
 
+  // Enlace desde Inicio: /sourcing-plan?alcance=mine abre Mi portafolio.
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('alcance')
+    if (requested === 'mine' || requested === 'team') setScope(requested)
+  }, [])
+
   useEffect(() => {
     loadSourcingPlans()
   }, [filters])
