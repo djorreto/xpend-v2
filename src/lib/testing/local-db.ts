@@ -70,6 +70,16 @@ export async function setup() {
   return { admin, clients, companyId, profiles, analystEmail: ANALYST_EMAIL, managerEmail: 'gerente.f1b@xpend.test', adminEmail: fx.XPEND_FASE0_BUYER_EMAIL, viewerEmail: fx.XPEND_FASE0_VIEWER_EMAIL }
 }
 
+// Proveedor de la empresa de prueba y administrador de otra empresa, para verificar aislamiento.
+export async function outsiders() {
+  const keys = localKeys()
+  const fx = fixtures()
+  return {
+    supplier: await signIn(keys.API_URL, keys.ANON_KEY, fx.XPEND_FASE0_SUPPLIER_EMAIL, fx.XPEND_FASE0_SUPPLIER_PASSWORD),
+    otherTenant: await signIn(keys.API_URL, keys.ANON_KEY, fx.XPEND_FASE0_OTHER_TENANT_EMAIL, fx.XPEND_FASE0_OTHER_TENANT_PASSWORD),
+  }
+}
+
 
 // Ejecuta SQL directamente en la base LOCAL (solo para limpiar datos de prueba que los disparadores protegen).
 export function localSql(statement: string) {
