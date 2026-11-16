@@ -12,6 +12,7 @@ import { CURRENCIES } from '@/lib/spend-basis'
 import { SpendMonthChart } from '@/components/spend/spend-month-chart'
 import { DossierThread } from '@/components/dossier-thread'
 import { canOpenOpportunity, saveDossier } from '@/lib/dossier-store'
+import { linkInitiativeToOpportunity } from '@/lib/portfolio-data'
 
 type Group = {
   id: string
@@ -228,6 +229,7 @@ export default function SpendGroupPage() {
       setMessage(error?.message || 'No se creó la iniciativa.')
       return
     }
+    await linkInitiativeToOpportunity(supabase, { companyId: company.id, userId: user.id, planId: data[0].id, opportunityId: item.id, categoryName: item.category })
     await saveDossier(supabase, {
       companyId: company.id,
       userId: user.id,

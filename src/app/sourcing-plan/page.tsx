@@ -43,6 +43,8 @@ import {
   type SavingsLink,
 } from '@/lib/procurement-flow'
 import { supabaseBrowser } from '@/lib/supabase'
+import { loadPortfolio, personName, type PortfolioData } from '@/lib/portfolio-data'
+import { assignmentGaps, effectiveOwner, filterByScope, PORTFOLIO_LABELS, type PortfolioScope } from '@/lib/portfolio'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 import { useToast } from '@/components/ui/toast'
@@ -100,6 +102,9 @@ export default function SourcingPlanPage() {
   const [groups, setGroups] = useState<{ id: string; name: string }[]>([])
   const [groupFilter, setGroupFilter] = useState('all')
   const [showFilters, setShowFilters] = useState(false)
+  const [portfolio, setPortfolio] = useState<PortfolioData | null>(null)
+  const [scope, setScope] = useState<PortfolioScope>('all')
+  const [areaFilter, setAreaFilter] = useState('')
 
   // Estadísticas
   const [stats, setStats] = useState<any>(null)
@@ -135,6 +140,7 @@ export default function SourcingPlanPage() {
       if (profileError || !profile) throw new Error('Perfil no encontrado')
 
       setUser({
+        id: profile.id,
         name: profile.full_name || authUser.email,
         email: authUser.email,
         role: profile.role
@@ -155,6 +161,7 @@ export default function SourcingPlanPage() {
           .eq('company_id', profile.company_id)
           .order('name')
         setGroups(groupRows || [])
+        setPortfolio(await loadPortfolio(supabase, profile.company_id))
 
         // Cargar planes con filtros
         let query = supabase
@@ -256,7 +263,19 @@ export default function SourcingPlanPage() {
     })
   }
 
-  const filteredPlans = plans.filter(plan => {
+  const assignmentMap = new Map((portfolio?.assignments || []).map(item => [item.category_id, item]))
+  const scopeContext = {
+    userId: user?.id || '',
+    teamIds: (portfolio?.members || []).filter(member => member.user_id === user?.id).map(member => member.team_id),
+    areaId: areaFilter || null,
+    assignments: assignmentMap,
+  }
+  const areas = Array.from(new Map(plans.filter(plan => plan.department_id).map(plan => [plan.department_id as string, (plan as any).department?.name || 'Área sin nombre'])).entries())
+  const scopedPlans = filterByScope(plans as any[], scope, scopeContext) as typeof plans
+  const gaps = assignmentGaps(plans as any[], assignmentMap)
+  const personById = (id?: string | null) => personName(portfolio?.people.find(person => person.id === id))
+
+  const filteredPlans = scopedPlans.filter(plan => {
     if (groupFilter === 'none' && plan.group_id) return false
     if (groupFilter !== 'all' && groupFilter !== 'none' && plan.group_id !== groupFilter) return false
     if (!searchQuery) return true
@@ -478,6 +497,31 @@ export default function SourcingPlanPage() {
         <Card>
           <CardContent className="p-3">
             <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Alcance del plan">
+                {(['all', 'mine', 'team', 'area'] as PortfolioScope[]).map(item => (
+                  <button
+                    key={item}
+                    type="button"
+                    aria-pressed={scope === item}
+                    onClick={() => setScope(item)}
+                    className={`rounded-full px-3 py-1 text-[12.5px] font-medium ${scope === item ? 'bg-petrol-blue text-white' : 'border border-petrol-blue/15 bg-white/70 text-petrol-blue hover:bg-white'}`}
+                  >
+                    {PORTFOLIO_LABELS[item]}
+                  </button>
+                ))}
+                {scope === 'area' && (
+                  <select aria-label="Área solicitante" className="h-8 rounded-md border bg-background px-2 text-sm" value={areaFilter} onChange={event => setAreaFilter(event.target.value)}>
+                    <option value="">Elegir área…</option>
+                    {areas.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                  </select>
+                )}
+                {(gaps.withoutOwner.length > 0 || gaps.withoutCategory.length > 0) && (
+                  <span className="ml-auto text-[12px] text-petrol-blue/80">
+                    {gaps.withoutOwner.length} sin responsable · {gaps.withoutCategory.length} sin categoría vinculada
+                    {can(user?.role, 'manageTeams') && <> · <a className="underline" href="/equipos">Asignar</a></>}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <div className="relative">
@@ -635,6 +679,15 @@ export default function SourcingPlanPage() {
                                   SPOT
                                 </Badge>
                               )}
+                            </div>
+                            <div className="truncate text-[12px] text-muted-foreground" data-testid="plan-owner">
+                              {(() => {
+                                const owner = effectiveOwner(plan as any, assignmentMap)
+                                const team = portfolio?.teams.find(item => item.id === (plan as any).team_id || item.id === assignmentMap.get((plan as any).category_id)?.team_id)
+                                return owner.userId
+                                  ? `${owner.source === 'categoria' ? PORTFOLIO_LABELS.categoryManager : 'Responsable'}: ${personById(owner.userId)}${(plan as any).backup_user_id ? ` · Suplente: ${personById((plan as any).backup_user_id)}` : ''}${team ? ` · ${team.name}` : ''}`
+                                  : PORTFOLIO_LABELS.noOwner
+                              })()}
                             </div>
                             {(plan.category || plan.group_id) && (
                               <div className="truncate text-[12px] text-muted-foreground">

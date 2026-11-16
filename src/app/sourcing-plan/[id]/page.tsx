@@ -33,6 +33,7 @@ import {
 } from '@/lib/procurement-flow'
 import { FichaGate } from '@/components/ficha-gate'
 import { DossierThread } from '@/components/dossier-thread'
+import { InitiativeOwners } from '@/components/initiative-owners'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
@@ -320,6 +321,7 @@ export default function SourcingPlanDetailPage() {
         </div>
 
         <DossierThread match={{ companyId: company?.id || plan.company_id, sourcingPlanId: plan.id }} />
+        <InitiativeOwners plan={plan as any} canManage={can(user?.role, 'manageTeams')} onChanged={loadPlan} />
         <FichaGate
           planId={plan.id}
           hasOwner={Boolean(plan.responsible_user_id)}

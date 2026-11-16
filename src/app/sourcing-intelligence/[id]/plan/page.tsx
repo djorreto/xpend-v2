@@ -12,6 +12,7 @@ import { SIProcurementPlan, SIPlanItem } from '@/types'
 import { useToast } from '@/components/ui/toast'
 import { SpendFlowBar } from '@/components/spend/spend-flow-bar'
 import { SpendResultTabs } from '@/components/spend/spend-result-tabs'
+import { linkInitiativeToOpportunity } from '@/lib/portfolio-data'
 
 export default function PlanPage() {
   const router = useRouter()
@@ -119,7 +120,7 @@ export default function PlanPage() {
     }
     setAddingId(item.id)
     try {
-      const { error } = await supabase
+      const { data: created, error } = await supabase
         .from('sourcing_plans')
         .insert({
           company_id: company.id,
@@ -138,8 +139,13 @@ export default function PlanPage() {
           is_spot: false,
           created_by: user.id
         })
+        .select('id')
+        .limit(1)
 
       if (error) throw error
+      if (created?.[0]?.id) {
+        await linkInitiativeToOpportunity(supabase, { companyId: company.id, userId: user.id, planId: created[0].id, opportunityId: item.id, categoryName: item.category })
+      }
       addToast({
         type: 'success',
         title: 'Iniciativa creada',

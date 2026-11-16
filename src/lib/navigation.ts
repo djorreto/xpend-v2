@@ -26,6 +26,7 @@ export const CAPABILITY_ROLES = {
   approve: ['super_admin', 'admin', 'manager'],
   readSpend: ['super_admin', 'admin', 'manager', 'analyst'],
   manageSpend: ['super_admin', 'admin', 'manager'],
+  manageTeams: ['super_admin', 'admin', 'manager'],
   administer: ['super_admin', 'admin'],
   platform: ['super_admin'],
 } as const satisfies Record<string, readonly Role[]>
@@ -43,6 +44,7 @@ export const CAPABILITY_LABELS: Record<Capability, string> = {
   approve: 'Aprobar bases y decisiones',
   readSpend: 'Ver el gasto',
   manageSpend: 'Cargar gasto y cerrar el mes',
+  manageTeams: 'Asignar categorías, responsables y equipos de compras',
   administer: 'Administrar usuarios y configuración',
   platform: 'Administrar la plataforma',
 }
@@ -88,6 +90,7 @@ export const NAV_SECTIONS: NavSection[] = [
     description: 'De la iniciativa a la adjudicación',
     items: [
       { id: 'plan', label: 'Plan de abastecimiento', href: '/sourcing-plan', description: 'Iniciativas del año', match: ['/sourcing-plan'] },
+      { id: 'equipos', label: 'Equipos y categorías', href: '/equipos', description: 'Quién lleva cada categoría', match: ['/equipos'] },
       { id: 'procesos', label: 'Procesos', href: '/procesos', description: 'RFx, licitaciones y salas de ofertas', match: ['/procesos', '/rfx-maker', '/licitaciones', '/sala'] },
       { id: 'adjudicaciones', label: 'Adjudicaciones', href: '/adjudicaciones', description: 'Decisiones del comité y su contrato', match: ['/adjudicaciones'] },
       { id: 'reportes', label: 'Reportes y exportaciones', href: '/reports', description: 'Descargas en CSV', match: ['/reports'] },
