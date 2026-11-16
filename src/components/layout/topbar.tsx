@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, User, LogOut, Settings, Home, Key, Menu, Globe } from 'lucide-react'
+import { Search, User, LogOut, Settings, Home, Key, Menu, Globe, Compass } from 'lucide-react'
+import { startTour, useDemoTours } from '@/components/guided-tour'
 import { roleLabel } from '@/lib/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,6 +41,7 @@ export function Topbar({ user, onOpenMobileMenu }: TopbarProps) {
   const { addToast } = useToast()
   const isSupplier = user?.role === 'supplier'
   const homeHref = isSupplier ? '/sala' : '/dashboard'
+  const { startable } = useDemoTours()
 
   const handleLogout = async () => {
     try {
@@ -156,6 +158,12 @@ export function Topbar({ user, onOpenMobileMenu }: TopbarProps) {
                 <DropdownMenuItem onClick={() => router.push('/settings')}>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Mi cuenta y configuración</span>
+                </DropdownMenuItem>
+              )}
+              {startable[0] && (
+                <DropdownMenuItem onClick={() => startTour(startable[0].id)} data-testid="menu-recorrido">
+                  <Compass className="mr-2 h-4 w-4" />
+                  <span>Recorrido guiado</span>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem onClick={() => router.push('/home')}>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { can } from '@/lib/navigation'
 import { useRouter, useParams } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
+import { InitiativeProjects } from '@/components/project/initiative-projects'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -357,6 +358,11 @@ export default function SourcingPlanDetailPage() {
             ))}
           </CardContent>
         </Card>
+
+        <InitiativeProjects
+          initiativeId={plan.id}
+          canCreate={['super_admin', 'admin', 'manager'].includes(user?.role) || (user?.role === 'analyst' && [plan.responsible_user_id, (plan as { backup_user_id?: string | null }).backup_user_id].includes(user?.id))}
+        />
 
         {/* Estado */}
         <Card>

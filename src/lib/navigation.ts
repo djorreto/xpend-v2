@@ -95,7 +95,8 @@ export const NAV_SECTIONS: NavSection[] = [
     description: 'De la iniciativa a la adjudicación',
     items: [
       { id: 'plan', label: 'Plan de abastecimiento', href: '/sourcing-plan', description: 'Iniciativas del año', match: ['/sourcing-plan'] },
-      { id: 'plan-anual', label: 'Plan anual y calendario', href: '/plan-anual', description: 'Metas, hitos y fechas del año', match: ['/plan-anual'] },
+      { id: 'plan-anual', label: 'Plan anual', href: '/plan-anual', description: 'Tabla, árbol, Gantt y entregables del año', match: ['/plan-anual'] },
+      { id: 'proyectos', label: 'Proyectos de sourcing', href: '/proyectos', description: 'Plan de trabajo, entregables, RFx y contratos', match: ['/proyectos'] },
       { id: 'equipos', label: 'Equipos y categorías', href: '/equipos', description: 'Quién lleva cada categoría', match: ['/equipos'] },
       { id: 'procesos', label: 'Procesos', href: '/procesos', description: 'RFx, licitaciones y salas de ofertas', match: ['/procesos', '/rfx-maker', '/licitaciones', '/sala'] },
       { id: 'ahorros', label: 'Control de ahorros', href: '/ahorros', description: 'Negociado, validado y realizado', match: ['/ahorros'] },
@@ -146,6 +147,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'usuarios', label: 'Usuarios', href: '/users', description: 'Invitar y administrar usuarios', match: ['/users'] },
       { id: 'roles', label: 'Roles y permisos', href: '/administracion/roles', description: 'Qué puede hacer cada rol', match: ['/administracion/roles'] },
       { id: 'configuracion', label: 'Configuración', href: '/settings', description: 'Empresa y cuenta', match: ['/settings'] },
+      { id: 'metodologia', label: 'Metodología de Procurement', href: '/administracion/metodologia', description: 'Light, Completa o personalizada', match: ['/administracion/metodologia'] },
+      { id: 'demostraciones', label: 'Demostraciones', href: '/administracion/demostraciones', description: 'Recorridos guiados de la empresa demo', match: ['/administracion/demostraciones'] },
       { id: 'super-admin', label: 'Super Admin', href: '/super-admin', description: 'Plataforma', match: ['/super-admin'], requires: 'platform' },
     ],
   },

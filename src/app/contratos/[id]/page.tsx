@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
+import { ContractHistory } from '@/components/project/contracts-panel'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -295,6 +296,7 @@ export default function ContratoPage() {
             {contract.award_id ? <p>Vinculado a la adjudicación. Cambiar este monto no cambia el ahorro de la licitación.</p> : null}
           </CardContent>
         </Card>
+        {session.companyId && <ContractHistory companyId={session.companyId} contractId={contractId} canManage={['admin', 'manager', 'analyst'].includes(session.role)} />}
         <Card>
           <CardHeader><CardTitle>Documentos</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">

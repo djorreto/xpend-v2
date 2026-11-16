@@ -18,6 +18,8 @@ import { ManagementDashboard } from '@/components/management-dashboard'
 import { PlanAnualCard } from '@/components/plan-anual-card'
 import { AdminPerspective } from '@/components/admin-perspective'
 import { PerspectiveSwitcher } from '@/components/perspective-switcher'
+import { BuyerToday, ManagerAttention } from '@/components/attention-panel'
+import { DemoTourCard } from '@/components/guided-tour'
 import { availablePerspectives, resolvePerspective, type Perspective } from '@/lib/perspective'
 import {
   BUCKET_LABELS,
@@ -231,6 +233,10 @@ export default function InicioPage() {
           <PerspectiveSwitcher options={perspectives} value={current} onChange={changePerspective} />
         </header>
 
+        <DemoTourCard />
+
+        {supervisor && (!multi || showMgmt) && viewer.companyId && <ManagerAttention companyId={viewer.companyId} role={role} userId={me} />}
+
         {(!multi || showAdmin) && healthIssues.length > 0 && (
           <BlockCard title="Para que funcione" description="Piezas que hay que corregir antes de confiar en la operación.">
             <ItemList items={healthIssues.map(issue => ({ id: issue.title, title: issue.title, detail: issue.detail }))} empty="" />
@@ -254,6 +260,8 @@ export default function InicioPage() {
             </span>
           </Link>
         )}
+
+        {showWork && !readOnly && !focusPerson && viewer.companyId && <BuyerToday companyId={viewer.companyId} role={role} userId={me} />}
 
         {showWork && quickActions.length > 0 && (
           <section aria-labelledby="acciones-rapidas" className="space-y-2">

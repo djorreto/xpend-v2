@@ -65,6 +65,20 @@ export function supplierNdaPath(
   return `${companyId}/${supplierId}/${timestamp}-nda${extension(fileName)}`
 }
 
+export function projectDocumentPath(
+  companyId: string,
+  projectId: string,
+  deliverableKey: string,
+  version: number,
+  fileName: string,
+  timestamp = Date.now()
+) {
+  assertCompanyId(companyId)
+  if (!UUID.test(projectId)) throw new Error('El proyecto no tiene un identificador válido para almacenar documentos.')
+  assertSegment(deliverableKey, 'El entregable')
+  return `${companyId}/proyectos/${projectId}/${deliverableKey}/v${version}-${timestamp}${extension(fileName)}`
+}
+
 export function savingsEvidencePath(
   companyId: string,
   validationId: string,

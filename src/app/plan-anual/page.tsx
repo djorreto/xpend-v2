@@ -16,25 +16,23 @@ import { formatCurrency } from '@/lib/utils'
 import { loadPortfolio, personName, type PortfolioData } from '@/lib/portfolio-data'
 import { effectiveOwner, filterByScope, PORTFOLIO_LABELS, type PortfolioScope } from '@/lib/portfolio'
 import { loadAnnualPlan, loadSchedules, type AnnualPlanBundle, type InitiativeSchedule } from '@/lib/annual-plan-data'
-import { HEALTH_LABEL, MILESTONE_LABEL, STATUS_LABEL, daysBetween, delaysByCause, diffAgainstCommitted, lineCoverage, todayISO, totalsByCurrency, CAUSE_LABEL, NO_CAUSE_LABEL, type InitiativeHealth, type RescheduleCause } from '@/lib/milestones'
+import { delaysByCause, diffAgainstCommitted, lineCoverage, todayISO, totalsByCurrency, CAUSE_LABEL, NO_CAUSE_LABEL, type RescheduleCause } from '@/lib/milestones'
+import { loadProjectsFor, type PortfolioProjects } from '@/lib/project-data'
+import { PlanDeliverables, PlanGantt, PlanTable, PlanTree, loadTree, type TreeData } from '@/components/plan-views'
 
 const FIELD = 'h-9 rounded-xl border border-petrol-blue/15 bg-white/80 px-3 text-[13px] text-petrol-blue'
 const TABS = [
-  { id: 'categorias', label: 'Categorías y metas' },
-  { id: 'iniciativas', label: 'Iniciativas e hitos' },
-  { id: 'calendario', label: 'Calendario' },
+  { id: 'tabla', label: 'Tabla' },
+  { id: 'arbol', label: 'Árbol' },
+  { id: 'gantt', label: 'Gantt' },
+  { id: 'entregables', label: 'Entregables' },
+  { id: 'categorias', label: 'Metas por categoría' },
   { id: 'cambios', label: 'Cambios del plan' },
 ] as const
 type TabId = (typeof TABS)[number]['id']
+const PREFS_KEY = 'xpend.plan-anual'
+type Prefs = { tab: TabId; scope: PortfolioScope; person: string; team: string; category: string }
 
-const HEALTH_STYLE: Record<InitiativeHealth, string> = {
-  completed: 'bg-accent-mint/40 text-petrol-blue',
-  blocked: 'bg-amber-100 text-amber-900',
-  late: 'bg-red-100 text-red-800',
-  due_soon: 'bg-yellow-100 text-yellow-900',
-  on_time: 'bg-white text-petrol-blue border border-petrol-blue/15',
-  no_dates: 'bg-petrol-blue/[0.06] text-petrol-blue/80',
-}
 const PRIORITY = { 1: 'Alta', 2: 'Media', 3: 'Baja' } as Record<number, string>
 
 export default function PlanAnualPage() {
@@ -45,12 +43,33 @@ export default function PlanAnualPage() {
   const [schedules, setSchedules] = useState<InitiativeSchedule[]>([])
   const [portfolio, setPortfolio] = useState<PortfolioData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<TabId>('categorias')
+  const [tab, setTabState] = useState<TabId>('tabla')
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
-  const [scope, setScope] = useState<PortfolioScope>('all')
-  const [personFilter, setPersonFilter] = useState('')
-  const [teamFilter, setTeamFilter] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('')
+  const [scope, setScopeState] = useState<PortfolioScope>('all')
+  const [personFilter, setPersonState] = useState('')
+  const [teamFilter, setTeamState] = useState('')
+  const [categoryFilter, setCategoryState] = useState('')
+  const [projects, setProjects] = useState<PortfolioProjects | null>(null)
+  const [tree, setTree] = useState<TreeData>({ rfx: [], links: [], contracts: [] })
+
+  // La vista y los filtros se recuerdan en este navegador; la URL (?vista=) manda si viene.
+  const persist = (next: Partial<Prefs>) => {
+    try {
+      const current = JSON.parse(window.localStorage.getItem(PREFS_KEY) || '{}')
+      window.localStorage.setItem(PREFS_KEY, JSON.stringify({ ...current, ...next }))
+    } catch { /* sin almacenamiento: vale para esta visita */ }
+  }
+  const setTab = (next: TabId) => {
+    setTabState(next)
+    persist({ tab: next })
+    const url = new URL(window.location.href)
+    url.searchParams.set('vista', next)
+    window.history.replaceState(null, '', url.toString())
+  }
+  const setScope = (value: PortfolioScope) => { setScopeState(value); persist({ scope: value }) }
+  const setPersonFilter = (value: string) => { setPersonState(value); persist({ person: value }) }
+  const setTeamFilter = (value: string) => { setTeamState(value); persist({ team: value }) }
+  const setCategoryFilter = (value: string) => { setCategoryState(value); persist({ category: value }) }
 
   const refresh = useCallback(async (appSession: AppSession, selectedYear: number) => {
     const supabase = supabaseBrowser()
@@ -63,6 +82,10 @@ export default function PlanAnualPage() {
     setBundle(plan)
     setSchedules(items)
     setPortfolio(portfolioData)
+    const planIds = items.map(item => item.initiative.id)
+    const projectData = await loadProjectsFor(supabase, companyId, planIds)
+    setProjects(projectData)
+    setTree(await loadTree(supabase, companyId, planIds, projectData.projects.map(item => item.id), can(appSession.role, 'readContracts')))
   }, [])
 
   useEffect(() => {
@@ -70,6 +93,16 @@ export default function PlanAnualPage() {
       if (!appSession) return router.replace('/login')
       if (appSession.role === 'supplier') return router.replace('/sala')
       setSession(appSession)
+      try {
+        const stored = JSON.parse(window.localStorage.getItem(PREFS_KEY) || '{}') as Partial<Prefs>
+        const fromUrl = new URLSearchParams(window.location.search).get('vista') as TabId | null
+        const initial = fromUrl && TABS.some(item => item.id === fromUrl) ? fromUrl : stored.tab && TABS.some(item => item.id === stored.tab) ? stored.tab : 'tabla'
+        setTabState(initial)
+        if (stored.scope) setScopeState(stored.scope)
+        if (stored.person) setPersonState(stored.person)
+        if (stored.team) setTeamState(stored.team)
+        if (stored.category) setCategoryState(stored.category)
+      } catch { /* preferencias ilegibles: se usan las de por defecto */ }
       if (appSession.companyId) await refresh(appSession, year)
       setLoading(false)
     })
@@ -216,47 +249,17 @@ export default function PlanAnualPage() {
           />
         )}
 
-        {tab === 'iniciativas' && (
+        {tab === 'tabla' && (
           visible.length === 0 ? <EmptyHint>No hay iniciativas de {year} con este filtro.</EmptyHint> : (
-            <Card>
-              <CardContent className="p-0">
-                <ul className="divide-y divide-petrol-blue/[0.06]" data-testid="lista-iniciativas">
-                  {visible.map(item => {
-                    const owner = effectiveOwner(item.initiative, assignments)
-                    const next = item.milestones.find(view => view.status !== 'completed' && view.committed_date)
-                    return (
-                      <li key={item.initiative.id} className="px-4 py-3">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <Link href={`/sourcing-plan/${item.initiative.id}`} className="text-[14px] font-medium text-petrol-blue hover:underline">{item.initiative.title}</Link>
-                            <p className="text-[12.5px] text-petrol-blue/80">
-                              {categoryName(item.initiative.category_id)} · {owner.userId ? person(owner.userId) : 'Sin responsable'}
-                              {next ? ` · Próximo hito: ${MILESTONE_LABEL[next.kind]} (${fmtDate(next.committed_date)})` : ''}
-                            </p>
-                          </div>
-                          <span className={`rounded-full px-2.5 py-0.5 text-[12px] font-medium ${HEALTH_STYLE[item.health]}`}>{HEALTH_LABEL[item.health]}</span>
-                        </div>
-                        {item.hasMilestones ? (
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {item.milestones.map(view => (
-                              <span key={view.id} title={`${view.label}: ${STATUS_LABEL[view.status]}`} className={`rounded-md px-2 py-0.5 text-[11.5px] ${STATUS_STYLE[view.status]}`}>
-                                {view.label}{view.lateDays > 0 ? ` +${view.lateDays} d` : ''}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="mt-1 text-[12px] text-petrol-blue/70">Sin hitos. Se crean desde la ficha de la iniciativa.</p>
-                        )}
-                      </li>
-                    )
-                  })}
-                </ul>
-              </CardContent>
-            </Card>
+            <PlanTable schedules={visible} projects={projects} today={today} categoryName={categoryName} person={person} ownerOf={item => effectiveOwner(item, assignments).userId} />
           )
         )}
 
-        {tab === 'calendario' && <CalendarTab year={year} schedules={visible} today={today} person={person} assignments={assignments} />}
+        {tab === 'arbol' && <PlanTree schedules={visible} categories={portfolio.categories} projects={projects} tree={tree} today={today} person={person} ownerOf={item => effectiveOwner(item, assignments).userId} />}
+
+        {tab === 'gantt' && <PlanGantt schedules={visible} projects={projects} today={today} person={person} ownerOf={item => effectiveOwner(item, assignments).userId} year={year} />}
+
+        {tab === 'entregables' && <PlanDeliverables schedules={visible} projects={projects} today={today} person={person} userId={session.userId} />}
 
         {tab === 'cambios' && (
           <BlockCard title="Revisiones del plan comprometido" description="Cada cambio posterior al compromiso, con su motivo. El original está guardado aparte.">
@@ -433,58 +436,5 @@ function LinesTab({ bundle, plan, portfolio, schedules, allSchedules, writable, 
       )}
       {committed && bundle.snapshot && <p className="text-[12px] text-petrol-blue/75">Foto del plan original guardada el {fmtDate(bundle.snapshot.taken_at)}: {bundle.snapshot.lines.length} líneas. No se puede modificar.</p>}
     </div>
-  )
-}
-
-function yearPercent(date: string, year: number) {
-  const start = `${year}-01-01`
-  const total = daysBetween(start, `${year + 1}-01-01`)
-  return Math.min(100, Math.max(0, (daysBetween(start, date) / total) * 100))
-}
-
-const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-const DOT: Record<string, string> = { completed: 'bg-accent-turquoise', blocked: 'bg-amber-500', late: 'bg-red-600', due_soon: 'bg-yellow-500', on_time: 'bg-petrol-blue/60', no_date: 'bg-transparent' }
-
-function CalendarTab({ year, schedules, today, person, assignments }: { year: number; schedules: InitiativeSchedule[]; today: string; person: (id: string | null | undefined) => string; assignments: Map<string, { manager_user_id: string | null; category_id: string; backup_user_id: string | null; team_id: string | null }> }) {
-  const withDates = schedules.filter(item => item.milestones.some(view => view.committed_date))
-  if (withDates.length === 0) return <EmptyHint>Ninguna iniciativa de {year} tiene hitos con fecha comprometida todavía.</EmptyHint>
-  const todayPos = today.startsWith(String(year)) ? yearPercent(today, year) : null
-  return (
-    <Card>
-      <CardContent className="overflow-x-auto p-4">
-        <div className="min-w-[860px]" data-testid="calendario">
-          <div className="ml-56 flex border-b border-petrol-blue/10 pb-1 text-[11.5px] text-petrol-blue/75">
-            {MONTHS.map(month => <span key={month} className="flex-1">{month}</span>)}
-          </div>
-          {withDates.map(item => {
-            const dated = item.milestones.filter(view => view.committed_date)
-            const first = yearPercent(dated[0].committed_date as string, year)
-            const last = yearPercent(dated[dated.length - 1].committed_date as string, year)
-            const owner = effectiveOwner(item.initiative, assignments).userId
-            return (
-              <div key={item.initiative.id} className="flex items-center border-b border-petrol-blue/[0.05] py-2" data-testid="calendario-fila">
-                <div className="w-56 shrink-0 pr-3">
-                  <Link href={`/sourcing-plan/${item.initiative.id}`} className="block truncate text-[12.5px] font-medium text-petrol-blue hover:underline">{item.initiative.title}</Link>
-                  <span className="block truncate text-[11.5px] text-petrol-blue/70">{owner ? person(owner) : 'Sin responsable'} · {HEALTH_LABEL[item.health]}</span>
-                </div>
-                <div className="relative h-6 flex-1">
-                  {todayPos != null && <span className="absolute top-0 h-full w-px bg-petrol-blue/30" style={{ left: `${todayPos}%` }} aria-hidden />}
-                  <span className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-petrol-blue/15" style={{ left: `${Math.min(first, last)}%`, width: `${Math.abs(last - first)}%` }} />
-                  {dated.map(view => (
-                    <span
-                      key={view.id}
-                      title={`${view.label}: ${fmtDate(view.committed_date)} · ${STATUS_LABEL[view.status]}`}
-                      className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white ${DOT[view.status]}`}
-                      style={{ left: `${yearPercent(view.committed_date as string, year)}%` }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )
-          })}
-          <p className="mt-3 text-[12px] text-petrol-blue/75">Cada punto es un hito en su fecha comprometida. Rojo: atrasado · ámbar: bloqueado · amarillo: próximo a vencer · turquesa: completado. La línea vertical es hoy.</p>
-        </div>
-      </CardContent>
-    </Card>
   )
 }

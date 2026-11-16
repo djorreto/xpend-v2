@@ -7,6 +7,7 @@ import { PageTrail } from './page-trail'
 import { TenantBar } from './tenant-bar'
 import { ChangePasswordModal } from '@/components/forms/change-password-modal'
 import { AnaChat } from '@/components/ui/ana-chat'
+import { GuidedTour } from '@/components/guided-tour'
 import { supabaseBrowser } from '@/lib/supabase'
 
 interface MainLayoutProps {
@@ -99,6 +100,7 @@ export function MainLayout({
 
       {/* ANA - AI Assistant (always visible) */}
       <AnaChat />
+      <GuidedTour />
     </div>
   )
 }

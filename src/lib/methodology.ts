@@ -186,7 +186,7 @@ export function validateDefinition(definition: MethodologyDefinition): string[] 
     }
     seen.add(task.key)
   })
-  for (const [event, count] of events) if (count > 1) errors.push(`El evento «${STANDARD_EVENTS[event as StandardEvent]}» está en más de una tarea.`)
+  for (const [event, count] of Array.from(events)) if (count > 1) errors.push(`El evento «${STANDARD_EVENTS[event as StandardEvent]}» está en más de una tarea.`)
   REQUIRED_EVENTS.forEach(event => { if (!events.has(event)) errors.push(`Falta una tarea para el evento «${STANDARD_EVENTS[event]}».`) })
   definition.deliverables.forEach(item => { if (!stageKeys.has(item.stage)) errors.push(`El entregable «${item.title}» apunta a una etapa que no existe.`) })
   return errors

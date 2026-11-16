@@ -584,8 +584,12 @@ create or replace function private.guard_baseline()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   if tg_table_name = 'baseline_lines' then
-    if exists (select 1 from public.economic_baselines b where b.id = coalesce(new.baseline_id, old.baseline_id) and b.status <> 'draft') then
-      raise exception 'La línea base ya fue enviada o aprobada: para cambiarla se crea una nueva versión.';
+    -- Con la línea base enviada o aprobada, la referencia queda fija; solo se registra el resultado adjudicado.
+    if exists (select 1 from public.economic_baselines b where b.id = coalesce(new.baseline_id, old.baseline_id) and b.status <> 'draft')
+       and not (tg_op = 'UPDATE' and new.baseline_id = old.baseline_id and new.item = old.item and new.unit is not distinct from old.unit
+                and new.specification is not distinct from old.specification and new.reference_price = old.reference_price
+                and new.adjustment_pct = old.adjustment_pct and new.projected_qty = old.projected_qty and new.seq = old.seq) then
+      raise exception 'La referencia de una línea base enviada o aprobada no cambia: para cambiarla se crea una nueva versión.';
     end if;
     if tg_op = 'DELETE' then return old; end if;
     if new.company_id is distinct from (select company_id from public.economic_baselines where id = new.baseline_id) then

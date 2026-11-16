@@ -202,6 +202,14 @@ test('proyecto Completa: plan de 29 actividades, reprogramación con historial, 
     assert.equal((await manager.rpc('decide_approval', { p_request: baselineRequest.data, p_decision: 'approved', p_note: 'Referencia validada' })).error, null)
     const facts = (await analyst.rpc('project_facts', { p_project: projectId })).data as { event_key: string; done_count: number }[]
     assert.equal(facts.find(row => row.event_key === 'baseline_approved')!.done_count, 1, 'hito de línea base cumplido por el hecho real')
+    const awarded = await analyst.from('baseline_lines').update({ awarded_price: 190000, supplier_name: 'Proveedor Demo' }).eq('baseline_id', baselineId).eq('seq', 2).select('id')
+    assert.equal(awarded.error, null, awarded.error?.message)
+    assert.equal(awarded.data?.length, 1, 'el precio adjudicado se registra sobre la línea base aprobada')
+    const frozen = await analyst.from('baseline_lines').update({ reference_price: 1 }).eq('baseline_id', baselineId).eq('seq', 2).select('id')
+    assert.match(frozen.error?.message || '', /nueva versión/, 'la referencia aprobada no cambia')
+    const after = (await analyst.from('baseline_savings').select('annualized_savings, priced_lines').eq('baseline_id', baselineId).single()).data!
+    assert.equal(Number(after.annualized_savings), 1_000_000 + (200000 - 190000) * 12)
+    assert.equal(after.priced_lines, 2)
     assert.equal((await supplier.from('economic_baselines').select('id').eq('id', baselineId)).data?.length ?? 0, 0)
     assert.equal((await otherTenant.from('baseline_lines').select('id').eq('baseline_id', baselineId)).data?.length ?? 0, 0)
 

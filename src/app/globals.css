@@ -178,3 +178,13 @@
   transition: transform 300ms ease-in-out;
 }
 
+.tour-highlight {
+  outline: 3px solid rgba(78, 205, 196, 0.9);
+  outline-offset: 4px;
+  border-radius: 18px;
+  box-shadow: 0 0 0 9999px rgba(45, 62, 61, 0.08);
+  transition: outline-color 300ms ease, box-shadow 300ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-highlight { transition: none; }
+}
