@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
+import { can } from '@/lib/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
@@ -91,13 +92,14 @@ export default function SalaPage() {
       <div className="space-y-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1>Sala de Ofertas</h1>
+            <h1>{isSupplier ? 'Mis procesos' : 'Salas de ofertas'}</h1>
             <p className="mt-1 max-w-2xl text-[13px] text-petrol-blue/55">
-              Aquí el proveedor entra a competir. El comprador invita, abre la sala y adjudica.
-              No es un catálogo: es el cierre del proceso.
+              {isSupplier
+                ? 'Tus invitaciones, acuerdos de confidencialidad y ofertas.'
+                : 'Aquí el proveedor entra a competir. El comprador invita, abre la sala y adjudica. No es un catálogo: es el cierre del proceso.'}
             </p>
           </div>
-          {!isSupplier && (
+          {can(session.role, 'openSala') && (
             <Button onClick={() => router.push('/sala/new')}>
               <Plus className="mr-2 h-4 w-4" />
               Nueva sala

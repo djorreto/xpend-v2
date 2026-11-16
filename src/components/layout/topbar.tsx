@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, User, LogOut, Settings, Home, Key, Menu } from 'lucide-react'
+import { Search, User, LogOut, Settings, Home, Key, Menu, Globe } from 'lucide-react'
+import { roleLabel } from '@/lib/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -37,6 +38,8 @@ export function Topbar({ user, onOpenMobileMenu }: TopbarProps) {
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const router = useRouter()
   const { addToast } = useToast()
+  const isSupplier = user?.role === 'supplier'
+  const homeHref = isSupplier ? '/sala' : '/dashboard'
 
   const handleLogout = async () => {
     try {
@@ -73,28 +76,39 @@ export function Topbar({ user, onOpenMobileMenu }: TopbarProps) {
           size="icon"
           className="md:hidden h-10 w-10"
           onClick={onOpenMobileMenu}
+          aria-label="Abrir menú"
         >
           <Menu className="h-5 w-5" />
         </Button>
 
-        {/* Search */}
         <div className="flex-1">
           <button
             type="button"
             className="text-sm font-medium tracking-tight text-petrol-blue sm:hidden"
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push(homeHref)}
           >
             Xpend
           </button>
-          <div className="relative hidden max-w-md sm:block">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar proyectos, licitaciones..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="rounded-full border-white/60 bg-white/50 pl-10"
-            />
-          </div>
+          {!isSupplier && (
+            <form
+              role="search"
+              className="relative hidden max-w-md sm:block"
+              onSubmit={(event) => {
+                event.preventDefault()
+                const query = searchQuery.trim()
+                router.push(query ? `/procesos?q=${encodeURIComponent(query)}` : '/procesos')
+              }}
+            >
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Input
+                aria-label="Buscar procesos por nombre o código"
+                placeholder="Buscar RFx, licitaciones o salas…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="rounded-full border-white/60 bg-white/50 pl-10"
+              />
+            </form>
+          )}
         </div>
 
         {/* Right side */}
@@ -128,23 +142,25 @@ export function Topbar({ user, onOpenMobileMenu }: TopbarProps) {
                   <p className="text-xs leading-none text-muted-foreground">
                     {user?.email}
                   </p>
-                  <p className="text-xs leading-none text-muted-foreground capitalize">
-                    {user?.role}
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {roleLabel(user?.role)}
                   </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push('/home')}>
+              <DropdownMenuItem onClick={() => router.push(homeHref)}>
                 <Home className="mr-2 h-4 w-4" />
-                <span>Home</span>
+                <span>{isSupplier ? 'Mis procesos' : 'Inicio'}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <span>Perfil</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/settings')}>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Configuración</span>
+              {!isSupplier && (
+                <DropdownMenuItem onClick={() => router.push('/settings')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Mi cuenta y configuración</span>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => router.push('/home')}>
+                <Globe className="mr-2 h-4 w-4" />
+                <span>Sitio web de Xpend</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setChangePasswordOpen(true)}>
                 <Key className="mr-2 h-4 w-4" />

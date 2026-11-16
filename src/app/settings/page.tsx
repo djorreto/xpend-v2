@@ -652,7 +652,7 @@ export default function SettingsPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Al vencer, un manager que abre Sourcing Intelligence borra esa carga y sus líneas. El Excel original no se guarda.
+                  Al vencer, un manager que abre Clasificación y categorías borra esa carga y sus líneas. El Excel original no se guarda.
                 </p>
               </div>
 

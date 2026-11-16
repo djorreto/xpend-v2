@@ -194,7 +194,7 @@ export default function NewSourcingPlanPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Nueva Iniciativa</h1>
             <p className="text-muted-foreground">
-              Agrega una nueva iniciativa al Sourcing Plan
+              Agrega una nueva iniciativa al plan de abastecimiento
             </p>
           </div>
         </div>

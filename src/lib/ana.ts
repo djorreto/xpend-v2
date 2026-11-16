@@ -113,9 +113,11 @@ export function contextFromPath(path: string): AnaContext {
   if (contract && !['nuevo', 'builder', 'comparar', 'desde-adjudicacion'].includes(contract[1])) {
     return { module: 'contrato', recordId: contract[1], label: 'Contrato abierto' }
   }
-  if (path.includes('/sourcing-intelligence') || path.includes('spend')) return { module: 'spend', label: 'Gasto de la empresa' }
-  if (path.includes('/sourcing-plan')) return { module: 'plan', label: 'Sourcing Plan' }
-  if (path.includes('/contratos')) return { module: 'contrato', label: 'Contracts' }
+  if (path.includes('/sourcing-intelligence') || path.includes('spend') || path.startsWith('/oportunidades') || path.startsWith('/comite')) {
+    return { module: 'spend', label: 'Gasto de la empresa' }
+  }
+  if (path.includes('/sourcing-plan')) return { module: 'plan', label: 'Plan de abastecimiento' }
+  if (path.includes('/contratos')) return { module: 'contrato', label: 'Contratos' }
   return { module: 'general', label: 'XPEND' }
 }
 

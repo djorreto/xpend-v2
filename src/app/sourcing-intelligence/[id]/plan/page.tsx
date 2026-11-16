@@ -114,7 +114,7 @@ export default function PlanPage() {
     }
     const key = (item.category || item.id).trim().toLowerCase()
     if (existingCategories.has(key)) {
-      addToast({ type: 'info', title: 'Ya está en el plan', message: 'Esta categoría ya fue añadida al Sourcing Plan' })
+      addToast({ type: 'info', title: 'Ya está en el plan', message: 'Esta categoría ya fue añadida al plan de abastecimiento' })
       return
     }
     setAddingId(item.id)
@@ -127,7 +127,7 @@ export default function PlanPage() {
           quarter: item.recommended_quarter || 'Q1',
           initiative_type: 'licitacion',
           title: item.category || 'Categoría sin nombre',
-          description: `Generado desde Sourcing Intelligence (upload ${uploadId}). Ajusta la descripción y responsables en Sourcing Plan.`,
+          description: `Generado desde Sourcing Intelligence (upload ${uploadId}). Ajusta la descripción y responsables en el plan de abastecimiento.`,
           category: item.category,
           estimated_spend: item.total_spend || 0,
           currency: plan?.display_currency || 'CLP',
@@ -143,7 +143,7 @@ export default function PlanPage() {
       addToast({
         type: 'success',
         title: 'Iniciativa creada',
-        message: 'La categoría fue enviada al Sourcing Plan'
+        message: 'La categoría fue enviada al plan de abastecimiento'
       })
       setExistingCategories(prev => {
         const next = new Set(prev)
@@ -398,7 +398,7 @@ export default function PlanPage() {
                               ? 'Ya añadido'
                               : addingId === item.id
                                 ? 'Enviando...'
-                                : 'Añadir al Sourcing Plan'}
+                                : 'Añadir al plan de abastecimiento'}
                           </Button>
                         )}
                       </td>

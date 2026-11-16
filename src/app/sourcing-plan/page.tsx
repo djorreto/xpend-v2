@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
+import { can } from '@/lib/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -218,7 +219,7 @@ export default function SourcingPlanPage() {
       addToast({
         type: 'error',
         title: 'Error',
-        message: 'No se pudo cargar el Sourcing Plan'
+        message: 'No se pudo cargar el plan de abastecimiento'
       })
     } finally {
       setLoading(false)
@@ -370,7 +371,7 @@ export default function SourcingPlanPage() {
     return (
       <MainLayout user={user} companyName={company?.name}>
         <ErrorMessage
-          title="Error al cargar Sourcing Plan"
+          title="Error al cargar el plan de abastecimiento"
           message={error}
           onRetry={loadSourcingPlans}
         />
@@ -383,7 +384,7 @@ export default function SourcingPlanPage() {
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Sourcing Plan</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Plan de abastecimiento</h1>
             <p className="text-xs text-muted-foreground">Iniciativas del año</p>
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -399,10 +400,12 @@ export default function SourcingPlanPage() {
               <Grid className="mr-1.5 h-3.5 w-3.5" />
               Kraljic
             </Button>
-            <Button size="sm" onClick={() => router.push('/sourcing-plan/new')}>
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Nueva
-            </Button>
+            {can(user?.role, 'createInitiative') && (
+              <Button size="sm" onClick={() => router.push('/sourcing-plan/new')}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                Nueva
+              </Button>
+            )}
           </div>
         </div>
 
@@ -749,10 +752,12 @@ export default function SourcingPlanPage() {
               <p className="text-muted-foreground text-center mb-4">
                 Comienza creando tu plan anual de Strategic Sourcing
               </p>
-              <Button onClick={() => router.push('/sourcing-plan/new')}>
-                <Plus className="mr-2 h-4 w-4" />
-                Crear Primera Iniciativa
-              </Button>
+              {can(user?.role, 'createInitiative') && (
+                <Button onClick={() => router.push('/sourcing-plan/new')}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Crear Primera Iniciativa
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}

@@ -203,7 +203,7 @@ export default function SourcingIntelligencePage() {
           <div>
             <h1 className="text-3xl font-bold flex items-center space-x-3">
               <Brain className="h-8 w-8" style={{ color: '#2AD4D2' }} />
-              <span>Sourcing Intelligence</span>
+              <span>Clasificación y categorías</span>
             </h1>
             <p className="text-muted-foreground mt-2">
               Carga gasto, clasifícalo con las reglas de la empresa y genera el plan de compras. La IA externa solo categoriza una línea si un administrador la autorizó.

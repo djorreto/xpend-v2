@@ -532,7 +532,7 @@ export default function NewLicitacionPage() {
           {/* Asociar a iniciativas del Sourcing Plan */}
           <Card>
             <CardHeader>
-              <CardTitle>Iniciativas del Sourcing Plan</CardTitle>
+              <CardTitle>Iniciativas del plan de abastecimiento</CardTitle>
               <CardDescription>Selecciona una o varias iniciativas asociadas (opcional).</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -701,7 +701,7 @@ export default function NewLicitacionPage() {
 
               {/* Sourcing Plan (multi) */}
               <div className="space-y-3">
-                <Label>Iniciativas del Sourcing Plan (opcional, puedes elegir varias)</Label>
+                <Label>Iniciativas del plan de abastecimiento (opcional, puedes elegir varias)</Label>
                 <div className="grid gap-2">
                   {sourcingPlans.map(plan => {
                     const isSelected = selectedPlans.includes(plan.id)
@@ -736,12 +736,12 @@ export default function NewLicitacionPage() {
                   })}
                   {sourcingPlans.length === 0 && (
                     <p className="text-sm text-muted-foreground">
-                      No hay iniciativas disponibles. Crea iniciativas en Sourcing Plan.
+                      No hay iniciativas disponibles. Crea iniciativas en el plan de abastecimiento.
                     </p>
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Vincula esta licitación con iniciativas del Sourcing Plan para seguimiento de ahorros.
+                  Vincula esta licitación con iniciativas del plan de abastecimiento para seguimiento de ahorros.
                 </p>
               </div>
             </CardContent>

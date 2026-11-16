@@ -694,7 +694,7 @@ export default function EditLicitacionPage() {
           {/* Asociar a iniciativas del Sourcing Plan */}
           <Card>
             <CardHeader>
-              <CardTitle>Iniciativas del Sourcing Plan</CardTitle>
+              <CardTitle>Iniciativas del plan de abastecimiento</CardTitle>
               <CardDescription>Selecciona una o varias iniciativas asociadas (opcional).</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

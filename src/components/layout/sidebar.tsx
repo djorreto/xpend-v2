@@ -5,64 +5,32 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard,
-  FolderOpen,
-  FileText,
+  Home,
+  Workflow,
   BarChart3,
+  FileText,
+  Truck,
   Settings,
-  Users,
+  Scale,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Building2,
-  Gavel,
-  Scale,
-  TrendingUp,
-  Truck,
-  Target,
-  Shield,
-  Brain,
-  FileEdit,
-  X
+  X,
+  type LucideIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { VersionSelector } from '@/components/ui/version-selector'
-import { Receipt } from 'lucide-react'
 import { featureInvoicesModule } from '@/lib/mvp-config'
+import { activeNav, navigationFor, type NavSection } from '@/lib/navigation'
 
-const navigationBase = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Comité', href: '/comite', icon: BarChart3 },
-  { name: 'Sourcing Intelligence', href: '/sourcing-intelligence', icon: Brain },
-  { name: 'Sourcing Plan', href: '/sourcing-plan', icon: Target },
-  { name: 'RFx Maker', href: '/rfx-maker', icon: FileEdit },
-  { name: 'Licitaciones', href: '/licitaciones', icon: Gavel },
-  { name: 'Sala de Ofertas', href: '/sala', icon: Scale },
-  { name: 'Proveedores', href: '/suppliers', icon: Truck },
-  { name: 'Contratos', href: '/contratos', icon: FileText },
-  { name: 'Spend Analysis', href: '/spend', icon: TrendingUp },
-  { name: 'Reportes', href: '/reports', icon: BarChart3 },
-  { name: 'Usuarios', href: '/users', icon: Users },
-  { name: 'Configuración', href: '/settings', icon: Settings },
-]
-
-const invoicesNavItem = { name: 'Facturas', href: '/invoices', icon: Receipt }
-
-const NAV_GROUPS = [
-  { label: 'Hoy', hrefs: ['/dashboard', '/comite'] },
-  { label: 'Estrategia', hrefs: ['/sourcing-intelligence', '/spend', '/sourcing-plan', '/rfx-maker'] },
-  { label: 'Compra', hrefs: ['/licitaciones', '/sala', '/suppliers', '/contratos', '/invoices'] },
-  { label: 'Lectura', hrefs: ['/reports'] },
-  { label: 'Cuenta', hrefs: ['/users', '/settings', '/super-admin'] },
-]
-
-const navigation = featureInvoicesModule
-  ? [
-      ...navigationBase.slice(0, 8),
-      invoicesNavItem,
-      ...navigationBase.slice(8),
-    ]
-  : navigationBase
+const SECTION_ICONS: Record<NavSection['id'], LucideIcon> = {
+  inicio: Home,
+  abastecimiento: Workflow,
+  gasto: BarChart3,
+  contratos: FileText,
+  proveedores: Truck,
+  administracion: Settings,
+}
 
 interface SidebarProps {
   companyName?: string
@@ -74,18 +42,16 @@ interface SidebarProps {
 export function Sidebar({ companyName, userRole, mobileMenuOpen = false, onCloseMobileMenu }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [cachedRole, setCachedRole] = useState<string | undefined>(undefined)
-  const [cachedCompanyName, setCachedCompanyName] = useState<string | undefined>(undefined)
-  const pathname = usePathname()
+  const [search, setSearch] = useState('')
+  const [isMobile, setIsMobile] = useState(false)
+  const [openSections, setOpenSections] = useState<string[]>([])
+  const pathname = usePathname() || '/'
 
-  // Load cached values from sessionStorage on mount (client-side only)
   useEffect(() => {
     const storedRole = sessionStorage.getItem('xpend-user-role')
-    const storedCompanyName = sessionStorage.getItem('xpend-company-name')
     if (storedRole) setCachedRole(storedRole)
-    if (storedCompanyName) setCachedCompanyName(storedCompanyName)
   }, [])
 
-  // Update cached role in state and sessionStorage when userRole changes
   useEffect(() => {
     if (userRole) {
       setCachedRole(userRole)
@@ -93,55 +59,21 @@ export function Sidebar({ companyName, userRole, mobileMenuOpen = false, onClose
     }
   }, [userRole])
 
-  // Update cached company name in state and sessionStorage when companyName changes
   useEffect(() => {
-    if (companyName) {
-      setCachedCompanyName(companyName)
-      sessionStorage.setItem('xpend-company-name', companyName)
-    }
+    if (companyName) sessionStorage.setItem('xpend-company-name', companyName)
   }, [companyName])
 
-  // Use cached values to prevent flickering
-  const effectiveRole = userRole || cachedRole
-  const effectiveCompanyName = companyName || cachedCompanyName
-
-  // Filter navigation based on user role
-  const supplierNavigation = [
-    { name: 'Sala de Ofertas', href: '/sala', icon: Scale },
-  ]
-
-  const [isMobile, setIsMobile] = useState(false)
-  const [closedGroups, setClosedGroups] = useState<string[]>([])
-
-  const groups = effectiveRole === 'supplier'
-    ? [{ label: '', hrefs: ['/sala'] }]
-    : NAV_GROUPS
-
   useEffect(() => {
-    let closed: string[] = []
-    const stored = sessionStorage.getItem('xpend-nav-closed')
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        if (Array.isArray(parsed)) closed = parsed.filter(item => typeof item === 'string')
-      } catch {
-        sessionStorage.removeItem('xpend-nav-closed')
-      }
-    }
-    const active = NAV_GROUPS.find(group =>
-      group.hrefs.some(href => pathname === href || pathname.startsWith(`${href}/`))
-    )
-    if (active) closed = closed.filter(label => label !== active.label)
-    setClosedGroups(closed)
+    setSearch(window.location.search)
   }, [pathname])
 
-  const toggleGroup = (label: string) => {
-    setClosedGroups(current => {
-      const next = current.includes(label) ? current.filter(item => item !== label) : [...current, label]
-      sessionStorage.setItem('xpend-nav-closed', JSON.stringify(next))
-      return next
-    })
-  }
+  const effectiveRole = userRole || cachedRole
+  const sections = navigationFor(effectiveRole, { invoices: featureInvoicesModule })
+  const active = activeNav(pathname, sections, search)
+
+  useEffect(() => {
+    if (active?.section.id) setOpenSections([active.section.id])
+  }, [active?.section.id])
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)')
@@ -151,152 +83,135 @@ export function Sidebar({ companyName, userRole, mobileMenuOpen = false, onClose
     return () => media.removeEventListener('change', apply)
   }, [])
 
-  const filteredNavigation = effectiveRole === 'supplier'
-    ? supplierNavigation
-    : effectiveRole === 'super_admin'
-    ? [
-        ...navigation,
-        { name: 'Super Admin', href: '/super-admin', icon: Shield }
-      ]
-    : navigation
+  const toggleSection = (id: string) => {
+    setOpenSections(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id])
+  }
+
+  const linkClass = (isActive: boolean) => cn(
+    'flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] tracking-tight transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-mint/70',
+    isActive
+      ? 'bg-white/10 text-white shadow-[inset_0_0_0_1px_rgba(59,231,174,0.45)]'
+      : 'text-white/70 hover:bg-white/10 hover:text-white'
+  )
 
   return (
     <div
       className={cn(
-        'z-50 flex w-[min(248px,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-[22px] border border-white/10 shadow-[0_24px_50px_-28px_rgba(0,0,0,0.65)]',
+        'z-50 flex w-[min(260px,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-[22px] border border-white/10 shadow-[0_24px_50px_-28px_rgba(0,0,0,0.65)]',
         'fixed bottom-3 left-3 top-[max(0.75rem,env(safe-area-inset-top))] h-auto md:static md:inset-auto md:my-3 md:ml-3 md:h-[calc(100%-1.5rem)]',
-        collapsed ? 'md:w-[72px]' : 'md:w-[248px]'
+        collapsed ? 'md:w-[72px]' : 'md:w-[260px]'
       )}
       style={{
         background:
           'linear-gradient(180deg, rgba(255,255,255,0.08), transparent 22%), linear-gradient(180deg, #314846 0%, #1f2c2b 100%)',
         transform: !isMobile || mobileMenuOpen ? 'translateX(0)' : 'translateX(calc(-100% - 1rem))',
-        transition: 'transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+        visibility: isMobile && !mobileMenuOpen ? 'hidden' : 'visible',
+        transition: 'transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1), visibility 280ms',
       }}
       suppressHydrationWarning
     >
-      {/* Header */}
       <div
-        className="flex items-center justify-between p-4 border-b"
-        style={{
-          backgroundColor: 'rgba(45, 62, 61, 0.9)',
-          borderBottomColor: 'rgba(42, 212, 210, 0.3)'
-        }}
+        className="flex items-center justify-between border-b p-4"
+        style={{ backgroundColor: 'rgba(45, 62, 61, 0.9)', borderBottomColor: 'rgba(42, 212, 210, 0.3)' }}
         suppressHydrationWarning
       >
         {!collapsed && (
-          <div className="flex-1 mr-2">
+          <div className="mr-2 flex-1">
             <VersionSelector tone="sidebar" fullWidth />
           </div>
         )}
-        {/* Mobile: Close button, Desktop: Collapse button */}
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => {
-            if (onCloseMobileMenu) {
-              onCloseMobileMenu()
-            } else {
-              setCollapsed(!collapsed)
-            }
-          }}
-          className={cn(
-            "h-8 w-8 text-white",
-            "md:hidden" // Only show close X on mobile
-          )}
-          style={{
-            ['--hover-bg' as any]: 'rgba(42, 212, 210, 0.2)'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(42, 212, 210, 0.2)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          onClick={() => onCloseMobileMenu ? onCloseMobileMenu() : setCollapsed(!collapsed)}
+          className="h-8 w-8 text-white hover:bg-white/10 md:hidden"
+          aria-label="Cerrar menú"
         >
           <X className="h-5 w-5" />
         </Button>
-
-        {/* Desktop only: Collapse button */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setCollapsed(!collapsed)}
-          className={cn(
-            "h-8 w-8 text-white",
-            "hidden md:flex" // Only show on desktop
-          )}
-          style={{
-            ['--hover-bg' as any]: 'rgba(42, 212, 210, 0.2)'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(42, 212, 210, 0.2)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          className="hidden h-8 w-8 text-white hover:bg-white/10 md:flex"
+          aria-label={collapsed ? 'Expandir menú' : 'Contraer menú'}
         >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
+          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4" suppressHydrationWarning>
-        {groups.map(group => {
-          const items = group.hrefs
-            .map(href => filteredNavigation.find(item => item.href === href))
-            .filter((item): item is (typeof filteredNavigation)[number] => !!item)
-          if (!items.length) return null
-          const closed = Boolean(group.label) && closedGroups.includes(group.label)
+      <nav aria-label="Navegación principal" className="flex-1 space-y-1 overflow-y-auto px-3 py-4" suppressHydrationWarning>
+        {sections.map(section => {
+          const Icon = effectiveRole === 'supplier' ? Scale : SECTION_ICONS[section.id]
+          const sectionActive = active?.section.id === section.id
+          const single = section.items.length === 1
+
+          if (single || collapsed) {
+            const target = section.items[0]
+            const isActive = sectionActive
+            return (
+              <Link
+                key={section.id}
+                href={target.href}
+                onClick={() => onCloseMobileMenu?.()}
+                className={linkClass(isActive)}
+                aria-current={isActive ? 'page' : undefined}
+                title={collapsed ? section.label : undefined}
+              >
+                <Icon className={cn('h-4 w-4 flex-shrink-0', isActive ? 'text-[#3BE7AE]' : 'text-white/45')} />
+                {!collapsed && <span>{section.label}</span>}
+              </Link>
+            )
+          }
+
+          const open = openSections.includes(section.id)
           return (
-            <div key={group.label || 'sala'} className="space-y-1">
-              {!collapsed && group.label && (
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(group.label)}
-                  className="flex w-full items-center justify-between px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.16em] text-white/35 hover:text-white/70"
-                  aria-expanded={!closed}
-                >
-                  {group.label}
-                  <ChevronDown className={cn('h-3 w-3 transition-transform', closed && '-rotate-90')} />
-                </button>
+            <div key={section.id}>
+              <button
+                type="button"
+                onClick={() => toggleSection(section.id)}
+                className={cn(linkClass(false), 'w-full justify-between', sectionActive && 'text-white')}
+                aria-expanded={open}
+                aria-controls={`nav-${section.id}`}
+              >
+                <span className="flex items-center gap-3">
+                  <Icon className={cn('h-4 w-4 flex-shrink-0', sectionActive ? 'text-[#3BE7AE]' : 'text-white/45')} />
+                  <span>{section.label}</span>
+                </span>
+                <ChevronDown className={cn('h-3.5 w-3.5 text-white/40 transition-transform', !open && '-rotate-90')} />
+              </button>
+              {open && (
+                <ul id={`nav-${section.id}`} className="mb-2 ml-[22px] mt-1 space-y-0.5 border-l border-white/10 pl-3">
+                  {section.items.map(item => {
+                    const isActive = active?.item.id === item.id
+                    return (
+                      <li key={item.id}>
+                        <Link
+                          href={item.href}
+                          onClick={() => onCloseMobileMenu?.()}
+                          className={cn(linkClass(isActive), 'py-1.5 text-[12.5px]')}
+                          aria-current={isActive ? 'page' : undefined}
+                        >
+                          {item.label}
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
               )}
-              {(!closed || collapsed) && items.map(item => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => onCloseMobileMenu?.()}
-                    className={cn(
-                      'flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] tracking-tight transition-colors duration-200',
-                      isActive
-                        ? 'bg-white/10 text-white shadow-[inset_0_0_0_1px_rgba(59,231,174,0.45)]'
-                        : 'text-white/70 hover:bg-white/10 hover:text-white'
-                    )}
-                  >
-                    <item.icon className={cn('h-4 w-4 flex-shrink-0', isActive ? 'text-[#3BE7AE]' : 'text-white/45')} />
-                    {!collapsed && <span>{item.name}</span>}
-                  </Link>
-                )
-              })}
             </div>
           )
         })}
       </nav>
 
-      {/* Footer */}
       {!collapsed && (
-        <div
-          className="p-4 border-t"
-          style={{
-            backgroundColor: 'rgba(45, 62, 61, 0.8)',
-            borderTopColor: 'rgba(42, 212, 210, 0.3)'
-          }}
-        >
+        <div className="border-t p-4" style={{ backgroundColor: 'rgba(45, 62, 61, 0.8)', borderTopColor: 'rgba(42, 212, 210, 0.3)' }}>
           <div className="text-xs font-medium">
             <p style={{ color: '#3BE7AE' }}>© 2026 Xpend™</p>
-            <p className="text-white/50">v3</p>
+            <p className="text-white/50">ANA está disponible en todas las pantallas</p>
           </div>
         </div>
       )}
     </div>
   )
 }
-

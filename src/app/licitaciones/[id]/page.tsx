@@ -407,7 +407,7 @@ export default function LicitacionDetailPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <LinkIcon className="h-5 w-5" />
-                Iniciativas del Sourcing Plan vinculadas
+                Iniciativas del plan de abastecimiento vinculadas
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">

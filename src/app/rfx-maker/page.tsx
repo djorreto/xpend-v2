@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { MainLayout } from '@/components/layout/main-layout'
+import { can } from '@/lib/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -134,10 +135,12 @@ export default function RfxMakerPage() {
                 Plantillas
               </Button>
             )}
-            <Button onClick={() => router.push('/rfx-maker/new')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Proyecto RFx
-            </Button>
+            {can(userRole, 'createRfx') && (
+              <Button onClick={() => router.push('/rfx-maker/new')}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Proyecto RFx
+              </Button>
+            )}
           </div>
         </div>
 
@@ -215,10 +218,12 @@ export default function RfxMakerPage() {
               <div className="text-center py-12">
                 <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600 mb-4">No hay proyectos RFx creados</p>
-                <Button onClick={() => router.push('/rfx-maker/new')}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Crear Primer Proyecto
-                </Button>
+                {can(userRole, 'createRfx') && (
+                  <Button onClick={() => router.push('/rfx-maker/new')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Crear Primer Proyecto
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="space-y-4">

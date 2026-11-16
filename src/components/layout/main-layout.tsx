@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Sidebar } from './sidebar'
 import { Topbar } from './topbar'
+import { PageTrail } from './page-trail'
 import { ChangePasswordModal } from '@/components/forms/change-password-modal'
 import { AnaChat } from '@/components/ui/ana-chat'
 import { supabaseBrowser } from '@/lib/supabase'
@@ -80,6 +81,7 @@ export function MainLayout({
         />
 
         <main className="app-main min-h-0 flex-1 overflow-auto px-1 pb-24 pt-4 md:px-6 md:pb-8 md:pt-5">
+          <PageTrail role={user?.role} />
           {children}
         </main>
       </div>

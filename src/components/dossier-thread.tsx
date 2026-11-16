@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabaseBrowser } from '@/lib/supabase'
-import { DOSSIER_STEPS, dossierHref, type Dossier, type DossierStage } from '@/lib/dossier-store'
+import { DOSSIER_STEPS, dossierHref, dossierNextStep, type Dossier, type DossierStage } from '@/lib/dossier-store'
+import { can } from '@/lib/navigation'
 
 type Match = {
   companyId: string
@@ -20,6 +21,11 @@ export function DossierThread({ match }: { match: Match }) {
   const [events, setEvents] = useState<{ id: string; action: string; detail: string | null; created_at: string }[]>([])
   const [report, setReport] = useState<string | null>(null)
   const [linkedContract, setLinkedContract] = useState<{ id: string; code: string; status: string } | null>(null)
+  const [role, setRole] = useState<string | null>(null)
+
+  useEffect(() => {
+    setRole(sessionStorage.getItem('xpend-user-role'))
+  }, [])
 
   useEffect(() => {
     const filters = [
@@ -75,6 +81,8 @@ export function DossierThread({ match }: { match: Match }) {
 
   if (!dossier) return null
   const current = DOSSIER_STEPS.findIndex(step => step.stage === dossier.stage)
+  const next = linkedContract ? null : dossierNextStep(dossier)
+  const allowed = next && (!next.capability || can(role, next.capability))
 
   return (
     <div className="rounded-lg border p-3 text-sm">
@@ -94,6 +102,14 @@ export function DossierThread({ match }: { match: Match }) {
           )
         })}
       </ol>
+      {next && role !== 'viewer' && (
+        <p className="mt-2 text-xs">
+          Siguiente paso sugerido:{' '}
+          {allowed
+            ? <Link href={next.href} className="font-medium underline">{next.label}</Link>
+            : <span>{next.label} (lo realiza un gerente o administrador)</span>}
+        </p>
+      )}
       {events.length > 0 && (
         <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
           {events.map(event => (

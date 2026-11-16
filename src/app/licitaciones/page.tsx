@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
+import { can } from '@/lib/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -245,10 +246,12 @@ export default function LicitacionesPage() {
               Gestiona todas tus licitaciones y procesos de compra
             </p>
           </div>
-          <Button onClick={() => router.push('/licitaciones/new')}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nueva Licitación
-          </Button>
+          {can(user?.role, 'createLicitacion') && (
+            <Button onClick={() => router.push('/licitaciones/new')}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nueva Licitación
+            </Button>
+          )}
         </div>
 
         <Card className="bg-muted/40 border-dashed">
@@ -492,10 +495,12 @@ export default function LicitacionesPage() {
               <p className="mb-4 text-center text-muted-foreground">
                 Comienza creando tu primera licitación
               </p>
-              <Button onClick={() => router.push('/licitaciones/new')}>
-                <Plus className="mr-2 h-4 w-4" />
-                Crear Licitación
-              </Button>
+              {can(user?.role, 'createLicitacion') && (
+                <Button onClick={() => router.push('/licitaciones/new')}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Crear Licitación
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}

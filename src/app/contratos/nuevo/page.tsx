@@ -96,8 +96,12 @@ function NuevoContratoForm() {
 
   return (
     <MainLayout user={{ name: session.name, email: session.email, role: session.role }} companyName={session.companyName}>
+      <div className="mb-4">
+        <h1>Cargar y analizar un contrato</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Sube un PDF o DOCX existente. XPEND extrae el texto y deja los datos encontrados pendientes hasta que tú los confirmes en la ficha.</p>
+      </div>
       <Card>
-        <CardHeader><CardTitle>Cargar contrato</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Datos del contrato</CardTitle></CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           <div><Label>Código</Label><Input value={code} onChange={event => setCode(event.target.value)} placeholder="CTR-MANT-2026" /></div>
           <div><Label>Nombre</Label><Input value={name} onChange={event => setName(event.target.value)} /></div>

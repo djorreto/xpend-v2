@@ -277,7 +277,7 @@ export default function SpendPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Spend Analysis</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Resumen y análisis de gasto</h1>
             <p className="text-muted-foreground">
               {spendSource?.label || 'Análisis y gestión de gastos por categoría y proveedor'}
             </p>

@@ -140,11 +140,11 @@ export default function KraljicForSourcingPlanPage() {
           <div>
             <Button variant="ghost" onClick={() => router.push('/sourcing-plan')} className="mb-2">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver al Sourcing Plan
+              Volver al plan de abastecimiento
             </Button>
             <h1 className="text-3xl font-bold">Matriz de Kraljic (Iniciativas)</h1>
             <p className="text-muted-foreground mt-2">
-              Distribución de las iniciativas del Sourcing Plan. Puedes ajustar el cuadrante manualmente para graficar.
+              Distribución de las iniciativas del plan de abastecimiento. Puedes ajustar el cuadrante manualmente para graficar.
             </p>
           </div>
         </div>
@@ -191,7 +191,7 @@ export default function KraljicForSourcingPlanPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {plans.length === 0 && (
-              <p className="text-sm text-muted-foreground">No hay iniciativas en el Sourcing Plan.</p>
+              <p className="text-sm text-muted-foreground">No hay iniciativas en el plan de abastecimiento.</p>
             )}
             {plans.map(plan => (
               <div key={plan.id} className="flex items-center justify-between border rounded-lg px-3 py-2">

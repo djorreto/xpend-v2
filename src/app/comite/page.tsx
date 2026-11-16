@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -164,9 +165,9 @@ export default function ComitePage() {
       <div className="space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1>Comité</h1>
-            <p className="mt-1 text-[13px] text-petrol-blue/55">
-              {period}. {source?.label}
+            <h1>Cierre mensual de gasto</h1>
+            <p className="mt-1 max-w-2xl text-[13px] text-petrol-blue/55">
+              {period}. Cierra el gasto del mes por moneda y prepara la reunión mensual. {source?.label}
             </p>
           </div>
           <Button onClick={closeMonth} disabled={closing || !companyId || closedSnapshot || monthSpend.length === 0}>
@@ -227,38 +228,18 @@ export default function ComitePage() {
           </Card>
         </div>
 
-        {pending.length > 0 && (
-          <Card>
-            <CardHeader><CardTitle>Decisiones pendientes</CardTitle></CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              {pending.map(item => (
-                <p key={item.id}>
-                  {item.licitacion_id}
-                  {item.event_id && <a className="ml-2 underline" href={`/sala/${item.event_id}/decision`}>Abrir expediente</a>}
-                </p>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        {awards.length > 0 && (
-          <Card>
-            <CardHeader><CardTitle>Decisiones de adjudicación</CardTitle></CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              {awards.map(row => (
-                <div key={row.id}>
-                  <p className="font-medium">{row.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Oferta ganadora {row.award?.amount != null ? formatCurrency(row.award.amount, row.currency || 'CLP') : 'sin monto'}
-                    {row.award?.target_savings != null ? ` · ${SAVINGS_LABELS.target.toLowerCase()} ${formatCurrency(row.award.target_savings, row.currency || 'CLP')}` : ''}
-                    {row.award?.estimated_savings != null ? ` · ${SAVINGS_LABELS.negotiated.toLowerCase()} ${formatCurrency(row.award.estimated_savings, row.currency || 'CLP')}` : ''}
-                    {row.award?.supplier_id ? ` · proveedor ${row.award.supplier_id}` : ''}
-                  </p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardHeader><CardTitle>Adjudicaciones</CardTitle></CardHeader>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 text-sm">
+            <p className="text-petrol-blue/70">
+              {pending.length} {pending.length === 1 ? 'decisión pendiente' : 'decisiones pendientes'} · {awards.length} {awards.length === 1 ? 'expediente adjudicado' : 'expedientes adjudicados'}.
+              {' '}Las decisiones del comité de adjudicación tienen su propia vista.
+            </p>
+            <Link href="/adjudicaciones" className="rounded-full border border-petrol-blue/15 bg-white/70 px-3 py-1.5 text-[12.5px] font-medium text-petrol-blue hover:bg-white">
+              Ir a Adjudicaciones
+            </Link>
+          </CardContent>
+        </Card>
 
         {queue && (
           <Card>

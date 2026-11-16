@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
+import { can } from '@/lib/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -343,10 +344,12 @@ export default function SuppliersPage() {
               Gestiona todos tus proveedores y sus evaluaciones
             </p>
           </div>
-          <Button onClick={() => router.push('/suppliers/new')}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Proveedor
-          </Button>
+          {can(user?.role, 'writeSuppliers') && (
+            <Button onClick={() => router.push('/suppliers/new')}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Proveedor
+            </Button>
+          )}
         </div>
 
         {/* Filters and Search */}
@@ -561,10 +564,12 @@ export default function SuppliersPage() {
               <p className="text-muted-foreground text-center mb-4">
                 Comienza agregando tu primer proveedor
               </p>
-              <Button onClick={() => router.push('/suppliers/new')}>
-                <Plus className="mr-2 h-4 w-4" />
-                Agregar Proveedor
-              </Button>
+              {can(user?.role, 'writeSuppliers') && (
+                <Button onClick={() => router.push('/suppliers/new')}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Agregar Proveedor
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}

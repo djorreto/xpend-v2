@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import { can } from '@/lib/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -35,6 +37,7 @@ const STATUS: Record<string, string> = {
 
 export default function ContratosPage() {
   const router = useRouter()
+  const pendingView = useSearchParams().get('vista') === 'pendientes'
   const [session, setSession] = useState<AppSession | null>(null)
   const [rows, setRows] = useState<Row[]>([])
   const [query, setQuery] = useState('')
@@ -63,6 +66,7 @@ export default function ContratosPage() {
   const visible = rows.filter(row => {
     const haystack = `${row.code} ${row.name} ${row.counterparty_name || ''} ${row.contract_type || ''}`.toLowerCase()
     if (query && !haystack.includes(query.toLowerCase())) return false
+    if (pendingView && row.status !== 'draft' && row.status !== 'in_review') return false
     if (status && row.status !== status) return false
     if (currency && row.currency !== currency) return false
     if (expiring && !(row.ends_on && row.ends_on >= today && row.ends_on <= soon && row.status === 'active')) return false
@@ -75,13 +79,19 @@ export default function ContratosPage() {
       <div className="space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1>Contratos</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Puedes cargar un contrato existente o redactar uno nuevo. No hace falta una licitación previa.</p>
+            <h1>{pendingView ? 'Contratos pendientes de revisión' : 'Repositorio de contratos'}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {pendingView
+                ? 'Borradores y contratos en revisión. Una versión la aprueba alguien distinto de quien la escribió.'
+                : 'Puedes cargar un contrato existente o redactar uno nuevo. No hace falta una licitación previa.'}
+            </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => router.push('/contratos/builder')}>Redactar</Button>
-            <Button onClick={() => router.push('/contratos/nuevo')}>Cargar contrato</Button>
-          </div>
+          {can(session.role, 'writeContracts') && (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => router.push('/contratos/builder')}>Redactar contrato</Button>
+              <Button onClick={() => router.push('/contratos/nuevo')}>Cargar y analizar</Button>
+            </div>
+          )}
         </div>
         <Card>
           <CardHeader><CardTitle>Próximos vencimientos</CardTitle></CardHeader>
@@ -118,7 +128,13 @@ export default function ContratosPage() {
               </p>
             </button>
           ))}
-          {visible.length === 0 && <p className="text-sm text-muted-foreground">No hay contratos con ese filtro.</p>}
+          {visible.length === 0 && (
+            <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+              {rows.length === 0
+                ? <>Todavía no hay contratos. Puedes <Link className="underline" href="/contratos/nuevo">cargar uno existente</Link>, <Link className="underline" href="/contratos/builder">redactarlo</Link> o prepararlo desde una <Link className="underline" href="/adjudicaciones">adjudicación</Link>.</>
+                : pendingView ? 'No hay contratos pendientes de revisión.' : 'No hay contratos con ese filtro.'}
+            </p>
+          )}
         </div>
         {visible.length > 1 && (
           <Button variant="outline" onClick={() => router.push(`/contratos/comparar?a=${visible[0].id}&b=${visible[1].id}`)}>Comparar los dos primeros</Button>

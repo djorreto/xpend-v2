@@ -169,6 +169,38 @@ export function dossierHref(dossier: Dossier, stage: DossierStage) {
   if (stage === 'bases' && dossier.rfx_project_id) return `/rfx-maker/${dossier.rfx_project_id}`
   if (stage === 'licitacion' && dossier.licitacion_id) return `/licitaciones/${dossier.licitacion_id}`
   if (stage === 'sala' && dossier.offer_event_id) return `/sala/${dossier.offer_event_id}`
-  if (stage === 'adjudicada') return '/comite'
+  if (stage === 'adjudicada') return '/adjudicaciones'
   return null
+}
+
+export type DossierNextStep = {
+  label: string
+  href: string
+  capability: 'createRfx' | 'createLicitacion' | 'openSala' | 'approve' | null
+}
+
+export function dossierNextStep(dossier: Dossier): DossierNextStep | null {
+  const plan: Record<string, string> = dossier.sourcing_plan_id ? { planId: dossier.sourcing_plan_id } : {}
+  switch (dossier.stage) {
+    case 'iniciativa':
+      return dossier.sourcing_plan_id
+        ? { label: 'Preparar las bases (RFx)', href: `/rfx-maker/new?${new URLSearchParams(plan)}`, capability: 'createRfx' }
+        : null
+    case 'bases':
+      return dossier.rfx_project_id
+        ? { label: 'Crear la licitación con estas bases', href: `/licitaciones/new?${new URLSearchParams({ rfxId: dossier.rfx_project_id, ...plan })}`, capability: 'createLicitacion' }
+        : null
+    case 'licitacion':
+      return dossier.licitacion_id
+        ? { label: 'Abrir la sala de ofertas', href: `/sala/new?${new URLSearchParams({ licitacionId: dossier.licitacion_id, ...plan })}`, capability: 'openSala' }
+        : null
+    case 'sala':
+      return dossier.offer_event_id
+        ? { label: 'Evaluar las ofertas', href: `/sala/${dossier.offer_event_id}/evaluacion`, capability: null }
+        : null
+    case 'adjudicada':
+      return { label: 'Ver la adjudicación y su contrato', href: '/adjudicaciones', capability: null }
+    default:
+      return null
+  }
 }
