@@ -1,7 +1,7 @@
 # Etapa 1 — estado de release
 
-Estado: **sin publicar. Esperando el GO del producto.** No hay migraciones ni tablas nuevas: el frontend corre sobre el
-esquema actual de producción (columnas verificadas en solo lectura).
+Estado: **publicada** (commit `2e953ab`, despliegue `xpend-v3-ac8edn36l`) junto con la migración de solo lectura de consulta
+(`etapa1_viewer_read_only`). Las Etapas 2 a 5 posteriores están en `docs/RELEASE-V3-V1.md`.
 
 ## A. Hotfix de seguridad RLS — ya aplicado
 
@@ -54,7 +54,7 @@ ningún cálculo ni inventa datos.
 - `src/lib/role-permissions.test.ts`: para admin, gerente, comprador y consulta, toda acción de creación que la interfaz
   ofrece (iniciativa, licitación, sala, RFx, contrato, proveedor) la acepta la base de datos.
 
-### Defectos de RLS ya existentes (no corregidos; requieren autorización antes de tocar Cloud)
+### Defectos de RLS ya existentes — CORREGIDOS en Cloud con la migración `etapa1_viewer_read_only`
 Confirmados en local con consultas directas y presentes en Cloud (mismas políticas; hoy solo hay perfiles admin y super_admin, sin exposición real):
 1. `rfx_projects`: INSERT/UPDATE solo exigen la empresa → un perfil de consulta puede crear/editar RFx por la API.
 2. Tablas de contratos: DELETE no se restringe por rol → un perfil de consulta puede borrar contratos por la API.
@@ -70,10 +70,8 @@ Ver el informe final entregado con este commit. Capturas en `docs/etapa1/captura
 `informe-evaluacion-escritorio.png`, `menu-{manager,analyst,viewer}-movil.png`, `adjudicaciones-escritorio.png`,
 `plan-escritorio.png`, `roles-escritorio.png`, `licitacion-migas-escritorio.png`, `proveedor-escritorio.png`.
 
-## Decisiones pendientes
-- ¿El perfil de consulta debe ver Contratos en solo lectura? La base lo permite; hoy la interfaz los oculta.
-- ¿Autorizas aplicar `propuesta-rls-roles.sql` en Cloud (después del GO de Etapa 1 o antes)?
+## Decisiones
+- El perfil de consulta no ve Contratos (decisión de producto, vigente). Además no escribe ni borra nada por la API.
 
-## Fuera de alcance (Etapas 2 y 3)
-Equipos, metas de ahorro, plan anual completo, calendario de hitos, reconocimiento mensual de ahorros, Desempeño,
-página propia de invitaciones, alcance por departamento.
+## Fuera de alcance de la Etapa 1 (entregado después)
+Equipos, metas, plan anual, hitos, control de ahorros y tableros: Etapas 2 a 5 (`docs/RELEASE-V3-V1.md`).

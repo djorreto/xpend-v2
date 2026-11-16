@@ -115,6 +115,7 @@ create policy storage_objects_viewer_no_savings on storage.objects as restrictiv
 create or replace function private.forbid_mutation()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 begin
   raise exception 'Este registro no se edita ni se borra. Una corrección se hace con una reversa.';
