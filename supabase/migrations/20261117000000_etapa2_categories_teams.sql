@@ -151,7 +151,8 @@ select private.secure_company_table('procurement_categories');
 select private.secure_company_table('procurement_teams');
 select private.secure_company_table('procurement_team_members');
 select private.secure_company_table('category_assignments');
-select private.secure_company_table('assignment_history', array['super_admin', 'admin', 'manager'], null, true);
+-- El historial solo lo escriben los disparadores: nadie lo inserta a mano.
+select private.secure_company_table('assignment_history', '{}'::text[], null, true);
 
 -- Integridad multiempresa de las referencias nuevas.
 create or replace function private.check_portfolio_refs()

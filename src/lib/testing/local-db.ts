@@ -70,3 +70,8 @@ export async function setup() {
   return { admin, clients, companyId, profiles, analystEmail: ANALYST_EMAIL, managerEmail: 'gerente.f1b@xpend.test', adminEmail: fx.XPEND_FASE0_BUYER_EMAIL, viewerEmail: fx.XPEND_FASE0_VIEWER_EMAIL }
 }
 
+
+// Ejecuta SQL directamente en la base LOCAL (solo para limpiar datos de prueba que los disparadores protegen).
+export function localSql(statement: string) {
+  return execSync('docker exec -i supabase_db_xpend-v3-local psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q', { input: statement, encoding: 'utf8' })
+}
