@@ -3,6 +3,13 @@
 Producción: www.xpend.cl · Supabase `qtncgtqgvilbjhrvzoxe` (sin cambiar de proyecto) · Vercel `xpend-v3`.
 Rama de trabajo: `fase-1/flujo-inicial`. Cada etapa es un commit.
 
+## Publicación de las Etapas 2 a 5
+
+- Código: commit `a9f626b` en `main` y `fase-1/flujo-inicial` (origin).
+- Vista previa `xpend-v3-37def1kep` y producción `xpend-v3-pkjzr8g01` (alias www.xpend.cl). Rollback inmediato: promover `xpend-v3-ac8edn36l`
+  (la versión previa, compatible porque las migraciones son aditivas).
+- Rutas públicas verificadas en producción (200): `/`, `/login`, `/dashboard`, `/ahorros`, `/gestion`, `/plan-anual`, `/equipos`.
+
 ## Etapas
 
 | Etapa | Contenido | Migración (repo) | Estado |
