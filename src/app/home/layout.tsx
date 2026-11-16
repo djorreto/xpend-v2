@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import './home.css'
 
 export const metadata: Metadata = {
   title: 'Xpend — Abastecimiento más inteligente. Menos complejidad.',
