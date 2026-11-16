@@ -90,12 +90,12 @@ export default function AdjudicacionesPage() {
       <div className="space-y-5">
         <div>
           <h1>Adjudicaciones</h1>
-          <p className="mt-1 max-w-2xl text-[13px] text-petrol-blue/60">
+          <p className="mt-1 max-w-2xl text-[13px] text-petrol-blue/75">
             Decisiones del comité de adjudicación y su paso a contrato. Recomendar no es adjudicar: una adjudicación aparece aquí solo cuando el comité la aprueba.
           </p>
         </div>
 
-        <BlockCard title="Decisiones pendientes" description="Recomendaciones que esperan la decisión del comité.">
+        <BlockCard title={`Decisiones pendientes (${pending.length})`} description="Recomendaciones que esperan la decisión del comité.">
           <ItemList
             items={pending.map(row => {
               const eventId = one(row.packet)?.event_id
@@ -111,10 +111,10 @@ export default function AdjudicacionesPage() {
           />
         </BlockCard>
 
-        <BlockCard title="Adjudicaciones registradas" description={`Montos en su moneda, sin conversión. ${SAVINGS_LABELS.realized}: ${realizedSavingsLabel()}.`}>
+        <BlockCard title={`Adjudicaciones registradas (${awards.length})`} description={`Montos en su moneda, sin conversión. ${SAVINGS_LABELS.realized}: ${realizedSavingsLabel()}.`}>
           {awards.length === 0 ? (
             <EmptyHint>
-              Todavía no hay adjudicaciones. Se registran al decidir en la sala de ofertas: <Link href="/procesos?etapa=evaluacion" className="font-medium underline">ver procesos en evaluación</Link>.
+              Todavía no hay adjudicaciones. Se registran al decidir en la sala de ofertas: <Link href="/procesos?tipo=sala" className="font-medium underline">ver procesos en evaluación</Link>.
             </EmptyHint>
           ) : (
             <ul className="divide-y divide-petrol-blue/[0.06]">
@@ -133,13 +133,13 @@ export default function AdjudicacionesPage() {
                       ) : (
                         <p className="text-[14px] font-medium text-petrol-blue">Adjudicación</p>
                       )}
-                      <p className="text-[12px] text-petrol-blue/60">
+                      <p className="text-[12px] text-petrol-blue/75">
                         {supplier?.fantasy_name || supplier?.legal_name || 'Proveedor'}
                         {' · '}
                         {award.amount != null ? formatCurrency(award.amount, currency) : 'sin monto'}
                         {award.awarded_at ? ` · ${new Date(award.awarded_at).toLocaleDateString('es-CL')}` : ''}
                       </p>
-                      <p className="text-[11.5px] text-petrol-blue/50">
+                      <p className="text-[12px] text-petrol-blue/75">
                         {SAVINGS_LABELS.negotiated}: {award.estimated_savings != null ? formatCurrency(award.estimated_savings, currency) : `${SAVINGS_LABELS.noInfo} (sin base comparable)`}
                         {' · '}Validado: {validatedSavingsLabel(award.estimated_savings != null)}
                       </p>

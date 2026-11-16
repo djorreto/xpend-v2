@@ -104,7 +104,7 @@ export default function TaxonomyPage() {
   }
 
   if (loading || !user) {
-    return <MainLayout><p className="p-8 text-sm text-petrol-blue/60">Cargando taxonomía…</p></MainLayout>
+    return <MainLayout><p className="p-8 text-sm text-petrol-blue/75">Cargando taxonomía…</p></MainLayout>
   }
 
   return (
@@ -113,7 +113,7 @@ export default function TaxonomyPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1>Taxonomía de gasto</h1>
-            <p className="mt-1 max-w-3xl text-[13px] text-petrol-blue/60">
+            <p className="mt-1 max-w-3xl text-[13px] text-petrol-blue/75">
               El modelo clasifica solo dentro de esta lista. Agrega la subcategoría, un sinónimo o el código de tu ERP o de UNSPSC.
               Cuando corriges una línea, el proveedor también queda como regla.
             </p>
@@ -131,7 +131,7 @@ export default function TaxonomyPage() {
           ].map(([label, value]) => (
             <Card key={label}>
               <CardContent className="p-4">
-                <p className="text-[12px] text-petrol-blue/50">{label}</p>
+                <p className="text-[12px] text-petrol-blue/75">{label}</p>
                 <p className="mt-1 text-2xl font-medium text-petrol-blue">{value}</p>
               </CardContent>
             </Card>
@@ -141,12 +141,12 @@ export default function TaxonomyPage() {
         <Card>
           <CardContent className="p-5">
             <p className="text-sm font-medium text-petrol-blue">Mix por rama</p>
-            <p className="mt-1 text-[13px] text-petrol-blue/55">La rama común vale para cualquier empresa. Las otras se activan según la industria.</p>
+            <p className="mt-1 text-[13px] text-petrol-blue/75">La rama común vale para cualquier empresa. Las otras se activan según la industria.</p>
             <div className="mt-3 divide-y">
               {byBranch.map(([branch, count]) => (
                 <div key={branch} className="flex items-center justify-between py-2 text-[13px]">
                   <span className="text-petrol-blue">{branchLabels[branch] || branch}</span>
-                  <span className="tabular-nums text-petrol-blue/60">{count} subcategorías</span>
+                  <span className="tabular-nums text-petrol-blue/75">{count} subcategorías</span>
                 </div>
               ))}
             </div>
@@ -188,8 +188,8 @@ export default function TaxonomyPage() {
                     return (
                       <li key={`${node.family}-${node.name}`} className="text-[13px] text-petrol-blue/75">
                         <span className="font-medium text-petrol-blue">{node.name}</span>
-                        {node.code ? <span className="ml-2 text-petrol-blue/45">{node.code}</span> : null}
-                        {node.synonyms.length ? <span className="mt-0.5 block text-xs text-petrol-blue/45">{node.synonyms.join(' · ')}</span> : null}
+                        {node.code ? <span className="ml-2 text-petrol-blue/75">{node.code}</span> : null}
+                        {node.synonyms.length ? <span className="mt-0.5 block text-xs text-petrol-blue/75">{node.synonyms.join(' · ')}</span> : null}
                         {own?.id ? (
                           <button type="button" className="mt-1 block text-xs text-red-600" onClick={() => remove(own.id)}>Quitar</button>
                         ) : null}

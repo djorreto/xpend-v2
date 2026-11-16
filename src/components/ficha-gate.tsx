@@ -58,9 +58,9 @@ export function FichaGate({
     <Card>
       <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-medium text-petrol-blue/50">Ficha de la iniciativa</p>
+          <p className="text-xs font-medium text-petrol-blue/75">Ficha de la iniciativa</p>
           <p className="mt-1 text-lg font-medium text-petrol-blue">{title}</p>
-          <p className="mt-1 text-sm text-petrol-blue/60">{detail}</p>
+          <p className="mt-1 text-sm text-petrol-blue/75">{detail}</p>
         </div>
         <Button onClick={() => router.push(href)}>{cta}</Button>
       </CardContent>

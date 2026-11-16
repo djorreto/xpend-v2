@@ -82,7 +82,7 @@ export default function OportunidadesPage() {
       <div className="space-y-5">
         <div>
           <h1>Oportunidades</h1>
-          <p className="mt-1 max-w-2xl text-[13px] text-petrol-blue/60">
+          <p className="mt-1 max-w-2xl text-[13px] text-petrol-blue/75">
             Categorías sugeridas por el análisis de gasto, de todas las cargas. El ahorro proyectado es una hipótesis para priorizar, no un resultado.
             Para llevar una categoría al plan, ábrela en su análisis.
           </p>
@@ -106,19 +106,19 @@ export default function OportunidadesPage() {
                     <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                       <div className="min-w-0">
                         <p className="text-[14px] font-medium text-petrol-blue">{item.category || 'Categoría sin nombre'}</p>
-                        <p className="text-[12px] text-petrol-blue/60">
+                        <p className="text-[12px] text-petrol-blue/75">
                           Gasto {formatCurrency(Number(item.total_spend) || 0, currency)}
                           {item.supplier_count != null ? ` · ${item.supplier_count} proveedores` : ''}
                           {item.kraljic_quadrant ? ` · ${item.kraljic_quadrant}` : ''}
                           {item.recommended_quarter ? ` · sugerido ${item.recommended_quarter}` : ''}
                         </p>
-                        <p className="text-[11.5px] text-petrol-blue/50">
+                        <p className="text-[12px] text-petrol-blue/75">
                           Ahorro proyectado (hipótesis): {item.projected_savings_amount != null ? formatCurrency(Number(item.projected_savings_amount), currency) : 'Sin información'}
                           {plan?.name ? ` · ${plan.name}` : ''}
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        {already && <span className="rounded-full bg-accent-mint/30 px-2 py-0.5 text-[11px] text-petrol-blue">Ya está en el plan</span>}
+                        {already && <span className="rounded-full bg-accent-mint/30 px-2 py-0.5 text-[12px] text-petrol-blue">Ya está en el plan</span>}
                         {plan?.upload_id && (
                           <Link href={`/sourcing-intelligence/${plan.upload_id}/plan`} className="rounded-full border border-petrol-blue/15 bg-white/70 px-3 py-1.5 text-[12px] font-medium text-petrol-blue hover:bg-white">
                             {already || !can(session.role, 'createInitiative') ? 'Ver análisis' : 'Ver y llevar al plan'}

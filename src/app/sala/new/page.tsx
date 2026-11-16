@@ -150,7 +150,7 @@ export default function NewSalaPage() {
         </Button>
         <div>
           <h1>Nueva sala</h1>
-          <p className="mt-1 text-[13px] text-petrol-blue/55">Elige cómo van a competir los proveedores.</p>
+          <p className="mt-1 text-[13px] text-petrol-blue/75">Elige cómo van a competir los proveedores.</p>
         </div>
         <Card>
           <CardHeader>
@@ -167,7 +167,7 @@ export default function NewSalaPage() {
                 />
                 <span>
                   <span className="block text-sm text-petrol-blue">{modality.name}</span>
-                  <span className="block text-xs text-petrol-blue/55">{modality.summary}</span>
+                  <span className="block text-xs text-petrol-blue/75">{modality.summary}</span>
                 </span>
               </label>
             ))}

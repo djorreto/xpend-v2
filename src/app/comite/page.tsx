@@ -166,7 +166,7 @@ export default function ComitePage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1>Cierre mensual de gasto</h1>
-            <p className="mt-1 max-w-2xl text-[13px] text-petrol-blue/55">
+            <p className="mt-1 max-w-2xl text-[13px] text-petrol-blue/75">
               {period}. Cierra el gasto del mes por moneda y prepara la reunión mensual. {source?.label}
             </p>
           </div>
@@ -184,7 +184,7 @@ export default function ComitePage() {
                   <p key={item.currency}>{formatCurrency(item.amount, item.currency)}</p>
                 ))}
               </div>
-              <p className="mt-1 text-xs text-petrol-blue/50">
+              <p className="mt-1 text-xs text-petrol-blue/75">
                 {closedSnapshot ? 'Mes cerrado. El número no se rearma.' : `${monthLines} líneas del mes en curso`}
               </p>
             </CardContent>
@@ -193,7 +193,7 @@ export default function ComitePage() {
             <CardHeader><CardTitle>Atrasos</CardTitle></CardHeader>
             <CardContent>
               <p className="text-2xl font-medium text-petrol-blue">{delayed}</p>
-              <p className="mt-1 text-xs text-petrol-blue/50">Detenidos, sin dueño o sin proceso, incluidos los trimestres vencidos</p>
+              <p className="mt-1 text-xs text-petrol-blue/75">Detenidos, sin dueño o sin proceso, incluidos los trimestres vencidos</p>
             </CardContent>
           </Card>
           <Card>
@@ -201,12 +201,12 @@ export default function ComitePage() {
             <CardContent>
               <div className="space-y-1 text-2xl font-medium text-petrol-blue">
                 {savings.filter(row => row.target != null).length === 0
-                  ? <p className="text-base font-normal text-petrol-blue/55">{SAVINGS_LABELS.noInfo}</p>
+                  ? <p className="text-base font-normal text-petrol-blue/75">{SAVINGS_LABELS.noInfo}</p>
                   : savings.filter(row => row.target != null).map(row => (
                       <p key={row.currency}>{formatCurrency(row.target as number, row.currency)}</p>
                     ))}
               </div>
-              <p className="mt-1 text-xs text-petrol-blue/50">Meta del plan de este año, por moneda. No es un resultado.</p>
+              <p className="mt-1 text-xs text-petrol-blue/75">Meta del plan de este año, por moneda. No es un resultado.</p>
             </CardContent>
           </Card>
           <Card>
@@ -214,12 +214,12 @@ export default function ComitePage() {
             <CardContent>
               <div className="space-y-1 text-2xl font-medium text-petrol-blue">
                 {savings.filter(row => row.negotiated != null).length === 0
-                  ? <p className="text-base font-normal text-petrol-blue/55">{SAVINGS_LABELS.noInfo}</p>
+                  ? <p className="text-base font-normal text-petrol-blue/75">{SAVINGS_LABELS.noInfo}</p>
                   : savings.filter(row => row.negotiated != null).map(row => (
                       <p key={row.currency}>{formatCurrency(row.negotiated as number, row.currency)}</p>
                     ))}
               </div>
-              <p className="mt-1 text-xs text-petrol-blue/50">
+              <p className="mt-1 text-xs text-petrol-blue/75">
                 Línea base menos monto adjudicado por el comité, en la misma moneda. Un cero es un resultado de la adjudicación.
                 {' '}Validado: {validatedSavingsLabel(savings.some(row => row.negotiated != null))}.
                 {' '}Realizado: {realizedSavingsLabel()}.
@@ -252,14 +252,14 @@ export default function ComitePage() {
                 ['Bases por aprobar', queue.decisions],
               ].map(([label, items]) => (
                 <div key={String(label)}>
-                  <p className="text-[12px] font-medium text-petrol-blue/55">{label as string}</p>
+                  <p className="text-[12px] font-medium text-petrol-blue/75">{label as string}</p>
                   {(items as MorningQueue['stalled']).length === 0 ? (
-                    <p className="mt-1 text-xs text-petrol-blue/40">Nada en esta lista.</p>
+                    <p className="mt-1 text-xs text-petrol-blue/75">Nada en esta lista.</p>
                   ) : (
                     (items as MorningQueue['stalled']).map(item => (
                       <p key={item.id} className="mt-2 text-sm text-petrol-blue">
                         {item.title}
-                        <span className="block text-xs text-petrol-blue/50">{item.detail}</span>
+                        <span className="block text-xs text-petrol-blue/75">{item.detail}</span>
                       </p>
                     ))
                   )}

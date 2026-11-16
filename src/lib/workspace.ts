@@ -84,15 +84,17 @@ export const EMPTY_WORKSPACE: WorkspaceRaw = {
 
 export type StageId = 'iniciativa' | 'rfx' | 'licitacion' | 'ofertas' | 'evaluacion' | 'adjudicacion' | 'contrato'
 
-export const FLOW_STAGES: { id: StageId; label: string; href: string }[] = [
-  { id: 'iniciativa', label: 'Iniciativa', href: '/sourcing-plan' },
-  { id: 'rfx', label: 'RFx', href: '/procesos?tipo=rfx' },
-  { id: 'licitacion', label: 'Licitación', href: '/procesos?tipo=licitacion' },
-  { id: 'ofertas', label: 'Ofertas', href: '/procesos?etapa=ofertas' },
-  { id: 'evaluacion', label: 'Evaluación', href: '/procesos?etapa=evaluacion' },
-  { id: 'adjudicacion', label: 'Adjudicación', href: '/adjudicaciones' },
-  { id: 'contrato', label: 'Contrato', href: '/contratos?vista=pendientes' },
-]
+/** Reglas compartidas de "qué sigue": las usan Inicio, Procesos y el hilo del expediente. */
+export type Bucket = 'attention' | 'work' | 'draft' | 'active'
+
+export const BUCKET_ORDER: Bucket[] = ['attention', 'work', 'draft', 'active']
+
+export const BUCKET_LABELS: Record<Bucket, { title: string; hint: string }> = {
+  attention: { title: 'Requiere tu atención ahora', hint: 'Algo espera una decisión tuya o lleva días detenido.' },
+  work: { title: 'Trabajo pendiente', hint: 'El siguiente paso concreto que te corresponde dar.' },
+  draft: { title: 'Borradores para continuar', hint: 'Cosas que empezaste y quedaron sin terminar.' },
+  active: { title: 'En curso, sin acción inmediata', hint: 'Avanzan por sí solos o dependen de otras personas.' },
+}
 
 export type ProcessKind = 'rfx' | 'licitacion' | 'sala'
 
@@ -116,6 +118,9 @@ export type ProcessItem = {
   href: string
   updatedAt: string | null
   next: Step
+  bucket: Bucket
+  /** Por qué el proceso aparece en ese grupo, en una frase. */
+  reason: string
 }
 
 const RFX_STATUS: Record<string, string> = { draft: 'Borrador', ready: 'Bases listas', closed: 'Cerrado', archived: 'Archivado' }
@@ -158,7 +163,7 @@ function isMine(row: { responsible_user_id?: string | null; created_by?: string 
   return row.created_by === me
 }
 
-type Indexes = {
+export type Indexes = {
   salaByLicitacion: Map<string, SalaRow>
   awardByLicitacion: Map<string, AwardRow>
   contractByLicitacion: Map<string, ContractRow>
@@ -248,6 +253,58 @@ export function salaNext(sala: SalaRow, role: string, idx: Indexes): Step {
   }
 }
 
+type Classification = { bucket: Bucket; reason: string }
+
+export function classifyRfx(rfx: RfxRow, role: string): Classification {
+  if (rfx.status === 'draft') return { bucket: 'draft', reason: 'Borrador: faltan completar las bases.' }
+  if (rfx.status === 'ready') {
+    return can(role, 'createLicitacion')
+      ? { bucket: 'work', reason: 'Bases listas: falta crear la licitación.' }
+      : { bucket: 'active', reason: 'Bases listas. La licitación la crea un gerente o administrador.' }
+  }
+  return { bucket: 'active', reason: 'Sin acción pendiente.' }
+}
+
+export function classifySala(sala: SalaRow, role: string): Classification {
+  switch (sala.status) {
+    case 'draft':
+      return can(role, 'openSala')
+        ? { bucket: 'draft', reason: 'Sala en borrador: falta configurarla y abrirla.' }
+        : { bucket: 'active', reason: 'Sala en preparación por un gerente o administrador.' }
+    case 'open':
+      return { bucket: 'active', reason: `Recibiendo ofertas${sala.closes_at ? ` hasta el ${String(sala.closes_at).slice(0, 10)}` : ''}.` }
+    case 'closed':
+      return { bucket: 'attention', reason: 'La recepción cerró: falta evaluar las ofertas.' }
+    default:
+      return { bucket: 'active', reason: 'Sin acción pendiente.' }
+  }
+}
+
+export function classifyLicitacion(lic: LicitacionRow, role: string, idx: Indexes): Classification {
+  const sala = idx.salaByLicitacion.get(lic.id)
+  switch (lic.status) {
+    case 'planned':
+      return can(role, 'createLicitacion')
+        ? { bucket: 'draft', reason: 'Licitación en preparación: faltan las bases y enviarlas a revisión.' }
+        : { bucket: 'active', reason: 'En preparación por un gerente o administrador.' }
+    case 'bases_review':
+      return can(role, 'approve')
+        ? { bucket: 'attention', reason: 'Las bases esperan tu aprobación para publicar.' }
+        : { bucket: 'active', reason: 'Bases en revisión: esperan la aprobación de un gerente.' }
+    case 'published':
+      if (sala) return classifySala(sala, role)
+      return can(role, 'openSala')
+        ? { bucket: 'work', reason: 'Publicada: falta abrir la sala de ofertas.' }
+        : { bucket: 'active', reason: 'Publicada. La sala la abre un gerente o administrador.' }
+    case 'evaluation':
+      return sala
+        ? { bucket: 'attention', reason: 'Hay ofertas por evaluar.' }
+        : { bucket: 'active', reason: 'En evaluación.' }
+    default:
+      return { bucket: 'active', reason: 'Sin acción pendiente.' }
+  }
+}
+
 export function buildProcesses(raw: WorkspaceRaw, me: string, role: string): ProcessItem[] {
   const idx = indexes(raw)
   const items: ProcessItem[] = [
@@ -263,6 +320,7 @@ export function buildProcesses(raw: WorkspaceRaw, me: string, role: string): Pro
       href: `/rfx-maker/${rfx.id}`,
       updatedAt: rfx.updated_at || null,
       next: rfxNext(rfx, role),
+      ...classifyRfx(rfx, role),
     })),
     ...raw.licitaciones.map(lic => ({
       kind: 'licitacion' as const,
@@ -276,6 +334,7 @@ export function buildProcesses(raw: WorkspaceRaw, me: string, role: string): Pro
       href: `/licitaciones/${lic.id}`,
       updatedAt: lic.updated_at || null,
       next: licitacionNext(lic, role, idx),
+      ...classifyLicitacion(lic, role, idx),
     })),
     ...raw.salas.map(sala => ({
       kind: 'sala' as const,
@@ -289,12 +348,13 @@ export function buildProcesses(raw: WorkspaceRaw, me: string, role: string): Pro
       href: `/sala/${sala.id}`,
       updatedAt: sala.updated_at || null,
       next: salaNext(sala, role, idx),
+      ...classifySala(sala, role),
     })),
   ]
   return items.sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
 }
 
-export type ProcessFilter = { kind?: string | null; stage?: string | null; mine?: boolean; active?: boolean; query?: string | null }
+export type ProcessFilter = { kind?: string | null; stage?: string | null; mine?: boolean; active?: boolean; statusLabel?: string | null; query?: string | null }
 
 export function filterProcesses(items: ProcessItem[], filter: ProcessFilter) {
   const query = (filter.query || '').trim().toLowerCase()
@@ -303,6 +363,7 @@ export function filterProcesses(items: ProcessItem[], filter: ProcessFilter) {
     (!filter.stage || item.stage === filter.stage) &&
     (!filter.mine || item.mine) &&
     (!filter.active || item.active) &&
+    (!filter.statusLabel || item.statusLabel === filter.statusLabel) &&
     (!query || `${item.title} ${item.id}`.toLowerCase().includes(query))
   )
 }
@@ -353,35 +414,123 @@ function stalled(updatedAt: string | null | undefined, today: Date) {
   return new Date(updatedAt).getTime() < today.getTime() - STALL_DAYS * 24 * 60 * 60 * 1000
 }
 
-export function pendingActions(raw: WorkspaceRaw, me: string, role: string, today = new Date()): ActionItem[] {
-  const out: ActionItem[] = []
+export type QueueItem = {
+  id: string
+  bucket: Bucket
+  title: string
+  /** Tipo y estado, p. ej. "RFx · Borrador". */
+  detail: string
+  /** Por qué aparece en la lista. */
+  reason: string
+  href: string
+  cta: string
+  note?: string
+  at: string
+}
+
+function lastWeek(today: Date, days: number) {
+  return new Date(today.getTime() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+}
+
+/**
+ * Cola personal única: la usan "Continuar donde quedaste", los pendientes y los procesos en curso.
+ * Cada elemento cae en un solo grupo (attention > work > draft > active) y dice por qué.
+ */
+export function workQueue(raw: WorkspaceRaw, me: string, role: string, today = new Date()): QueueItem[] {
+  const out: QueueItem[] = []
+  const idx = indexes(raw)
+
+  for (const item of buildProcesses(raw, me, role).filter(item => item.mine && item.active)) {
+    if (item.kind === 'licitacion') {
+      const sala = idx.salaByLicitacion.get(item.id)
+      if (sala && sala.created_by === me && sala.status !== 'awarded') continue
+    }
+    const isStalled = stalled(item.updatedAt, today)
+    const bucket: Bucket = isStalled ? 'attention' : item.bucket
+    out.push({
+      id: `${item.kind}-${item.id}`,
+      bucket,
+      title: item.title,
+      detail: `${PROCESS_KIND_LABELS[item.kind]} · ${item.statusLabel}`,
+      reason: isStalled ? `${item.reason} Sin movimiento hace más de ${STALL_DAYS} días.` : item.reason,
+      href: item.next.href || item.href,
+      cta: item.next.label,
+      note: item.next.note,
+      at: item.updatedAt || '',
+    })
+  }
+
   const linked = plansWithProcess(raw)
   for (const plan of openPlans(raw.plans).filter(plan => isMine(plan, me) && !linked.has(plan.id))) {
     const next = initiativeNext(plan, false, role)
-    out.push({ id: `plan-${plan.id}`, title: plan.title || 'Iniciativa', detail: 'Tu iniciativa todavía no tiene proceso.', href: next.href || `/sourcing-plan/${plan.id}`, cta: next.label })
+    out.push({
+      id: `plan-${plan.id}`,
+      bucket: 'work',
+      title: plan.title || 'Iniciativa',
+      detail: 'Iniciativa · ' + (PLAN_STATUS[plan.status || ''] || plan.status || 'Abierta'),
+      reason: 'Iniciativa asignada a ti que todavía no tiene proceso.',
+      href: next.href || `/sourcing-plan/${plan.id}`,
+      cta: next.label,
+      at: plan.updated_at || '',
+    })
   }
-  for (const sala of raw.salas.filter(sala => sala.status === 'closed' && sala.created_by === me)) {
-    out.push({ id: `sala-${sala.id}`, title: sala.title || 'Sala de ofertas', detail: 'La recepción cerró. Falta evaluar las ofertas.', href: `/sala/${sala.id}/evaluacion`, cta: 'Evaluar' })
-  }
-  const idx = indexes(raw)
+
   for (const lic of raw.licitaciones.filter(lic => ['awarded', 'contract_signed'].includes(lic.status || '') && isMine(lic, me))) {
     const award = idx.awardByLicitacion.get(lic.id)
     if (award && !award.contract_id && !idx.contractByLicitacion.get(lic.id) && can(role, 'writeContracts')) {
-      out.push({ id: `award-${award.id}`, title: lic.name || lic.id, detail: 'Adjudicada sin contrato.', href: `/contratos/desde-adjudicacion?award=${award.id}`, cta: 'Preparar contrato' })
+      out.push({
+        id: `award-${award.id}`,
+        bucket: 'work',
+        title: lic.name || lic.id,
+        detail: 'Adjudicación · Sin contrato',
+        reason: 'Adjudicada: falta preparar el contrato.',
+        href: `/contratos/desde-adjudicacion?award=${award.id}`,
+        cta: 'Preparar contrato',
+        at: award.awarded_at || lic.updated_at || '',
+      })
     }
   }
+
   const contracts = new Map(raw.contracts.map(contract => [contract.id, contract]))
-  const latest = latestVersions(raw.versions)
-  for (const version of Array.from(latest.values())) {
+  const returnedContracts = new Set<string>()
+  for (const version of Array.from(latestVersions(raw.versions).values())) {
     const contract = contracts.get(version.contract_id)
     if (version.status === 'returned' && contract && (isMineContract(contract, me) || version.created_by === me)) {
-      out.push({ id: `version-${version.id}`, title: contract.name || contract.code || 'Contrato', detail: 'La versión fue devuelta con observaciones.', href: `/contratos/${contract.id}`, cta: 'Corregir' })
+      returnedContracts.add(contract.id)
+      out.push({
+        id: `version-${version.id}`,
+        bucket: 'attention',
+        title: contract.name || contract.code || 'Contrato',
+        detail: 'Contrato · Versión devuelta',
+        reason: 'La versión fue devuelta con observaciones y espera tu corrección.',
+        href: `/contratos/${contract.id}`,
+        cta: 'Corregir',
+        at: version.created_at || contract.updated_at || '',
+      })
     }
   }
-  for (const item of buildProcesses(raw, me, role).filter(item => item.mine && item.active && stalled(item.updatedAt, today))) {
-    out.push({ id: `stalled-${item.kind}-${item.id}`, title: item.title, detail: `${PROCESS_KIND_LABELS[item.kind]} sin movimiento hace más de ${STALL_DAYS} días.`, href: item.next.href || item.href, cta: item.next.label })
+  const from = today.toISOString().slice(0, 10)
+  const soon = lastWeek(today, 90)
+  for (const contract of raw.contracts.filter(contract => isMineContract(contract, me) && !returnedContracts.has(contract.id))) {
+    const title = contract.name || contract.code || 'Contrato'
+    const base = { id: `contract-${contract.id}`, title, href: `/contratos/${contract.id}`, at: contract.updated_at || '' }
+    if (contract.status === 'draft') {
+      out.push({ ...base, bucket: 'draft', detail: 'Contrato · Borrador', reason: 'Borrador sin enviar a revisión.', cta: 'Continuar el contrato' })
+    } else if (contract.status === 'in_review') {
+      out.push({ ...base, bucket: 'active', detail: 'Contrato · En revisión', reason: 'En revisión: no hay una acción tuya por ahora.', cta: 'Ver contrato' })
+    } else if (contract.status === 'active' && contract.ends_on && contract.ends_on >= from && contract.ends_on <= soon) {
+      out.push({ ...base, bucket: 'work', detail: 'Contrato · Vigente', reason: `Vence el ${contract.ends_on}: decide si se renueva o se cierra.`, cta: 'Revisar' })
+    }
   }
-  return out
+
+  const rank = (bucket: Bucket) => BUCKET_ORDER.indexOf(bucket)
+  return out.sort((a, b) => rank(a.bucket) - rank(b.bucket) || b.at.localeCompare(a.at))
+}
+
+export function queueByBucket(queue: QueueItem[]): Record<Bucket, QueueItem[]> {
+  const grouped: Record<Bucket, QueueItem[]> = { attention: [], work: [], draft: [], active: [] }
+  for (const item of queue) grouped[item.bucket].push(item)
+  return grouped
 }
 
 function latestVersions(versions: VersionRow[]) {
@@ -477,65 +626,109 @@ export function upcomingDates(raw: WorkspaceRaw, options: { me?: string; onlyMin
   return out.sort((a, b) => a.date.localeCompare(b.date))
 }
 
-export function contractsForMe(raw: WorkspaceRaw, me: string, today = new Date()): ActionItem[] {
-  const soon = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-  const from = today.toISOString().slice(0, 10)
-  const out: ActionItem[] = []
-  for (const contract of raw.contracts.filter(contract => isMineContract(contract, me))) {
-    const title = contract.name || contract.code || 'Contrato'
-    if (contract.status === 'draft') out.push({ id: contract.id, title, detail: 'Borrador sin enviar a revisión.', href: `/contratos/${contract.id}`, cta: 'Continuar' })
-    else if (contract.status === 'in_review') out.push({ id: contract.id, title, detail: 'En revisión.', href: `/contratos/${contract.id}`, cta: 'Ver' })
-    else if (contract.status === 'active' && contract.ends_on && contract.ends_on >= from && contract.ends_on <= soon) {
-      out.push({ id: contract.id, title, detail: `Vence el ${contract.ends_on}.`, href: `/contratos/${contract.id}`, cta: 'Revisar' })
-    }
-  }
-  return out
+export type ContinueItem = { title: string; detail: string; reason: string; bucket: Bucket; href: string; cta: string }
+
+/** El elemento de la cola personal que se tocó más recientemente. Siempre coincide con lo que dicen las listas. */
+export function continueWhereLeft(raw: WorkspaceRaw, me: string, role: string, today = new Date()): ContinueItem | null {
+  const latest = workQueue(raw, me, role, today).slice().sort((a, b) => b.at.localeCompare(a.at))[0]
+  return latest ? { title: latest.title, detail: latest.detail, reason: latest.reason, bucket: latest.bucket, href: latest.href, cta: latest.cta } : null
 }
 
-export type ContinueItem = { title: string; detail: string; href: string; cta: string }
-
-export function continueWhereLeft(raw: WorkspaceRaw, me: string, role: string): ContinueItem | null {
-  const candidates: { at: string; item: ContinueItem }[] = []
-  for (const process of buildProcesses(raw, me, role).filter(item => item.mine && item.active)) {
-    candidates.push({ at: process.updatedAt || '', item: { title: process.title, detail: `${PROCESS_KIND_LABELS[process.kind]} · ${process.statusLabel}`, href: process.next.href || process.href, cta: process.next.label } })
-  }
-  for (const contract of raw.contracts.filter(contract => isMineContract(contract, me) && ['draft', 'in_review'].includes(contract.status || ''))) {
-    candidates.push({ at: contract.updated_at || '', item: { title: contract.name || contract.code || 'Contrato', detail: 'Contrato en preparación', href: `/contratos/${contract.id}`, cta: 'Continuar el contrato' } })
-  }
-  candidates.sort((a, b) => b.at.localeCompare(a.at))
-  return candidates[0]?.item || null
+export type ActivityMetric = {
+  id: 'iniciativas' | 'rfx' | 'licitaciones' | 'salas' | 'adjudicaciones' | 'contratos'
+  label: string
+  value: number
+  /** Qué cuenta exactamente este número. */
+  definition: string
+  /** Desglose del mismo número, nunca otra cifra distinta. */
+  breakdown: string
+  href: string
 }
 
-export type StageCount = { id: StageId; label: string; href: string; count: number | null }
-
-export function stageCounts(raw: WorkspaceRaw, me: string, role: string): StageCount[] {
-  const counts: Record<StageId, number> = { iniciativa: 0, rfx: 0, licitacion: 0, ofertas: 0, evaluacion: 0, adjudicacion: 0, contrato: 0 }
-  const linked = plansWithProcess(raw)
-  counts.iniciativa = openPlans(raw.plans).filter(plan => !linked.has(plan.id)).length
-  const salaLicitaciones = new Set(raw.salas.filter(sala => sala.status !== 'cancelled' && sala.licitacion_id).map(sala => sala.licitacion_id as string))
-  for (const item of buildProcesses(raw, me, role).filter(item => item.active)) {
-    if (item.kind === 'licitacion' && salaLicitaciones.has(item.id) && item.stage !== 'licitacion') continue
-    counts[item.stage] += 1
-  }
-  const idx = indexes(raw)
-  counts.adjudicacion = raw.decisions.filter(decision => decision.outcome === 'pending').length +
-    raw.awards.filter(award => !award.contract_id && !(award.licitacion_id && idx.contractByLicitacion.get(award.licitacion_id))).length
-  counts.contrato = raw.contracts.filter(contract => contract.status === 'draft' || contract.status === 'in_review').length
-  const hidden = new Set<StageId>(can(role, 'readContracts') ? [] : ['adjudicacion', 'contrato'])
-  return FLOW_STAGES.map(stage => ({ ...stage, count: hidden.has(stage.id) ? null : counts[stage.id] }))
+function joinParts(parts: [number, string][]) {
+  return parts.filter(([count]) => count > 0).map(([count, label]) => `${count} ${label}`).join(' · ')
 }
 
-export function areaSummary(raw: WorkspaceRaw, year = new Date().getFullYear()) {
+/**
+ * Actividad por tipo de registro. Cada número cuenta registros de UN tipo y no mide avance entre etapas:
+ * una licitación y su sala son dos registros, por eso las cifras no se suman ni se comparan como un embudo.
+ */
+export function activityByType(raw: WorkspaceRaw, role: string, year = new Date().getFullYear()): ActivityMetric[] {
   const plans = raw.plans.filter(plan => plan.plan_year == null || plan.plan_year === year)
-  return {
-    year,
-    openInitiatives: openPlans(plans).length,
-    completedInitiatives: plans.filter(plan => plan.status === 'completed').length,
-    activeProcesses: raw.rfx.filter(rfx => rfx.status === 'draft' || rfx.status === 'ready').length +
-      raw.licitaciones.filter(lic => !['awarded', 'contract_signed'].includes(lic.status || '')).length +
-      raw.salas.filter(sala => ['draft', 'open', 'closed'].includes(sala.status || '')).length,
-    contractsInReview: raw.contracts.filter(contract => contract.status === 'draft' || contract.status === 'in_review').length,
+  const open = openPlans(plans)
+  const linked = plansWithProcess(raw)
+  const rfx = raw.rfx.filter(item => item.status === 'draft' || item.status === 'ready')
+  const lics = raw.licitaciones.filter(item => !['awarded', 'contract_signed'].includes(item.status || ''))
+  const salas = raw.salas.filter(item => ['draft', 'open', 'closed'].includes(item.status || ''))
+  const idx = indexes(raw)
+  const awardsWithoutContract = raw.awards.filter(award => !award.contract_id && !(award.licitacion_id && idx.contractByLicitacion.get(award.licitacion_id)))
+  const pendingDecisions = raw.decisions.filter(decision => decision.outcome === 'pending').length
+  const metrics: ActivityMetric[] = [
+    {
+      id: 'iniciativas',
+      label: `Iniciativas abiertas ${year}`,
+      value: open.length,
+      definition: `Iniciativas del plan ${year} planificadas o en curso, con o sin proceso asociado.`,
+      breakdown: joinParts([[open.filter(plan => !linked.has(plan.id)).length, 'sin proceso aún'], [open.filter(plan => linked.has(plan.id)).length, 'con proceso']]) || 'Sin iniciativas abiertas',
+      href: '/sourcing-plan',
+    },
+    {
+      id: 'rfx',
+      label: 'RFx en curso',
+      value: rfx.length,
+      definition: 'Bases (RFx) en borrador o listas para licitar.',
+      breakdown: joinParts([[rfx.filter(item => item.status === 'draft').length, 'en borrador'], [rfx.filter(item => item.status === 'ready').length, 'listas']]) || 'Ninguna en curso',
+      href: '/procesos?tipo=rfx',
+    },
+    {
+      id: 'licitaciones',
+      label: 'Licitaciones en curso',
+      value: lics.length,
+      definition: 'Licitaciones que todavía no están adjudicadas.',
+      breakdown: joinParts([
+        [lics.filter(item => item.status === 'planned').length, 'en preparación'],
+        [lics.filter(item => item.status === 'bases_review').length, 'en revisión de bases'],
+        [lics.filter(item => item.status === 'published').length, 'publicadas'],
+        [lics.filter(item => item.status === 'evaluation').length, 'en evaluación'],
+      ]) || 'Ninguna en curso',
+      href: '/procesos?tipo=licitacion',
+    },
+    {
+      id: 'salas',
+      label: 'Salas de ofertas activas',
+      value: salas.length,
+      definition: 'Salas en borrador, recibiendo ofertas o cerradas pendientes de evaluar. Una sala puede pertenecer a una licitación ya contada.',
+      breakdown: joinParts([
+        [salas.filter(item => item.status === 'draft').length, 'en borrador'],
+        [salas.filter(item => item.status === 'open').length, 'recibiendo ofertas'],
+        [salas.filter(item => item.status === 'closed').length, 'por evaluar'],
+      ]) || 'Ninguna activa',
+      href: '/procesos?tipo=sala',
+    },
+    {
+      id: 'adjudicaciones',
+      label: 'Adjudicaciones registradas',
+      value: raw.awards.length,
+      definition: 'Total histórico de adjudicaciones de la empresa, sea cual sea el estado del contrato.',
+      breakdown: joinParts([
+        [can(role, 'readContracts') ? awardsWithoutContract.length : 0, 'sin contrato'],
+        [pendingDecisions, pendingDecisions === 1 ? 'decisión pendiente' : 'decisiones pendientes'],
+      ]) || 'Histórico completo',
+      href: '/adjudicaciones',
+    },
+  ]
+  if (can(role, 'readContracts')) {
+    const preparing = raw.contracts.filter(contract => contract.status === 'draft' || contract.status === 'in_review')
+    metrics.push({
+      id: 'contratos',
+      label: 'Contratos en preparación',
+      value: preparing.length,
+      definition: 'Contratos en borrador o en revisión. No incluye los vigentes.',
+      breakdown: joinParts([[preparing.filter(item => item.status === 'draft').length, 'en borrador'], [preparing.filter(item => item.status === 'in_review').length, 'en revisión']]) || 'Ninguno en preparación',
+      href: '/contratos?vista=pendientes',
+    })
   }
+  return metrics
 }
 
 const LIMIT = 500

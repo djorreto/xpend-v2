@@ -1,5 +1,6 @@
 'use client'
 
+import { EvaluationReport } from '@/components/evaluation-report'
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
@@ -497,7 +498,7 @@ export default function EvaluacionPage() {
                   </Button>
                 ))}
               </div>
-              {report && <pre className="whitespace-pre-wrap text-sm">{report}</pre>}
+              {report && <EvaluationReport text={report} />}
               {report && <Button variant="outline" onClick={() => router.push(`/sala/${eventId}/decision`)}>Preparar comité</Button>}
             </CardContent>
           </Card>

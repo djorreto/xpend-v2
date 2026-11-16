@@ -2,17 +2,16 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   EMPTY_WORKSPACE,
+  activityByType,
   approvals,
-  areaSummary,
   buildProcesses,
   continueWhereLeft,
-  contractsForMe,
   filterProcesses,
   myInitiatives,
   needsAttention,
-  pendingActions,
-  stageCounts,
+  queueByBucket,
   upcomingDates,
+  workQueue,
   type WorkspaceRaw,
 } from './workspace.ts'
 
@@ -90,7 +89,7 @@ test('una licitación con contrato lleva al contrato, nunca vuelve a prepararlo'
   const withContract = workspace({ ...sample, contracts: [{ id: 'c-awd', code: 'CTR-AWD', name: 'x', status: 'active', licitacion_id: 'LIC-AWD' }] })
   const item = buildProcesses(withContract, ME, 'manager').find(process => process.id === 'LIC-AWD')
   assert.equal(item?.next.href, '/contratos/c-awd')
-  assert.equal(pendingActions(withContract, ME, 'manager', TODAY).some(action => action.id === 'award-a-1'), false)
+  assert.equal(workQueue(withContract, ME, 'manager', TODAY).some(action => action.id === 'award-a-1'), false)
 })
 
 test('filtros de procesos por tipo, etapa, responsable, estado y texto', () => {
@@ -100,6 +99,7 @@ test('filtros de procesos por tipo, etapa, responsable, estado y texto', () => {
   assert.ok(filterProcesses(items, { mine: true }).every(item => item.mine))
   assert.ok(filterProcesses(items, { active: true }).every(item => item.id !== 'LIC-AWD'))
   assert.deepEqual(filterProcesses(items, { query: 'lic-pub' }).map(item => item.id), ['LIC-PUB'])
+  assert.deepEqual(filterProcesses(items, { statusLabel: 'Recepción cerrada' }).map(item => item.id), ['s-closed'])
 })
 
 test('las iniciativas asignadas usan el responsable y, si falta, quien la creó', () => {
@@ -111,18 +111,67 @@ test('las iniciativas asignadas usan el responsable y, si falta, quien la creó'
   assert.equal(myInitiatives(sample, ME, 'viewer').find(item => item.id === 'p-mine')?.next.label, 'Ver iniciativa')
 })
 
-test('los pendientes del comprador son solo suyos y salen del estado real', () => {
-  const actions = pendingActions(sample, ME, 'analyst', TODAY)
-  const ids = actions.map(action => action.id)
-  assert.ok(ids.includes('plan-p-mine'), 'iniciativa sin proceso')
-  assert.ok(!ids.includes('plan-p-created'), 'ya tiene RFx')
-  assert.ok(!ids.includes('plan-p-other'), 'no es mía')
-  assert.ok(ids.includes('sala-s-closed'), 'sala cerrada por evaluar')
-  assert.ok(ids.includes('award-a-1'), 'adjudicada sin contrato')
-  assert.ok(ids.includes('version-v-2'), 'versión devuelta')
-  assert.ok(ids.includes('stalled-licitacion-LIC-REVIEW'), 'detenida hace más de 14 días')
-  assert.ok(!ids.includes('stalled-rfx-r-ready'), 'detenida pero de otra persona')
-  assert.deepEqual(pendingActions(EMPTY_WORKSPACE, ME, 'analyst', TODAY), [])
+test('la cola personal es solo mía, sale del estado real y cada elemento dice por qué', () => {
+  const queue = workQueue(sample, ME, 'analyst', TODAY)
+  const bucketOf = new Map(queue.map(item => [item.id, item.bucket]))
+  assert.equal(bucketOf.get('plan-p-mine'), 'work', 'iniciativa sin proceso')
+  assert.equal(bucketOf.has('plan-p-created'), false, 'ya tiene RFx')
+  assert.equal(bucketOf.has('plan-p-other'), false, 'no es mía')
+  assert.equal(bucketOf.get('sala-s-closed'), 'attention', 'sala cerrada por evaluar')
+  assert.equal(bucketOf.get('award-a-1'), 'work', 'adjudicada sin contrato')
+  assert.equal(bucketOf.get('version-v-2'), 'attention', 'versión devuelta')
+  assert.equal(bucketOf.get('licitacion-LIC-REVIEW'), 'attention', 'detenida hace más de 14 días')
+  assert.match(queue.find(item => item.id === 'licitacion-LIC-REVIEW')?.reason || '', /Sin movimiento hace más de 14 días/)
+  assert.equal(bucketOf.has('rfx-r-ready'), false, 'de otra persona')
+  assert.equal(bucketOf.get('contract-c-ending'), 'work', 'contrato por vencer')
+  assert.equal(bucketOf.has('contract-c-draft'), false, 'su versión devuelta ya está arriba, sin duplicar')
+  assert.ok(queue.every(item => item.reason.length > 10 && item.href && item.cta), 'todo elemento explica por qué y a dónde ir')
+  assert.deepEqual(workQueue(EMPTY_WORKSPACE, ME, 'analyst', TODAY), [])
+})
+
+test('un RFx en borrador es un borrador para continuar: aparece en la cola y en "Continuar"', () => {
+  const only = workspace({ rfx: [{ id: 'r-1', title: 'Bases aseo', status: 'draft', responsible_user_id: ME, updated_at: FRESH }] })
+  const queue = workQueue(only, ME, 'analyst', TODAY)
+  assert.deepEqual(queue.map(item => [item.id, item.bucket]), [['rfx-r-1', 'draft']])
+  assert.match(queue[0].reason, /Borrador/)
+  const next = continueWhereLeft(only, ME, 'analyst', TODAY)
+  assert.equal(next?.title, 'Bases aseo')
+  assert.equal(next?.bucket, 'draft')
+  assert.equal(next?.href, '/rfx-maker/r-1')
+})
+
+test('"Continuar" siempre es un elemento de la cola; nada aparece solo en una de las dos', () => {
+  for (const role of ['analyst', 'manager', 'admin']) {
+    const queue = workQueue(sample, ME, role, TODAY)
+    const next = continueWhereLeft(sample, ME, role, TODAY)
+    assert.ok(next && queue.some(item => item.title === next.title && item.href === next.href), role)
+  }
+  assert.equal(continueWhereLeft(EMPTY_WORKSPACE, ME, 'analyst', TODAY), null)
+})
+
+test('la cola reparte cada elemento en un solo grupo y respeta lo que puede hacer el rol', () => {
+  const analyst = queueByBucket(workQueue(sample, ME, 'analyst', TODAY))
+  assert.deepEqual(analyst.draft.map(item => item.id), ['rfx-r-draft'])
+  const total = (grouped: ReturnType<typeof queueByBucket>) => grouped.attention.length + grouped.work.length + grouped.draft.length + grouped.active.length
+  assert.equal(total(analyst), workQueue(sample, ME, 'analyst', TODAY).length)
+  // un gerente aprueba sus bases en revisión, un comprador solo las sigue
+  const review = (role: string) => workQueue(sample, ME, role, new Date('2026-10-02T12:00:00Z')).find(item => item.id === 'licitacion-LIC-REVIEW')
+  assert.equal(review('manager')?.bucket, 'attention')
+  assert.match(review('manager')?.reason || '', /esperan tu aprobación/)
+  assert.equal(review('analyst')?.bucket, 'active')
+  assert.match(review('analyst')?.reason || '', /esperan la aprobación de un gerente/)
+  // las bases listas: el gerente tiene trabajo; el comprador solo espera
+  const ready = workspace({ rfx: [{ id: 'r-9', title: 'Listas', status: 'ready', responsible_user_id: ME, updated_at: FRESH }] })
+  assert.equal(workQueue(ready, ME, 'manager', TODAY)[0].bucket, 'work')
+  assert.equal(workQueue(ready, ME, 'analyst', TODAY)[0].bucket, 'active')
+})
+
+test('una licitación con sala propia no se duplica con su sala en la cola', () => {
+  const both = workspace({
+    licitaciones: [{ id: 'L-1', name: 'Mi licitación', status: 'published', responsible_user_id: ME, updated_at: FRESH }],
+    salas: [{ id: 's-1', title: 'Mi sala', status: 'closed', licitacion_id: 'L-1', created_by: ME, updated_at: FRESH }],
+  })
+  assert.deepEqual(workQueue(both, ME, 'manager', TODAY).map(item => item.id), ['sala-s-1'])
 })
 
 test('las aprobaciones solo existen para quien puede aprobar y nunca las propias', () => {
@@ -153,34 +202,54 @@ test('las próximas fechas usan solo fechas cargadas, futuras y ordenadas', () =
   assert.deepEqual(upcomingDates(EMPTY_WORKSPACE, { today: TODAY }), [])
 })
 
-test('contratos que requieren mi atención y continuar donde quedé', () => {
-  assert.deepEqual(contractsForMe(sample, ME, TODAY).map(item => item.id), ['c-draft', 'c-ending'])
-  const next = continueWhereLeft(sample, ME, 'analyst')
-  assert.equal(next?.title, 'Bases mantención')
-  assert.equal(continueWhereLeft(EMPTY_WORKSPACE, ME, 'analyst'), null)
+function breakdownTotal(text: string) {
+  return text.split(' · ').reduce((sum, part) => sum + Number(part.match(/^\d+/)?.[0] || 0), 0)
+}
+
+test('la actividad por tipo define cada número y su desglose suma exactamente ese número', () => {
+  const metrics = activityByType(sample, 'manager', 2026)
+  const byId = new Map(metrics.map(metric => [metric.id, metric]))
+  assert.deepEqual(metrics.map(metric => [metric.id, metric.value]), [
+    ['iniciativas', 3], ['rfx', 2], ['licitaciones', 2], ['salas', 2], ['adjudicaciones', 1], ['contratos', 2],
+  ])
+  for (const id of ['iniciativas', 'rfx', 'licitaciones', 'salas', 'contratos'] as const) {
+    const metric = byId.get(id)!
+    assert.equal(breakdownTotal(metric.breakdown), metric.value, `${id}: ${metric.breakdown}`)
+  }
+  assert.equal(byId.get('iniciativas')?.breakdown, '1 sin proceso aún · 2 con proceso')
+  assert.equal(byId.get('adjudicaciones')?.breakdown, '1 sin contrato · 1 decisión pendiente')
+  assert.ok(metrics.every(metric => metric.definition.length > 20 && metric.href.startsWith('/')))
+  assert.match(byId.get('salas')!.definition, /pertenecer a una licitación ya contada/)
 })
 
-test('el flujo cuenta cada registro en una sola etapa', () => {
-  const counts = Object.fromEntries(stageCounts(sample, ME, 'manager').map(stage => [stage.id, stage.count]))
-  assert.deepEqual(counts, { iniciativa: 1, rfx: 2, licitacion: 1, ofertas: 1, evaluacion: 1, adjudicacion: 2, contrato: 2 })
-  const viewer = Object.fromEntries(stageCounts(sample, ME, 'viewer').map(stage => [stage.id, stage.count]))
-  assert.equal(viewer.contrato, null)
-  assert.equal(viewer.adjudicacion, null)
-  const summary = areaSummary(sample, 2026)
-  assert.equal(summary.openInitiatives, 3)
-  assert.equal(summary.completedInitiatives, 1)
-  assert.equal(summary.activeProcesses, 6)
+test('las cifras de tipos distintos pueden superponerse sin forzarlas a coincidir', () => {
+  // 3 iniciativas abiertas conviven con 0 iniciativas sin proceso: son preguntas distintas y ambas se muestran con su nombre
+  const linked = workspace({
+    plans: [{ id: 'p-1', title: 'Con RFx', status: 'planned', plan_year: 2026, responsible_user_id: ME }],
+    rfx: [{ id: 'r-1', title: 'Bases', status: 'draft', sourcing_plan_id: 'p-1', responsible_user_id: ME }],
+  })
+  const initiatives = activityByType(linked, 'manager', 2026).find(metric => metric.id === 'iniciativas')!
+  assert.equal(initiatives.value, 1)
+  assert.equal(initiatives.breakdown, '1 con proceso')
+  assert.doesNotMatch(initiatives.breakdown, /sin proceso/)
+})
+
+test('el perfil de consulta ve las adjudicaciones que RLS le permite, pero no los contratos', () => {
+  const viewer = activityByType(sample, 'viewer', 2026)
+  assert.equal(viewer.find(metric => metric.id === 'adjudicaciones')?.value, 1)
+  assert.equal(viewer.find(metric => metric.id === 'adjudicaciones')?.breakdown, '1 decisión pendiente')
+  assert.equal(viewer.some(metric => metric.id === 'contratos'), false)
+  assert.equal(activityByType(sample, 'analyst', 2026).some(metric => metric.id === 'contratos'), true)
 })
 
 test('el centro de trabajo no calcula ni inventa ahorros, metas ni hitos', () => {
   const outputs = JSON.stringify([
     buildProcesses(sample, ME, 'manager'),
-    pendingActions(sample, ME, 'manager', TODAY),
+    workQueue(sample, ME, 'manager', TODAY),
     approvals(sample, ME, 'manager'),
     needsAttention(sample, ME, 'manager', TODAY),
     upcomingDates(sample, { today: TODAY }),
-    stageCounts(sample, ME, 'manager'),
-    areaSummary(sample, 2026),
+    activityByType(sample, 'manager', 2026),
   ])
   assert.doesNotMatch(outputs, /savings|ahorro|meta|hito|atrasad/i)
 })

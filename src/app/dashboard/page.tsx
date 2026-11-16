@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, ChevronRight, FilePlus2, FileText, FolderPlus, Gavel, Scale, Upload } from 'lucide-react'
+import { ArrowRight, FilePlus2, FileText, FolderPlus, Gavel, Scale, Upload } from 'lucide-react'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
-import { BlockCard, EmptyHint, ItemList, Metric, QuickAction, type BlockItem } from '@/components/workspace-blocks'
+import { ActivityTile, BlockCard, EmptyHint, ItemList, QuickAction, type BlockItem } from '@/components/workspace-blocks'
 import { supabaseBrowser } from '@/lib/supabase'
 import { formatCurrency } from '@/lib/utils'
 import { describeSpendSource, type SpendSourceInfo } from '@/lib/spend-sources'
@@ -22,19 +22,21 @@ import {
   type CurrencySavings,
 } from '@/lib/procurement-flow'
 import {
+  BUCKET_LABELS,
+  BUCKET_ORDER,
   EMPTY_WORKSPACE,
   PROCESS_KIND_LABELS,
+  activityByType,
   approvals,
-  areaSummary,
   buildProcesses,
   continueWhereLeft,
-  contractsForMe,
   loadWorkspaceRaw,
   myInitiatives,
   needsAttention,
-  pendingActions,
-  stageCounts,
+  queueByBucket,
   upcomingDates,
+  workQueue,
+  type QueueItem,
   type WorkspaceRaw,
 } from '@/lib/workspace'
 
@@ -155,17 +157,16 @@ export default function InicioPage() {
   const supervisor = can(role, 'approve')
   const readOnly = role === 'viewer'
   const processes = buildProcesses(raw, me, role)
-  const mineActive = processes.filter(item => item.mine && item.active)
   const companyActive = processes.filter(item => item.active)
+  const queue = readOnly ? [] : workQueue(raw, me, role)
+  const grouped = queueByBucket(queue)
   const continueItem = readOnly ? null : continueWhereLeft(raw, me, role)
-  const stages = stageCounts(raw, me, role)
-  const summary = areaSummary(raw)
-  const toDo = readOnly ? [] : pendingActions(raw, me, role)
+  const activity = activityByType(raw, role)
+  const year = new Date().getFullYear()
   const toApprove = approvals(raw, me, role)
   const attention = supervisor ? needsAttention(raw, me, role) : []
   const initiatives = myInitiatives(raw, me, role)
   const dates = upcomingDates(raw, { me, onlyMine: !supervisor && !readOnly })
-  const myContracts = can(role, 'readContracts') && !supervisor ? contractsForMe(raw, me) : []
   const firstName = viewer.name.split(/[\s@]/)[0]
   const noData = processes.length === 0 && raw.plans.length === 0
 
@@ -176,6 +177,16 @@ export default function InicioPage() {
     href: readOnly ? item.href : item.next.href || item.href,
     cta: readOnly ? 'Ver' : item.next.label,
     note: readOnly ? undefined : item.next.note,
+  }))
+
+  const queueItems = (list: QueueItem[]): BlockItem[] => list.map(item => ({
+    id: item.id,
+    title: item.title,
+    detail: item.detail,
+    reason: item.reason,
+    href: item.href,
+    cta: item.cta,
+    note: item.note,
   }))
 
   const quickActions = [
@@ -197,11 +208,11 @@ export default function InicioPage() {
       <div className="space-y-5">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-petrol-blue/45">
+            <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-petrol-blue/75">
               {roleLabel(role)}{companyName ? ` · ${companyName}` : ''}
             </p>
             <h1 className="mt-1">Hola, {firstName}</h1>
-            <p className="mt-1 max-w-2xl text-[13px] text-petrol-blue/60">{subtitle}</p>
+            <p className="mt-1 max-w-2xl text-[13px] text-petrol-blue/75">{subtitle}</p>
           </div>
         </header>
 
@@ -217,9 +228,10 @@ export default function InicioPage() {
             className="glass-card flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-accent-mint p-4 hover:-translate-y-0.5"
           >
             <div className="min-w-0">
-              <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-petrol-blue/45">Continuar donde quedaste</p>
+              <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-petrol-blue/75">Continuar donde quedaste</p>
               <p className="truncate text-[15px] font-medium text-petrol-blue">{continueItem.title}</p>
-              <p className="text-[12px] text-petrol-blue/55">{continueItem.detail}</p>
+              <p className="text-[12.5px] text-petrol-blue/75">{continueItem.detail} · {BUCKET_LABELS[continueItem.bucket].title}</p>
+              <p className="text-[12.5px] text-petrol-blue"><span className="font-medium">Por qué: </span>{continueItem.reason}</p>
             </div>
             <span className="flex items-center gap-1 rounded-full bg-petrol-blue px-4 py-2 text-[12.5px] font-medium text-white">
               {continueItem.cta}
@@ -237,7 +249,7 @@ export default function InicioPage() {
               ))}
             </div>
             {!can(role, 'createLicitacion') && (
-              <p className="text-[12px] text-petrol-blue/50">
+              <p className="text-[12px] text-petrol-blue/75">
                 Las iniciativas, licitaciones y salas de ofertas las crea un gerente o administrador. Tú puedes preparar las bases y los contratos.
               </p>
             )}
@@ -254,7 +266,7 @@ export default function InicioPage() {
               ].map(step => (
                 <div key={step.title} className="glass-chip p-4">
                   <p className="text-[13.5px] font-medium text-petrol-blue">{step.title}</p>
-                  <p className="mt-1 text-[12px] text-petrol-blue/60">{step.text}</p>
+                  <p className="mt-1 text-[12px] text-petrol-blue/75">{step.text}</p>
                   {step.href && <Link href={step.href} className="mt-2 inline-block text-[12px] font-medium text-petrol-blue underline">Ir</Link>}
                 </div>
               ))}
@@ -262,84 +274,63 @@ export default function InicioPage() {
           </BlockCard>
         )}
 
-        {(supervisor || readOnly) && (
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Metric label={`Iniciativas abiertas ${summary.year}`} value={summary.openInitiatives} hint={`${summary.completedInitiatives} completadas`} href="/sourcing-plan" />
-            <Metric label="Procesos activos" value={summary.activeProcesses} hint="RFx, licitaciones y salas" href="/procesos" />
-            {supervisor ? (
-              <Metric label="Aprobaciones pendientes" value={toApprove.length} hint="Bases, adjudicaciones y contratos" />
-            ) : (
-              <Metric label="Adjudicaciones registradas" value={raw.awards.length} href="/adjudicaciones" />
-            )}
-            {can(role, 'readContracts') ? (
-              <Metric label="Contratos en preparación" value={summary.contractsInReview} hint="Borradores y en revisión" href="/contratos?vista=pendientes" />
-            ) : (
-              <Metric label="Próximas fechas" value={dates.length} hint="En los próximos 45 días" />
-            )}
+        <section aria-labelledby="actividad" className="space-y-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="actividad" className="text-[15px] font-medium text-petrol-blue">Actividad por tipo de registro</h2>
+            <p className="max-w-xl text-[12.5px] text-petrol-blue/75">
+              Cada número cuenta registros de un solo tipo y se abre en su lista. No es un embudo: una licitación y su sala son registros distintos y no se suman.
+            </p>
           </div>
-        )}
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-[13px] font-medium text-petrol-blue/70">Cómo avanza el abastecimiento en tu empresa</h2>
-              <p className="text-[11.5px] text-petrol-blue/45">Cada paso se puede usar por separado. Los números son registros activos en esa etapa.</p>
-            </div>
-            <ol className="flex gap-1 overflow-x-auto pb-1">
-              {stages.map((stage, index) => (
-                <li key={stage.id} className="flex items-center gap-1">
-                  {index > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-petrol-blue/25" aria-hidden />}
-                  {stage.count === null ? (
-                    <div className="flex min-w-[96px] flex-col rounded-xl border border-dashed border-petrol-blue/15 px-3 py-2">
-                      <span className="text-[11.5px] text-petrol-blue/55">{stage.label}</span>
-                      <span className="text-[12px] leading-[27px] text-petrol-blue/45">Sin acceso</span>
-                    </div>
-                  ) : (
-                    <Link
-                      href={stage.href}
-                      className="flex min-w-[96px] flex-col rounded-xl border border-white/70 bg-white/55 px-3 py-2 transition-colors hover:bg-white/85"
-                    >
-                      <span className="text-[11.5px] text-petrol-blue/55">{stage.label}</span>
-                      <span className="text-[18px] font-medium text-petrol-blue">{stage.count}</span>
-                    </Link>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </CardContent>
-        </Card>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {activity.map(metric => (
+              <ActivityTile key={metric.id} label={metric.label} value={metric.value} breakdown={metric.breakdown} definition={metric.definition} href={metric.href} />
+            ))}
+          </div>
+        </section>
 
         <div className="grid gap-4 lg:grid-cols-2">
           {supervisor && (
-            <BlockCard title="Aprobaciones pendientes" description="Bases por publicar, decisiones del comité y versiones de contrato.">
+            <BlockCard title={`Aprobaciones pendientes (${toApprove.length})`} description="Bases por publicar, decisiones del comité y versiones de contrato que esperan a un gerente.">
               <ItemList items={toApprove} empty="No hay aprobaciones pendientes." />
             </BlockCard>
           )}
           {supervisor && (
-            <BlockCard title="Requieren atención" description="Procesos detenidos e iniciativas sin responsable o sin proceso." action={{ label: 'Ver plan', href: '/sourcing-plan' }}>
+            <BlockCard title="Atención en toda la empresa" description="Procesos detenidos más de 14 días e iniciativas sin responsable o sin proceso, de cualquier persona." action={{ label: 'Ver plan', href: '/sourcing-plan' }}>
               <ItemList items={attention} empty="Nada detenido. Todas las iniciativas abiertas tienen responsable y proceso." />
             </BlockCard>
           )}
 
-          {!readOnly && (
-            <BlockCard title={supervisor ? 'Tus pendientes' : 'Requiere tu acción'} description="Calculado con el estado actual de tus procesos, iniciativas y contratos.">
-              <ItemList items={toDo} empty="No tienes acciones pendientes. Revisa tus procesos activos o comienza algo nuevo." />
+          {!readOnly ? (
+            <BlockCard
+              title="Tu trabajo"
+              description="Un solo criterio para todo: cada elemento está en un grupo y dice por qué."
+              action={{ label: 'Ver todos mis procesos', href: '/procesos?mios=1' }}
+              className="lg:col-span-2"
+            >
+              {queue.length === 0 ? (
+                <EmptyHint>No tienes trabajo asignado ni procesos activos a tu nombre. Comienza algo nuevo o revisa los procesos de la empresa.</EmptyHint>
+              ) : (
+                <div className="grid gap-5 lg:grid-cols-2">
+                  {BUCKET_ORDER.filter(bucket => grouped[bucket].length > 0).map(bucket => (
+                    <section key={bucket} aria-labelledby={`grupo-${bucket}`}>
+                      <h3 id={`grupo-${bucket}`} className="text-[13.5px] font-medium text-petrol-blue">
+                        {BUCKET_LABELS[bucket].title} <span className="font-normal text-petrol-blue/75">({grouped[bucket].length})</span>
+                      </h3>
+                      <p className="text-[12.5px] text-petrol-blue/75">{BUCKET_LABELS[bucket].hint}</p>
+                      <ItemList items={queueItems(grouped[bucket])} empty="" limit={bucket === 'active' ? 4 : 5} />
+                    </section>
+                  ))}
+                </div>
+              )}
+            </BlockCard>
+          ) : (
+            <BlockCard title="Procesos activos de la empresa" description="RFx, licitaciones y salas en curso." action={{ label: 'Ver todos', href: '/procesos' }}>
+              <ItemList items={processItems(companyActive)} empty="No hay procesos activos." />
             </BlockCard>
           )}
 
-          <BlockCard
-            title={readOnly ? 'Procesos activos de la empresa' : 'Mis procesos activos'}
-            description={readOnly ? 'RFx, licitaciones y salas en curso.' : 'RFx, licitaciones y salas donde eres responsable.'}
-            action={{ label: 'Ver todos', href: readOnly ? '/procesos' : '/procesos?mios=1' }}
-          >
-            <ItemList
-              items={processItems(readOnly ? companyActive : mineActive)}
-              empty={readOnly ? 'No hay procesos activos.' : 'No eres responsable de procesos activos.'}
-            />
-          </BlockCard>
-
           {!readOnly && (
-            <BlockCard title="Mis iniciativas asignadas" description="Iniciativas abiertas del plan donde figuras como responsable." action={{ label: 'Plan de abastecimiento', href: '/sourcing-plan' }}>
+            <BlockCard title="Mis iniciativas asignadas" description="Todas tus iniciativas abiertas del plan, con o sin proceso asociado." action={{ label: 'Plan de abastecimiento', href: '/sourcing-plan' }}>
               <ItemList
                 items={initiatives.map(item => ({ id: item.id, title: item.title, detail: item.detail, href: item.next.href, cta: item.next.label }))}
                 empty="No tienes iniciativas asignadas. Un gerente puede asignarte una desde el plan."
@@ -358,14 +349,8 @@ export default function InicioPage() {
             />
           </BlockCard>
 
-          {can(role, 'readContracts') && !supervisor && (
-            <BlockCard title="Contratos que requieren tu atención" description="Tus borradores, revisiones y vencimientos en 90 días." action={{ label: 'Repositorio', href: '/contratos' }}>
-              <ItemList items={myContracts} empty="No tienes contratos pendientes." />
-            </BlockCard>
-          )}
-
           {supervisor && planSavings && (
-            <BlockCard title={`Plan de abastecimiento ${summary.year}`} description="Ahorros por moneda, sin conversión." action={{ label: 'Abrir plan', href: '/sourcing-plan' }}>
+            <BlockCard title={`Plan de abastecimiento ${year}`} description="Ahorros por moneda, sin conversión." action={{ label: 'Abrir plan', href: '/sourcing-plan' }}>
               {planSavings.length === 0 ? (
                 <EmptyHint>{SAVINGS_LABELS.noInfo}. Todavía no hay iniciativas con montos este año.</EmptyHint>
               ) : (
@@ -373,22 +358,22 @@ export default function InicioPage() {
                   {planSavings.map(row => (
                     <div key={row.currency} className="grid grid-cols-3 gap-2 text-[12px]">
                       <div className="glass-chip p-3">
-                        <p className="text-petrol-blue/55">{SAVINGS_LABELS.target}</p>
+                        <p className="text-petrol-blue/75">{SAVINGS_LABELS.target}</p>
                         <p className="mt-1 text-[14px] font-medium text-petrol-blue">{row.target != null ? formatCurrency(row.target, row.currency) : SAVINGS_LABELS.noInfo}</p>
                       </div>
                       <div className="glass-chip p-3">
-                        <p className="text-petrol-blue/55">{SAVINGS_LABELS.negotiated}</p>
+                        <p className="text-petrol-blue/75">{SAVINGS_LABELS.negotiated}</p>
                         <p className="mt-1 text-[14px] font-medium text-petrol-blue">{row.negotiated != null ? formatCurrency(row.negotiated, row.currency) : SAVINGS_LABELS.noInfo}</p>
-                        <p className="text-[10.5px] text-petrol-blue/45">{validatedSavingsLabel(row.negotiated != null)}</p>
+                        <p className="text-[12px] text-petrol-blue/75">{validatedSavingsLabel(row.negotiated != null)}</p>
                       </div>
                       <div className="glass-chip p-3">
-                        <p className="text-petrol-blue/55">{SAVINGS_LABELS.realized}</p>
-                        <p className="mt-1 text-[14px] font-medium text-petrol-blue/60">{realizedSavingsLabel()}</p>
-                        <p className="text-[10.5px] text-petrol-blue/45">Aún no se mide</p>
+                        <p className="text-petrol-blue/75">{SAVINGS_LABELS.realized}</p>
+                        <p className="mt-1 text-[14px] font-medium text-petrol-blue/75">{realizedSavingsLabel()}</p>
+                        <p className="text-[12px] text-petrol-blue/75">Aún no se mide</p>
                       </div>
                     </div>
                   ))}
-                  <p className="text-[11px] text-petrol-blue/45">El objetivo es una meta, no un resultado. El negociado sale de las adjudicaciones del comité.</p>
+                  <p className="text-[12px] text-petrol-blue/75">El objetivo es una meta, no un resultado. El negociado sale de las adjudicaciones del comité.</p>
                 </div>
               )}
             </BlockCard>
@@ -438,16 +423,16 @@ export default function InicioPage() {
               const item = entry as { label: string; href: string; hint: string }
               return (
                 <Link key={item.href} href={item.href} className="glass-chip flex items-center gap-2 p-3 hover:bg-white/70">
-                  <FileText className="h-4 w-4 shrink-0 text-petrol-blue/50" aria-hidden />
+                  <FileText className="h-4 w-4 shrink-0 text-petrol-blue/75" aria-hidden />
                   <span>
                     <span className="block font-medium text-petrol-blue">{item.label}</span>
-                    <span className="block text-[11px] text-petrol-blue/50">{item.hint}</span>
+                    <span className="block text-[12px] text-petrol-blue/75">{item.hint}</span>
                   </span>
                 </Link>
               )
             })}
           </div>
-          <p className="mt-3 text-[11.5px] text-petrol-blue/45">¿Dudas? ANA, el asistente, está disponible abajo a la derecha en todas las pantallas.</p>
+          <p className="mt-3 text-[12px] text-petrol-blue/75">¿Dudas? ANA, el asistente, está disponible abajo a la derecha en todas las pantallas.</p>
         </BlockCard>
       </div>
     </MainLayout>

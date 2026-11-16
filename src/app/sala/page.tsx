@@ -93,7 +93,7 @@ export default function SalaPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1>{isSupplier ? 'Mis procesos' : 'Salas de ofertas'}</h1>
-            <p className="mt-1 max-w-2xl text-[13px] text-petrol-blue/55">
+            <p className="mt-1 max-w-2xl text-[13px] text-petrol-blue/75">
               {isSupplier
                 ? 'Tus invitaciones, acuerdos de confidencialidad y ofertas.'
                 : 'Aquí el proveedor entra a competir. El comprador invita, abre la sala y adjudica. No es un catálogo: es el cierre del proceso.'}
@@ -123,7 +123,7 @@ export default function SalaPage() {
                 <CardTitle>{modality.name}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-xs leading-relaxed text-petrol-blue/60">{modality.summary}</p>
+                <p className="text-xs leading-relaxed text-petrol-blue/75">{modality.summary}</p>
               </CardContent>
             </Card>
           ))}
@@ -135,7 +135,7 @@ export default function SalaPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             {events.length === 0 && (
-              <p className="text-sm text-petrol-blue/50">
+              <p className="text-sm text-petrol-blue/75">
                 {isSupplier
                   ? 'Todavía no tienes una invitación. El comprador tiene que asociar tu usuario al proveedor.'
                   : 'Todavía no hay salas. Ábrela desde una iniciativa cuando las bases estén listas.'}
@@ -150,9 +150,9 @@ export default function SalaPage() {
               >
                 <div>
                   <p className="text-sm text-petrol-blue">{event.title}</p>
-                  <p className="text-xs text-petrol-blue/50">{modalityName(event.modality)}</p>
+                  <p className="text-xs text-petrol-blue/75">{modalityName(event.modality)}</p>
                 </div>
-                <span className="text-xs text-petrol-blue/60">{STATUS_LABEL[event.status] || event.status}</span>
+                <span className="text-xs text-petrol-blue/75">{STATUS_LABEL[event.status] || event.status}</span>
               </button>
             ))}
           </CardContent>

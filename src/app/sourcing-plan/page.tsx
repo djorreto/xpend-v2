@@ -414,9 +414,9 @@ export default function SourcingPlanPage() {
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
             <Card>
               <CardContent className="p-3">
-                <p className="text-[11px] text-muted-foreground">Planificado</p>
+                <p className="text-[12px] text-muted-foreground">Planificado</p>
                 <p className="text-lg font-semibold leading-tight">{stats.total_planned}</p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[12px] text-muted-foreground">
                   {stats.total_completed} listas · {stats.total_in_progress} en curso
                 </p>
               </CardContent>
@@ -424,7 +424,7 @@ export default function SourcingPlanPage() {
 
             <Card>
               <CardContent className="p-3">
-                <p className="text-[11px] text-muted-foreground">{SAVINGS_LABELS.target}</p>
+                <p className="text-[12px] text-muted-foreground">{SAVINGS_LABELS.target}</p>
                 <div className="text-sm font-semibold leading-tight">
                   {(stats.savings_by_currency || []).filter((row: CurrencySavings) => row.target != null).length === 0
                     ? SAVINGS_LABELS.noInfo
@@ -434,13 +434,13 @@ export default function SourcingPlanPage() {
                           <div key={row.currency}>{formatCurrency(row.target as number, row.currency)}</div>
                         ))}
                 </div>
-                <p className="text-[11px] text-muted-foreground">Meta, no resultado</p>
+                <p className="text-[12px] text-muted-foreground">Meta, no resultado</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardContent className="p-3">
-                <p className="text-[11px] text-muted-foreground">{SAVINGS_LABELS.negotiated}</p>
+                <p className="text-[12px] text-muted-foreground">{SAVINGS_LABELS.negotiated}</p>
                 <div className="text-sm font-semibold leading-tight">
                   {(stats.savings_by_currency || []).filter((row: CurrencySavings) => row.negotiated != null).length === 0
                     ? SAVINGS_LABELS.noInfo
@@ -450,14 +450,14 @@ export default function SourcingPlanPage() {
                           <div key={row.currency}>
                             {formatCurrency(row.negotiated as number, row.currency)}
                             {row.negotiatedVsTarget != null && (
-                              <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                              <span className="ml-1 text-[12px] font-normal text-muted-foreground">
                                 {row.negotiatedVsTarget.toFixed(0)}% del objetivo
                               </span>
                             )}
                           </div>
                         ))}
                 </div>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[12px] text-muted-foreground">
                   Validado: {validatedSavingsLabel((stats.savings_by_currency || []).some((row: CurrencySavings) => row.negotiated != null))}
                   {' · '}Realizado: {realizedSavingsLabel()}
                 </p>
@@ -466,9 +466,9 @@ export default function SourcingPlanPage() {
 
             <Card>
               <CardContent className="p-3">
-                <p className="text-[11px] text-muted-foreground">Spot</p>
+                <p className="text-[12px] text-muted-foreground">Spot</p>
                 <p className="text-lg font-semibold leading-tight">{stats.total_spot}</p>
-                <p className="text-[11px] text-muted-foreground">Fuera del plan</p>
+                <p className="text-[12px] text-muted-foreground">Fuera del plan</p>
               </CardContent>
             </Card>
           </div>
@@ -637,7 +637,7 @@ export default function SourcingPlanPage() {
                               )}
                             </div>
                             {(plan.category || plan.group_id) && (
-                              <div className="truncate text-[11px] text-muted-foreground">
+                              <div className="truncate text-[12px] text-muted-foreground">
                                 {[groups.find(group => group.id === plan.group_id)?.name, plan.category].filter(Boolean).join(' · ')}
                               </div>
                             )}
@@ -701,7 +701,7 @@ export default function SourcingPlanPage() {
                             </span>
                           )}
                           {declaredList.length > 0 && (
-                            <div className="mt-1 text-[11px] text-muted-foreground">
+                            <div className="mt-1 text-[12px] text-muted-foreground">
                               Declarado: {declaredList.map(row => formatCurrency(row.amount, row.currency)).join(' · ')} (sin validar)
                             </div>
                           )}

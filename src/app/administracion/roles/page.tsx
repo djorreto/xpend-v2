@@ -49,7 +49,7 @@ export default function RolesPage() {
       <div className="space-y-5">
         <div>
           <h1>Roles y permisos</h1>
-          <p className="mt-1 max-w-3xl text-[13px] text-petrol-blue/60">
+          <p className="mt-1 max-w-3xl text-[13px] text-petrol-blue/75">
             Qué puede hacer cada rol hoy. Las reglas las aplica la base de datos; el menú solo oculta lo que un rol no puede usar.
             Para cambiar el rol de una persona, ve a <Link href="/users" className="underline">Usuarios</Link>.
           </p>
@@ -60,7 +60,7 @@ export default function RolesPage() {
             <table className="w-full min-w-[640px] text-[12.5px]">
               <caption className="sr-only">Permisos por rol</caption>
               <thead>
-                <tr className="border-b border-petrol-blue/10 text-left text-petrol-blue/60">
+                <tr className="border-b border-petrol-blue/10 text-left text-petrol-blue/75">
                   <th scope="col" className="px-4 py-3 font-medium">Acción</th>
                   {ROLES.map(role => <th key={role} scope="col" className="px-3 py-3 text-center font-medium">{ROLE_LABELS[role]}</th>)}
                 </tr>
@@ -81,7 +81,7 @@ export default function RolesPage() {
                 <tr>
                   <th scope="row" className="px-4 py-2.5 text-left font-normal text-petrol-blue">Secciones del menú</th>
                   {ROLES.map(role => (
-                    <td key={role} className="px-3 py-2.5 text-center text-[11.5px] text-petrol-blue/60">
+                    <td key={role} className="px-3 py-2.5 text-center text-[12px] text-petrol-blue/75">
                       {navigationFor(role).map(section => section.label).join(', ')}
                     </td>
                   ))}
@@ -91,7 +91,7 @@ export default function RolesPage() {
           </CardContent>
         </Card>
 
-        <p className="text-[12px] text-petrol-blue/50">
+        <p className="text-[12px] text-petrol-blue/75">
           El menú del proveedor solo muestra sus invitaciones, NDA y ofertas; las pantallas internas lo redirigen a su portal.
           Los roles personalizados y los equipos de Procurement llegarán en una etapa posterior.
         </p>

@@ -294,7 +294,7 @@ export default function ParticiparPage() {
   if (!event) {
     return (
       <MainLayout user={{ name: session.name, email: session.email, role: session.role }}>
-        <p className="text-sm text-petrol-blue/60">Esta sala no está disponible.</p>
+        <p className="text-sm text-petrol-blue/75">Esta sala no está disponible.</p>
       </MainLayout>
     )
   }
@@ -311,7 +311,7 @@ export default function ParticiparPage() {
         </Button>
         <div>
           <h1>{event.title}</h1>
-          <p className="mt-1 text-[13px] text-petrol-blue/55">
+          <p className="mt-1 text-[13px] text-petrol-blue/75">
             {modalityName(event.modality)} · {event.currency}
             {event.closes_at ? ` · cierra ${new Date(event.closes_at).toLocaleString('es-CL')}` : ''}
           </p>

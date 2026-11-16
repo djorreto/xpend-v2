@@ -87,17 +87,17 @@ export function ExpedientePanel({ licitacionId, name }: { licitacionId: string; 
       </CardHeader>
       <CardContent className="space-y-4">
         {events.length === 0 ? (
-          <p className="text-sm text-petrol-blue/55">Todavía no hay firmas ni acta en esta licitación.</p>
+          <p className="text-sm text-petrol-blue/75">Todavía no hay firmas ni acta en esta licitación.</p>
         ) : (
           <ul className="space-y-2">
             {events.map(event => (
               <li key={event.id} className="text-sm text-petrol-blue">
                 <span className="font-medium">{LABELS[event.action] || event.action}</span>
-                <span className="ml-2 text-xs text-petrol-blue/50">
+                <span className="ml-2 text-xs text-petrol-blue/75">
                   {new Date(event.performed_at).toLocaleString('es-CL')}
                 </span>
                 {event.metadata?.exception ? (
-                  <span className="mt-1 block text-xs text-petrol-blue/60">Excepción: {event.metadata.exception}</span>
+                  <span className="mt-1 block text-xs text-petrol-blue/75">Excepción: {event.metadata.exception}</span>
                 ) : null}
                 {event.metadata?.body ? (
                   <span className="mt-1 block whitespace-pre-wrap text-xs text-petrol-blue/70">{event.metadata.body}</span>

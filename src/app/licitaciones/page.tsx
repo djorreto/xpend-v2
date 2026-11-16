@@ -421,7 +421,7 @@ export default function LicitacionesPage() {
                                   <span className="ml-1 text-xs">({Math.abs(view.percentage).toFixed(1)}%)</span>
                                 )}
                               </span>
-                              <span className="text-[11px] text-muted-foreground">
+                              <span className="text-[12px] text-muted-foreground">
                                 {view.kind === 'negotiated'
                                   ? `${view.amount < 0 ? 'Sobrecosto' : 'Negociado'} (estimado)`
                                   : 'Declarado, sin validación'}

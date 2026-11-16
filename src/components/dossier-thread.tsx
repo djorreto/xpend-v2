@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabaseBrowser } from '@/lib/supabase'
 import { DOSSIER_STEPS, dossierHref, dossierNextStep, type Dossier, type DossierStage } from '@/lib/dossier-store'
 import { can } from '@/lib/navigation'
+import { EvaluationReport } from '@/components/evaluation-report'
 
 type Match = {
   companyId: string
@@ -87,7 +88,7 @@ export function DossierThread({ match }: { match: Match }) {
   return (
     <div className="rounded-lg border p-3 text-sm">
       <p className="font-medium">Expediente {dossier.title}</p>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-[13px] text-muted-foreground">
         {dossier.currency || 'moneda'} {dossier.net_spend != null ? `· neto ${Number(dossier.net_spend).toLocaleString('es-CL')}` : ''} {dossier.country_code ? `· ${dossier.country_code}` : ''}
       </p>
       <ol className="mt-2 flex flex-wrap gap-2">
@@ -103,7 +104,7 @@ export function DossierThread({ match }: { match: Match }) {
         })}
       </ol>
       {next && role !== 'viewer' && (
-        <p className="mt-2 text-xs">
+        <p className="mt-2 text-[13px]">
           Siguiente paso sugerido:{' '}
           {allowed
             ? <Link href={next.href} className="font-medium underline">{next.label}</Link>
@@ -111,22 +112,24 @@ export function DossierThread({ match }: { match: Match }) {
         </p>
       )}
       {events.length > 0 && (
-        <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+        <ul className="mt-3 space-y-1 text-[13px] text-muted-foreground">
           {events.map(event => (
             <li key={event.id}>{new Date(event.created_at).toLocaleString('es-CL')} · {event.action}{event.detail ? ` · ${event.detail}` : ''}</li>
           ))}
         </ul>
       )}
       {report && (
-        <pre className="mt-3 whitespace-pre-wrap text-xs text-petrol-blue">{report}</pre>
+        <div className="mt-4 rounded-xl border border-petrol-blue/10 bg-white/60 p-4">
+          <EvaluationReport text={report} />
+        </div>
       )}
       {linkedContract && (
-        <p className="mt-3 text-xs">
+        <p className="mt-3 text-[13px]">
           Contrato <Link className="underline" href={`/contratos/${linkedContract.id}`}>{linkedContract.code}</Link> · {linkedContract.status}
         </p>
       )}
       {dossier.award && (
-        <p className="mt-3 text-xs">
+        <p className="mt-3 text-[13px]">
           Adjudicación {dossier.award.amount != null ? `${dossier.currency || ''} ${dossier.award.amount}` : ''}.
           Objetivo {dossier.award.target_savings ?? '—'} · estimado {dossier.award.estimated_savings ?? '—'} · realizado {dossier.award.realized_savings ?? 'sin evidencia'}.
         </p>

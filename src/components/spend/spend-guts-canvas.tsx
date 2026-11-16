@@ -320,7 +320,7 @@ export function SpendGutsCanvas() {
               >
                 <div className={`flex items-center justify-between rounded-t-lg px-3 py-2 ${KIND_HEAD[node.kind]}`}>
                   <span className="text-sm font-medium">{node.title}</span>
-                  <span className="text-[11px] opacity-80">{node.status}</span>
+                  <span className="text-[12px] opacity-80">{node.status}</span>
                 </div>
                 <div className="relative px-3 pt-2">
                   {Array.from({ length: Math.max(ins.length, outs.length) }).map((_, index) => (

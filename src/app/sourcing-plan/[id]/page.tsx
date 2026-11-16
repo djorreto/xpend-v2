@@ -339,7 +339,7 @@ export default function SourcingPlanDetailPage() {
               ['4. Sala', `${linkedDocs.filter(doc => doc.detail.startsWith('Sala')).length} sala(s)`],
             ].map(([title, detail]) => (
               <div key={title} className="glass-chip px-3 py-3">
-                <p className="text-[12px] font-medium text-petrol-blue/55">{title}</p>
+                <p className="text-[12px] font-medium text-petrol-blue/75">{title}</p>
                 <p className="mt-1 text-sm text-petrol-blue">{detail}</p>
               </div>
             ))}
@@ -347,7 +347,7 @@ export default function SourcingPlanDetailPage() {
             {linkedDocs.map(doc => (
               <button key={doc.id} type="button" onClick={() => router.push(doc.href)} className="block text-left text-sm text-petrol-blue">
                 {doc.title}
-                <span className="ml-2 text-xs text-petrol-blue/50">{doc.detail}</span>
+                <span className="ml-2 text-xs text-petrol-blue/75">{doc.detail}</span>
               </button>
             ))}
           </CardContent>

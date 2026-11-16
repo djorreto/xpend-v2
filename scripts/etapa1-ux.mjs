@@ -149,7 +149,7 @@ try {
     check(`${role}: el login lleva a Inicio`, new URL(page.url()).pathname === '/dashboard', page.url())
     await settle(page)
     const inicio = await bodyText(page)
-    check(`${role}: Inicio saluda y muestra el flujo`, /Hola, /.test(inicio) && inicio.includes('Cómo avanza el abastecimiento'))
+    check(`${role}: Inicio saluda y muestra la actividad por tipo (sin embudo ni "Sin acceso")`, /Hola, /.test(inicio) && inicio.includes('Actividad por tipo de registro') && !inicio.includes('Sin acceso'))
     await page.screenshot({ path: join(shots, `inicio-${role}-escritorio.png`), fullPage: true })
 
     const labels = (await sidebarLabels(page)).map(text => text.trim()).filter(Boolean)
@@ -160,16 +160,17 @@ try {
     if (role === 'analyst') {
       check('analyst: sin acción de licitación (la base no lo permite)', hasLicitacionAction === 0)
       check('analyst: puede preparar bases', hasRfxAction > 0)
-      check('analyst: ve sus iniciativas y procesos', inicio.includes('Mis iniciativas asignadas') && inicio.includes('Mis procesos activos') && !inicio.includes('No tienes iniciativas asignadas'))
+      check('analyst: ve sus iniciativas y procesos', inicio.includes('Mis iniciativas asignadas') && inicio.includes('Tu trabajo') && inicio.includes('Por qué:') && !inicio.includes('No tienes iniciativas asignadas'))
       check('analyst: continuar donde quedó', /continuar donde quedaste/i.test(inicio))
       check('analyst: sin aprobaciones de gerente', !inicio.includes('Aprobaciones pendientes'))
     }
     if (role === 'viewer') {
       check('viewer: sin acciones de escritura', hasLicitacionAction === 0 && hasRfxAction === 0 && !inicio.includes('Comenzar algo nuevo'))
       check('viewer: aviso de consulta', inicio.includes('Tu perfil es de consulta'))
+      check('viewer: ve el total de adjudicaciones (RLS se lo autoriza) y no ve contratos', inicio.includes('Adjudicaciones registradas') && !inicio.includes('Contratos en preparación'))
     }
     if (role === 'manager' || role === 'admin') {
-      check(`${role}: aprobaciones y atención`, inicio.includes('Aprobaciones pendientes') && inicio.includes('Requieren atención'))
+      check(`${role}: aprobaciones y atención`, inicio.includes('Aprobaciones pendientes') && inicio.includes('Atención en toda la empresa'))
       check(`${role}: plan del año sin ahorro realizado inventado`, inicio.includes('Ahorro objetivo') && inicio.includes('Ahorro realizado') && !/Ahorro realizado\s*\n?\s*(USD|CLP|\$)/.test(inicio))
       check(`${role}: acción nueva licitación`, hasLicitacionAction > 0)
     }
@@ -227,6 +228,77 @@ try {
     check('Contracts: el contrato de la adjudicación abre', contract.includes('CTR-LIC-F1B-MANT'))
     const ana = await page.getByRole('button', { name: /ANA/i }).count()
     check('ANA sigue disponible', ana > 0)
+    await context.close()
+  }
+
+  {
+    // Coherencia: cada número de Inicio debe coincidir con la lista a la que enlaza.
+    const tileValue = async (page, label) => {
+      const aria = await page.locator(`a[aria-label^="${label}:"]`).first().getAttribute('aria-label').catch(() => null)
+      const match = aria && aria.match(/:\s*(\d+)\./)
+      return match ? Number(match[1]) : null
+    }
+    for (const role of ['manager', 'analyst', 'viewer']) {
+      const { context, page } = await login(role, { width: 1440, height: 960 })
+      await settle(page)
+      for (const [label, route] of [['RFx en curso', '/procesos?tipo=rfx'], ['Licitaciones en curso', '/procesos?tipo=licitacion'], ['Salas de ofertas activas', '/procesos?tipo=sala']]) {
+        const value = await tileValue(page, label)
+        await page.goto(`${base}${route}`, { waitUntil: 'domcontentloaded' })
+        await settle(page)
+        const rows = await page.locator('main ul.divide-y > li').count()
+        check(`${role}: "${label}" (${value}) coincide con su lista`, value !== null && value === rows, `lista ${rows}`)
+        await page.goto(`${base}/dashboard`, { waitUntil: 'domcontentloaded' })
+        await settle(page)
+      }
+      const awards = await tileValue(page, 'Adjudicaciones registradas')
+      await page.goto(`${base}/adjudicaciones`, { waitUntil: 'domcontentloaded' })
+      await settle(page)
+      const adjText = await bodyText(page)
+      const listed = Number((adjText.match(/Adjudicaciones registradas \((\d+)\)/) || [])[1])
+      check(`${role}: "Adjudicaciones registradas" (${awards}) coincide con la página de Adjudicaciones`, awards !== null && awards === listed, `página ${listed}`)
+      await page.goto(`${base}/dashboard`, { waitUntil: 'domcontentloaded' })
+      await settle(page)
+      const small = await page.evaluate(() => {
+        const out = []
+        const walker = document.createTreeWalker(document.querySelector('main') || document.body, NodeFilter.SHOW_TEXT)
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const el = node.parentElement
+          if (!el || !node.textContent.trim() || el.closest('.sr-only')) continue
+          const size = parseFloat(getComputedStyle(el).fontSize)
+          if (size < 12) out.push(`${size}px ${node.textContent.trim().slice(0, 30)}`)
+        }
+        return out
+      })
+      check(`${role}: Inicio sin texto menor a 12px`, small.length === 0, small.slice(0, 3).join(' | '))
+      await context.close()
+    }
+  }
+
+  {
+    const { context, page } = await login('manager', { width: 1440, height: 960 })
+    await settle(page)
+    await page.goto(`${base}/procesos`, { waitUntil: 'domcontentloaded' })
+    await settle(page)
+    const tabsGroup = await page.locator('[role="tablist"][aria-label="Tipo de proceso"]').count()
+    const typeGroups = await page.locator('[role="group"][aria-label="Tipo de proceso"]').count()
+    const stageSelect = await page.getByLabel('Etapa', { exact: true }).count()
+    const statusSelect = await page.getByLabel('Estado', { exact: true }).count()
+    check('Procesos: un solo selector de tipo (pestañas), sin repetirlo en filtros', tabsGroup === 1 && typeGroups === 0 && stageSelect === 0, `pestañas ${tabsGroup} · grupos ${typeGroups} · etapa ${stageSelect}`)
+    check('Procesos: conserva búsqueda, estado y responsable', statusSelect === 1 && (await page.getByLabel('Buscar por nombre o código').count()) === 1 && (await page.getByText('Solo donde soy responsable').count()) === 1)
+    const reasons = await page.getByText(/^[A-ZÁÉÍÓÚ].+/, { exact: false }).count()
+    check('Procesos: cada fila explica el estado', (await bodyText(page)).length > 0 && reasons > 0)
+    for (const tab of ['RFx (bases)', 'Licitaciones', 'Salas de ofertas']) {
+      check(`Procesos: acceso independiente a ${tab}`, (await page.locator('[role="tablist"][aria-label="Tipo de proceso"]').getByRole('tab', { name: tab, exact: true }).count()) === 1)
+    }
+    await page.goto(`${base}/licitaciones/LIC-F1B-MANT`, { waitUntil: 'domcontentloaded' })
+    await settle(page)
+    const report = page.locator('article[aria-label="Informe de evaluación"]')
+    const hasReport = (await report.count()) > 0
+    check('Informe de evaluación con secciones, ranking y fundamentos', hasReport && (await report.getByRole('heading', { name: /Ranking de ofertas/i }).count()) === 1 && (await report.locator('table').count()) === 1 && (await report.getByRole('heading', { name: /Recomendación/i }).count()) === 1)
+    if (hasReport) {
+      await report.scrollIntoViewIfNeeded()
+      await report.screenshot({ path: join(shots, 'informe-evaluacion-escritorio.png') })
+    }
     await context.close()
   }
 

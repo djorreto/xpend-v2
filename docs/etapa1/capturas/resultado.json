@@ -11,7 +11,7 @@
       "detail": "http://127.0.0.1:3027/dashboard"
     },
     {
-      "name": "admin: Inicio saluda y muestra el flujo",
+      "name": "admin: Inicio saluda y muestra la actividad por tipo (sin embudo ni \"Sin acceso\")",
       "ok": true,
       "detail": ""
     },
@@ -146,7 +146,7 @@
       "detail": "http://127.0.0.1:3027/dashboard"
     },
     {
-      "name": "manager: Inicio saluda y muestra el flujo",
+      "name": "manager: Inicio saluda y muestra la actividad por tipo (sin embudo ni \"Sin acceso\")",
       "ok": true,
       "detail": ""
     },
@@ -201,7 +201,7 @@
       "detail": "http://127.0.0.1:3027/dashboard"
     },
     {
-      "name": "analyst: Inicio saluda y muestra el flujo",
+      "name": "analyst: Inicio saluda y muestra la actividad por tipo (sin embudo ni \"Sin acceso\")",
       "ok": true,
       "detail": ""
     },
@@ -261,7 +261,7 @@
       "detail": "http://127.0.0.1:3027/dashboard"
     },
     {
-      "name": "viewer: Inicio saluda y muestra el flujo",
+      "name": "viewer: Inicio saluda y muestra la actividad por tipo (sin embudo ni \"Sin acceso\")",
       "ok": true,
       "detail": ""
     },
@@ -277,6 +277,11 @@
     },
     {
       "name": "viewer: aviso de consulta",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "viewer: ve el total de adjudicaciones (RLS se lo autoriza) y no ve contratos",
       "ok": true,
       "detail": ""
     },
@@ -342,6 +347,116 @@
     },
     {
       "name": "ANA sigue disponible",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "manager: \"RFx en curso\" (31) coincide con su lista",
+      "ok": true,
+      "detail": "lista 31"
+    },
+    {
+      "name": "manager: \"Licitaciones en curso\" (19) coincide con su lista",
+      "ok": true,
+      "detail": "lista 19"
+    },
+    {
+      "name": "manager: \"Salas de ofertas activas\" (18) coincide con su lista",
+      "ok": true,
+      "detail": "lista 18"
+    },
+    {
+      "name": "manager: \"Adjudicaciones registradas\" (12) coincide con la página de Adjudicaciones",
+      "ok": true,
+      "detail": "página 12"
+    },
+    {
+      "name": "manager: Inicio sin texto menor a 12px",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "analyst: \"RFx en curso\" (31) coincide con su lista",
+      "ok": true,
+      "detail": "lista 31"
+    },
+    {
+      "name": "analyst: \"Licitaciones en curso\" (19) coincide con su lista",
+      "ok": true,
+      "detail": "lista 19"
+    },
+    {
+      "name": "analyst: \"Salas de ofertas activas\" (18) coincide con su lista",
+      "ok": true,
+      "detail": "lista 18"
+    },
+    {
+      "name": "analyst: \"Adjudicaciones registradas\" (12) coincide con la página de Adjudicaciones",
+      "ok": true,
+      "detail": "página 12"
+    },
+    {
+      "name": "analyst: Inicio sin texto menor a 12px",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "viewer: \"RFx en curso\" (31) coincide con su lista",
+      "ok": true,
+      "detail": "lista 31"
+    },
+    {
+      "name": "viewer: \"Licitaciones en curso\" (19) coincide con su lista",
+      "ok": true,
+      "detail": "lista 19"
+    },
+    {
+      "name": "viewer: \"Salas de ofertas activas\" (18) coincide con su lista",
+      "ok": true,
+      "detail": "lista 18"
+    },
+    {
+      "name": "viewer: \"Adjudicaciones registradas\" (12) coincide con la página de Adjudicaciones",
+      "ok": true,
+      "detail": "página 12"
+    },
+    {
+      "name": "viewer: Inicio sin texto menor a 12px",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Procesos: un solo selector de tipo (pestañas), sin repetirlo en filtros",
+      "ok": true,
+      "detail": "pestañas 1 · grupos 0 · etapa 0"
+    },
+    {
+      "name": "Procesos: conserva búsqueda, estado y responsable",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Procesos: cada fila explica el estado",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Procesos: acceso independiente a RFx (bases)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Procesos: acceso independiente a Licitaciones",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Procesos: acceso independiente a Salas de ofertas",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Informe de evaluación con secciones, ranking y fundamentos",
       "ok": true,
       "detail": ""
     },

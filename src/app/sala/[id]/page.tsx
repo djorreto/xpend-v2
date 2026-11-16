@@ -327,7 +327,7 @@ export default function SalaDetailPage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1>{event.title}</h1>
-            <p className="mt-1 text-[13px] text-petrol-blue/55">
+            <p className="mt-1 text-[13px] text-petrol-blue/75">
               {modalityName(event.modality)} · {event.currency}
             </p>
           </div>
@@ -408,24 +408,24 @@ export default function SalaDetailPage() {
                   )}
                 </div>
               ))}
-              {invites.length === 0 && <p className="text-xs text-petrol-blue/50">Nadie invitado todavía.</p>}
+              {invites.length === 0 && <p className="text-xs text-petrol-blue/75">Nadie invitado todavía.</p>}
               {canManage && (
               <>
               {accessLink && (
                 <div className="rounded-xl bg-white/60 p-3">
-                  <p className="text-xs text-petrol-blue/60">Enlace de acceso, por si el correo no sale:</p>
+                  <p className="text-xs text-petrol-blue/75">Enlace de acceso, por si el correo no sale:</p>
                   <p className="mt-1 break-all text-xs text-petrol-blue">{accessLink}</p>
                 </div>
               )}
               {event.licitacion_id && (
                 <div className="space-y-2 rounded-xl bg-white/50 p-3">
-                  <p className="text-xs text-petrol-blue/60">Aclaración o bases. Cada publicación deja un archivo nuevo.</p>
+                  <p className="text-xs text-petrol-blue/75">Aclaración o bases. Cada publicación deja un archivo nuevo.</p>
                   <textarea className="min-h-16 w-full rounded-md border bg-background p-2 text-sm" value={notice} onChange={input => setNotice(input.target.value)} />
                   <Button type="button" variant="outline" onClick={publishNotice}>Publicar documento</Button>
                 </div>
               )}
               <div className="space-y-2 rounded-xl bg-white/50 p-3">
-                <p className="text-xs text-petrol-blue/60">NDA para ver documentos confidenciales. Aceptarlo no es una firma electrónica.</p>
+                <p className="text-xs text-petrol-blue/75">NDA para ver documentos confidenciales. Aceptarlo no es una firma electrónica.</p>
                 <textarea className="min-h-20 w-full rounded-md border bg-background p-2 text-sm" value={ndaText} onChange={input => setNdaText(input.target.value)} placeholder="Texto del NDA" />
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" onClick={() => saveNda(true)}>Exigir NDA</Button>
@@ -473,7 +473,7 @@ export default function SalaDetailPage() {
                 <div key={bid.id} className="flex items-center justify-between gap-3 rounded-xl px-2 py-2">
                   <div>
                     <p className="text-sm text-petrol-blue">{supplierName(bid.supplier_id)}</p>
-                    <p className="text-xs text-petrol-blue/50">{formatCurrency(bid.amount, event.currency)}</p>
+                    <p className="text-xs text-petrol-blue/75">{formatCurrency(bid.amount, event.currency)}</p>
                   </div>
                   {event.status !== 'awarded' && event.offers_opened_at && (
                     <Button size="sm" variant="outline" onClick={() => router.push(`/sala/${eventId}/decision`)}>
@@ -483,7 +483,7 @@ export default function SalaDetailPage() {
                 </div>
               ))}
               {showAmounts && ranking.length === 0 && event.modality !== 'adhesion' && (
-                <p className="text-xs text-petrol-blue/50">Todavía no hay ofertas visibles.</p>
+                <p className="text-xs text-petrol-blue/75">Todavía no hay ofertas visibles.</p>
               )}
               {event.winning_supplier_id && (
                 <p className="text-sm text-petrol-blue">

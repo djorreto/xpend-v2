@@ -167,7 +167,7 @@ export default function ValidationPage() {
   }
 
   if (loading || !user) {
-    return <MainLayout><p className="p-8 text-sm text-petrol-blue/60">Armando la cola de validación…</p></MainLayout>
+    return <MainLayout><p className="p-8 text-sm text-petrol-blue/75">Armando la cola de validación…</p></MainLayout>
   }
 
   if (!canReadSpendRole(user.role)) {
@@ -186,7 +186,7 @@ export default function ValidationPage() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1>Validación del gasto</h1>
-            <p className="mt-1 max-w-3xl text-[13px] text-petrol-blue/60">
+            <p className="mt-1 max-w-3xl text-[13px] text-petrol-blue/75">
               Cada moneda se mira sola. Aquí están los proveedores que concentran el gasto abierto. Si hay sugerencia, un clic cierra sus líneas y guarda la regla. Si no, eliges la familia.
             </p>
           </div>
@@ -201,9 +201,9 @@ export default function ValidationPage() {
           {queue.coverage.map(item => (
             <Card key={item.currency}>
               <CardContent className="p-5">
-                <p className="text-[12px] font-medium tracking-wide text-petrol-blue/50">{item.currency}</p>
+                <p className="text-[12px] font-medium tracking-wide text-petrol-blue/75">{item.currency}</p>
                 <p className="mt-2 text-2xl font-medium text-petrol-blue">{Math.round(item.rate * 100)}%</p>
-                <p className="text-xs text-petrol-blue/55">
+                <p className="text-xs text-petrol-blue/75">
                   del {item.currency} ya tiene categoría. Sigue abierto {formatCurrency(item.open, item.currency)} en {item.openSuppliers} proveedores.
                 </p>
               </CardContent>
@@ -221,27 +221,27 @@ export default function ValidationPage() {
 
         <div className="space-y-3">
           {queue.groups.length === 0 ? (
-            <Card><CardContent className="p-5 text-sm text-petrol-blue/60">No hay grupos en la cola.</CardContent></Card>
+            <Card><CardContent className="p-5 text-sm text-petrol-blue/75">No hay grupos en la cola.</CardContent></Card>
           ) : queue.groups.map(group => (
             <Card key={group.id}>
               <CardContent className="grid gap-4 p-5 md:grid-cols-[1fr_220px]">
                 <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-petrol-blue/40">{REASON[group.reason]}</p>
+                  <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-petrol-blue/75">{REASON[group.reason]}</p>
                   <p className="mt-1 text-base font-medium text-petrol-blue">{group.supplier}</p>
                   <p className="text-sm text-petrol-blue/70">
                     {formatCurrency(group.amount, group.currency)} · {group.lineCount} líneas abiertas · {Math.round(group.share * 100)}% de {group.currency}
                   </p>
                   {group.family ? (
-                    <p className="mt-1 text-xs text-petrol-blue/55">Sugerencia: {group.family}{group.subcategory ? ` · ${group.subcategory}` : ''}</p>
+                    <p className="mt-1 text-xs text-petrol-blue/75">Sugerencia: {group.family}{group.subcategory ? ` · ${group.subcategory}` : ''}</p>
                   ) : null}
                   {group.samples.length ? (
                     <ul className="mt-2 space-y-1">
                       {group.samples.map(sample => (
-                        <li key={sample} className="text-xs text-petrol-blue/50">{sample}</li>
+                        <li key={sample} className="text-xs text-petrol-blue/75">{sample}</li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="mt-2 text-xs text-petrol-blue/45">El texto de las líneas es un número de documento. La decisión se toma por el proveedor.</p>
+                    <p className="mt-2 text-xs text-petrol-blue/75">El texto de las líneas es un número de documento. La decisión se toma por el proveedor.</p>
                   )}
                 </div>
                 {active?.id === group.id ? (

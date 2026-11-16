@@ -69,7 +69,7 @@ export default function LoginPage() {
         <form onSubmit={onSubmit} className="space-y-3">
           <div className="mb-5 text-center">
             <h1 className="text-lg font-medium tracking-tight text-petrol-blue">Iniciar sesión</h1>
-            <p className="mt-1 text-xs text-petrol-blue/50">Entra a tu espacio de procurement</p>
+            <p className="mt-1 text-xs text-petrol-blue/75">Entra a tu espacio de procurement</p>
           </div>
 
           <input
@@ -102,11 +102,11 @@ export default function LoginPage() {
 
           {error && <p className="text-xs text-red-600">{error}</p>}
 
-          <p className="pt-2 text-center text-xs text-petrol-blue/60">
+          <p className="pt-2 text-center text-xs text-petrol-blue/75">
             <a href="/reset-password" className="transition-colors hover:text-petrol-blue">¿Olvidaste tu contraseña?</a>
           </p>
 
-          <p className="text-center text-xs text-petrol-blue/60">
+          <p className="text-center text-xs text-petrol-blue/75">
             ¿Aún no tienes cuenta? <a href="/signup" className="font-medium text-petrol-blue hover:text-accent-turquoise">Crear cuenta</a>
           </p>
         </form>

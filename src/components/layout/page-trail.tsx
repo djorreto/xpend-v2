@@ -28,7 +28,7 @@ export function PageTrail({ role }: { role?: string }) {
 
   return (
     <div className="mb-4 space-y-3">
-      <nav aria-label="Ruta" className="text-[12px] text-petrol-blue/55">
+      <nav aria-label="Ruta" className="text-[12px] text-petrol-blue/75">
         <ol className="flex flex-wrap items-center gap-1">
           {crumbs.map((crumb, index) => (
             <li key={`${crumb.label}-${index}`} className="flex items-center gap-1">

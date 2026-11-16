@@ -5,7 +5,7 @@ import { ArrowRight, type LucideIcon } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
-export type BlockItem = { id: string; title: string; detail?: string; href?: string; cta?: string; note?: string }
+export type BlockItem = { id: string; title: string; detail?: string; reason?: string; href?: string; cta?: string; note?: string }
 
 export function BlockCard({
   title,
@@ -47,12 +47,13 @@ export function ItemList({ items, empty, limit = 6 }: { items: BlockItem[]; empt
         <li key={item.id} className="flex items-center justify-between gap-3 py-2.5">
           <div className="min-w-0">
             {item.href ? (
-              <Link href={item.href} className="block truncate text-[13px] font-medium text-petrol-blue hover:underline">{item.title}</Link>
+              <Link href={item.href} className="block truncate text-[14px] font-medium text-petrol-blue hover:underline">{item.title}</Link>
             ) : (
-              <p className="truncate text-[13px] font-medium text-petrol-blue">{item.title}</p>
+              <p className="truncate text-[14px] font-medium text-petrol-blue">{item.title}</p>
             )}
-            {item.detail && <p className="truncate text-[12px] text-petrol-blue/55">{item.detail}</p>}
-            {item.note && <p className="text-[11px] text-petrol-blue/45">{item.note}</p>}
+            {item.detail && <p className="truncate text-[12.5px] text-petrol-blue/75">{item.detail}</p>}
+            {item.reason && <p className="text-[12.5px] text-petrol-blue"><span className="font-medium">Por qué: </span>{item.reason}</p>}
+            {item.note && <p className="text-[12px] text-petrol-blue/75">{item.note}</p>}
           </div>
           {item.cta && item.href && (
             <Link
@@ -64,13 +65,13 @@ export function ItemList({ items, empty, limit = 6 }: { items: BlockItem[]; empt
           )}
         </li>
       ))}
-      {items.length > limit && <li className="pt-2 text-[12px] text-petrol-blue/45">Y {items.length - limit} más.</li>}
+      {items.length > limit && <li className="pt-2 text-[12px] text-petrol-blue/75">Y {items.length - limit} más.</li>}
     </ul>
   )
 }
 
 export function EmptyHint({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-xl border border-dashed border-petrol-blue/15 px-4 py-5 text-[12.5px] text-petrol-blue/55">{children}</div>
+  return <div className="rounded-xl border border-dashed border-petrol-blue/15 px-4 py-5 text-[12.5px] text-petrol-blue/75">{children}</div>
 }
 
 export function QuickAction({ href, icon: Icon, label, hint, primary }: { href: string; icon: LucideIcon; label: string; hint: string; primary?: boolean }) {
@@ -89,7 +90,7 @@ export function QuickAction({ href, icon: Icon, label, hint, primary }: { href: 
       </span>
       <span>
         <span className="block text-[13.5px] font-medium">{label}</span>
-        <span className={cn('hidden text-[12px] sm:block', primary ? 'text-white/70' : 'text-petrol-blue/55')}>{hint}</span>
+        <span className={cn('hidden text-[12px] sm:block', primary ? 'text-white/70' : 'text-petrol-blue/75')}>{hint}</span>
       </span>
     </Link>
   )
@@ -98,14 +99,46 @@ export function QuickAction({ href, icon: Icon, label, hint, primary }: { href: 
 export function Metric({ label, value, hint, href }: { label: string; value: React.ReactNode; hint?: string; href?: string }) {
   const body = (
     <>
-      <p className="text-[12px] font-medium tracking-wide text-petrol-blue/55">{label}</p>
+      <p className="text-[12px] font-medium tracking-wide text-petrol-blue/75">{label}</p>
       <div className="mt-2 text-[1.6rem] font-medium tracking-tight text-petrol-blue">{value}</div>
-      {hint && <p className="mt-0.5 text-[11.5px] text-petrol-blue/45">{hint}</p>}
+      {hint && <p className="mt-0.5 text-[12px] text-petrol-blue/75">{hint}</p>}
     </>
   )
   return href ? (
     <Link href={href} className="glass-card block p-4 hover:-translate-y-0.5">{body}</Link>
   ) : (
     <div className="glass-card p-4">{body}</div>
+  )
+}
+
+export function ActivityTile({
+  label,
+  value,
+  breakdown,
+  definition,
+  href,
+}: {
+  label: string
+  value: number
+  breakdown: string
+  definition: string
+  href: string
+}) {
+  return (
+    <Link
+      href={href}
+      title={definition}
+      aria-label={`${label}: ${value}. ${definition} Abrir los registros.`}
+      className="glass-card flex flex-col p-4 hover:-translate-y-0.5"
+    >
+      <p className="text-[13px] font-medium text-petrol-blue">{label}</p>
+      <p className="mt-1 text-[1.75rem] font-medium leading-none tracking-tight text-petrol-blue">{value}</p>
+      <p className="mt-2 text-[12.5px] font-medium text-petrol-blue/80">{breakdown}</p>
+      <p className="mt-1 text-[12px] leading-snug text-petrol-blue/75">{definition}</p>
+      <span className="mt-2 inline-flex items-center gap-1 text-[12px] font-medium text-petrol-blue underline-offset-2">
+        Ver registros
+        <ArrowRight className="h-3 w-3" aria-hidden />
+      </span>
+    </Link>
   )
 }
