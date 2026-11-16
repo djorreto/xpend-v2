@@ -1,0 +1,500 @@
+{
+  "results": [
+    {
+      "name": "datos locales asignados al comprador",
+      "ok": true,
+      "detail": "rfx sí · iniciativa sí"
+    },
+    {
+      "name": "admin: el login lleva a Inicio",
+      "ok": true,
+      "detail": "http://127.0.0.1:3027/dashboard"
+    },
+    {
+      "name": "admin: Inicio saluda y muestra el flujo",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "admin: secciones del menú",
+      "ok": true,
+      "detail": "Inicio | Abastecimiento | Inteligencia de gasto | Contratos | Proveedores | Administración"
+    },
+    {
+      "name": "admin: aprobaciones y atención",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "admin: plan del año sin ahorro realizado inventado",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "admin: acción nueva licitación",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "admin: tarjeta de administración",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "admin: /sourcing-plan",
+      "ok": true,
+      "detail": "Plan de abastecimiento"
+    },
+    {
+      "name": "admin: /procesos",
+      "ok": true,
+      "detail": "Procesos"
+    },
+    {
+      "name": "admin: /rfx-maker",
+      "ok": true,
+      "detail": "RFx Maker"
+    },
+    {
+      "name": "admin: /licitaciones",
+      "ok": true,
+      "detail": "Licitaciones"
+    },
+    {
+      "name": "admin: /sala",
+      "ok": true,
+      "detail": "Salas de ofertas"
+    },
+    {
+      "name": "admin: /adjudicaciones",
+      "ok": true,
+      "detail": "Adjudicaciones"
+    },
+    {
+      "name": "admin: /reports",
+      "ok": true,
+      "detail": "Reportes"
+    },
+    {
+      "name": "admin: /spend",
+      "ok": true,
+      "detail": "Resumen y análisis de gasto"
+    },
+    {
+      "name": "admin: /sourcing-intelligence",
+      "ok": true,
+      "detail": "Clasificación y categorías"
+    },
+    {
+      "name": "admin: /oportunidades",
+      "ok": true,
+      "detail": "Oportunidades"
+    },
+    {
+      "name": "admin: /comite",
+      "ok": true,
+      "detail": "Cierre mensual de gasto"
+    },
+    {
+      "name": "admin: /contratos",
+      "ok": true,
+      "detail": "Repositorio de contratos"
+    },
+    {
+      "name": "admin: /contratos?vista=pendientes",
+      "ok": true,
+      "detail": "Contratos pendientes de revisión"
+    },
+    {
+      "name": "admin: /contratos/builder",
+      "ok": true,
+      "detail": "Redactar contrato"
+    },
+    {
+      "name": "admin: /contratos/nuevo",
+      "ok": true,
+      "detail": "Cargar y analizar un contrato"
+    },
+    {
+      "name": "admin: /suppliers",
+      "ok": true,
+      "detail": "Proveedores"
+    },
+    {
+      "name": "admin: /suppliers/new",
+      "ok": true,
+      "detail": "Nuevo Proveedor"
+    },
+    {
+      "name": "admin: /users",
+      "ok": true,
+      "detail": "Usuarios"
+    },
+    {
+      "name": "admin: /administracion/roles",
+      "ok": true,
+      "detail": "Roles y permisos"
+    },
+    {
+      "name": "admin: /settings",
+      "ok": true,
+      "detail": "Configuración"
+    },
+    {
+      "name": "manager: el login lleva a Inicio",
+      "ok": true,
+      "detail": "http://127.0.0.1:3027/dashboard"
+    },
+    {
+      "name": "manager: Inicio saluda y muestra el flujo",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "manager: secciones del menú",
+      "ok": true,
+      "detail": "Inicio | Abastecimiento | Inteligencia de gasto | Contratos | Proveedores"
+    },
+    {
+      "name": "manager: aprobaciones y atención",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "manager: plan del año sin ahorro realizado inventado",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "manager: acción nueva licitación",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "manager: /procesos",
+      "ok": true,
+      "detail": "Procesos"
+    },
+    {
+      "name": "manager: /adjudicaciones",
+      "ok": true,
+      "detail": "Adjudicaciones"
+    },
+    {
+      "name": "manager: /comite",
+      "ok": true,
+      "detail": "Cierre mensual de gasto"
+    },
+    {
+      "name": "manager: /contratos?vista=pendientes",
+      "ok": true,
+      "detail": "Contratos pendientes de revisión"
+    },
+    {
+      "name": "manager: /oportunidades",
+      "ok": true,
+      "detail": "Oportunidades"
+    },
+    {
+      "name": "analyst: el login lleva a Inicio",
+      "ok": true,
+      "detail": "http://127.0.0.1:3027/dashboard"
+    },
+    {
+      "name": "analyst: Inicio saluda y muestra el flujo",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "analyst: secciones del menú",
+      "ok": true,
+      "detail": "Inicio | Abastecimiento | Inteligencia de gasto | Contratos | Proveedores"
+    },
+    {
+      "name": "analyst: sin acción de licitación (la base no lo permite)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "analyst: puede preparar bases",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "analyst: ve sus iniciativas y procesos",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "analyst: continuar donde quedó",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "analyst: sin aprobaciones de gerente",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "analyst: /procesos?mios=1",
+      "ok": true,
+      "detail": "Procesos"
+    },
+    {
+      "name": "analyst: /adjudicaciones",
+      "ok": true,
+      "detail": "Adjudicaciones"
+    },
+    {
+      "name": "analyst: /contratos",
+      "ok": true,
+      "detail": "Repositorio de contratos"
+    },
+    {
+      "name": "analyst: /sourcing-plan",
+      "ok": true,
+      "detail": "Plan de abastecimiento"
+    },
+    {
+      "name": "viewer: el login lleva a Inicio",
+      "ok": true,
+      "detail": "http://127.0.0.1:3027/dashboard"
+    },
+    {
+      "name": "viewer: Inicio saluda y muestra el flujo",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "viewer: secciones del menú",
+      "ok": true,
+      "detail": "Inicio | Abastecimiento | Proveedores"
+    },
+    {
+      "name": "viewer: sin acciones de escritura",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "viewer: aviso de consulta",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "viewer: /procesos",
+      "ok": true,
+      "detail": "Procesos"
+    },
+    {
+      "name": "viewer: /adjudicaciones",
+      "ok": true,
+      "detail": "Adjudicaciones"
+    },
+    {
+      "name": "viewer: /sourcing-plan",
+      "ok": true,
+      "detail": "Plan de abastecimiento"
+    },
+    {
+      "name": "viewer: /suppliers",
+      "ok": true,
+      "detail": "Proveedores"
+    },
+    {
+      "name": "migas de pan en una licitación",
+      "ok": true,
+      "detail": "Abastecimiento Procesos Licitaciones Detalle"
+    },
+    {
+      "name": "pestañas de tipo de proceso",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "S2C: licitación adjudicada sigue mostrando su adjudicación",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Comité renombrado a Cierre mensual de gasto",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Adjudicaciones lista decisiones con su contrato",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Adjudicaciones no muestra ahorro realizado con monto",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "el buscador superior encuentra procesos",
+      "ok": true,
+      "detail": "http://127.0.0.1:3027/procesos?q=MANT"
+    },
+    {
+      "name": "Contracts: el contrato de la adjudicación abre",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ANA sigue disponible",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "manager móvil: el menú empieza cerrado",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "manager móvil: el menú se abre",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "manager móvil: navega a Procesos y cierra el menú",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "manager móvil: sin desborde horizontal",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "analyst móvil: el menú empieza cerrado",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "analyst móvil: el menú se abre",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "analyst móvil: sin desborde horizontal",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "viewer móvil: el menú empieza cerrado",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "viewer móvil: el menú se abre",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "viewer móvil: sin desborde horizontal",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "proveedor: el login termina en su portal",
+      "ok": true,
+      "detail": "http://127.0.0.1:3027/sala"
+    },
+    {
+      "name": "proveedor: /dashboard lo devuelve a su portal",
+      "ok": true,
+      "detail": "http://127.0.0.1:3027/sala"
+    },
+    {
+      "name": "proveedor: /procesos lo devuelve a su portal",
+      "ok": true,
+      "detail": "http://127.0.0.1:3027/sala"
+    },
+    {
+      "name": "proveedor: /adjudicaciones lo devuelve a su portal",
+      "ok": true,
+      "detail": "http://127.0.0.1:3027/sala"
+    },
+    {
+      "name": "proveedor: /oportunidades lo devuelve a su portal",
+      "ok": true,
+      "detail": "http://127.0.0.1:3027/sala"
+    },
+    {
+      "name": "proveedor: /administracion/roles lo devuelve a su portal",
+      "ok": true,
+      "detail": "http://127.0.0.1:3027/sala"
+    },
+    {
+      "name": "proveedor: /contratos lo devuelve a su portal",
+      "ok": true,
+      "detail": "http://127.0.0.1:3027/sala"
+    },
+    {
+      "name": "proveedor: menú solo con Mis procesos",
+      "ok": true,
+      "detail": "Mis procesos"
+    },
+    {
+      "name": "proveedor: sin plan, gasto, ahorros ni contratos internos",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "proveedor: el selector muestra su propia empresa, no la compradora",
+      "ok": true,
+      "detail": "Proveedor Fase 0"
+    },
+    {
+      "name": "proveedor: el selector no ofrece cambiar de empresa",
+      "ok": true,
+      "detail": "Invitado por Fase0 Compradora"
+    },
+    {
+      "name": "manager: ve las acciones de lic",
+      "ok": true,
+      "detail": "3"
+    },
+    {
+      "name": "manager: ve las acciones de sala",
+      "ok": true,
+      "detail": "4"
+    },
+    {
+      "name": "manager: ve las acciones de supplier",
+      "ok": true,
+      "detail": "2"
+    },
+    {
+      "name": "analyst: no ve acciones de escritura en lic",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "analyst: no ve acciones de escritura en sala",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "analyst: no ve acciones de escritura en supplier",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "viewer: no ve acciones de escritura en lic",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "viewer: no ve acciones de escritura en sala",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "viewer: no ve acciones de escritura en supplier",
+      "ok": true,
+      "detail": "0"
+    }
+  ],
+  "consoleErrors": []
+}

@@ -1,10 +1,11 @@
 import { randomBytes } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
 
 const base = process.env.XPEND_QA_BASE || 'http://127.0.0.1:3031'
-const shots = process.env.XPEND_QA_SHOTS || '/tmp/xpend-etapa1'
+const shots = process.env.XPEND_QA_SHOTS || fileURLToPath(new URL('../docs/etapa1/capturas', import.meta.url))
 const ANALYST_EMAIL = 'comprador.etapa1@xpend.test'
 mkdirSync(shots, { recursive: true })
 
@@ -267,8 +268,34 @@ try {
     check('proveedor: menú solo con Mis procesos', JSON.stringify(labels) === '["Mis procesos"]', labels.join(' | '))
     const text = await bodyText(page)
     check('proveedor: sin plan, gasto, ahorros ni contratos internos', !/Plan de abastecimiento|Inteligencia de gasto|Ahorro objetivo|Adjudicaciones registradas/.test(text))
+    const selectorText = await page.getByRole('button').filter({ hasText: /\S/ }).first().innerText().catch(() => '')
+    check('proveedor: el selector muestra su propia empresa, no la compradora', selectorText.length > 0 && !/Compradora/i.test(selectorText), selectorText.trim())
+    await page.getByRole('button').filter({ hasText: /\S/ }).first().click().catch(() => {})
+    await page.waitForTimeout(250)
+    const dropdown = await page.locator('[role="menu"]').innerText().catch(() => '')
+    check('proveedor: el selector no ofrece cambiar de empresa', /Invitado por|Mis procesos/.test(dropdown) && !/Seleccionar empresa/.test(dropdown), dropdown.trim())
+    await page.keyboard.press('Escape')
     await page.screenshot({ path: join(shots, 'proveedor-escritorio.png'), fullPage: true })
     await context.close()
+  }
+
+  {
+    const [lic] = await rest('licitaciones?select=id&id=eq.LIC-F1B-MANT')
+    const [sala] = await rest('offer_events?select=id&order=created_at.desc&limit=1')
+    const [supplier] = await rest('suppliers?select=id&limit=1')
+    const writeButtons = { lic: /^(Abrir sala|Editar|Eliminar)$/, sala: /^(Abrir sala|Cerrar recepción|Abrir sobres|Abrir siguiente ronda|Reenviar acceso|Agregar e invitar|Invitar|Publicar documento|Exigir NDA|Responder en privado|Publicar aclaración)$/, supplier: /^(Editar|Eliminar)$/ }
+    for (const role of ['manager', 'analyst', 'viewer']) {
+      const { context, page } = await login(role, { width: 1280, height: 900 })
+      const pages = [['lic', `/licitaciones/${lic.id}`], ['sala', `/sala/${sala.id}`], ['supplier', `/suppliers/${supplier.id}`]]
+      for (const [kind, path] of pages) {
+        await page.goto(`${base}${path}`, { waitUntil: 'domcontentloaded' })
+        await settle(page)
+        const count = await page.getByRole('button', { name: writeButtons[kind] }).count()
+        if (role === 'manager') check(`manager: ve las acciones de ${kind}`, count > 0, `${count}`)
+        else check(`${role}: no ve acciones de escritura en ${kind}`, count === 0, `${count}`)
+      }
+      await context.close()
+    }
   }
 
   {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { can } from '@/lib/navigation'
 import { useRouter, useParams } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -297,18 +298,24 @@ export default function SourcingPlanDetailPage() {
               <FileText className="mr-2 h-4 w-4" />
               Bases con esta iniciativa
             </Button>
-            <Button variant="outline" onClick={() => router.push(`/licitaciones/new?planId=${plan.id}`)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Licitación con esta iniciativa
-            </Button>
-            <Button variant="outline" onClick={() => router.push(`/sala/new?planId=${plan.id}`)}>
-              <Scale className="mr-2 h-4 w-4" />
-              Sala con esta iniciativa
-            </Button>
-            <Button onClick={() => router.push(`/sourcing-plan/${plan.id}/edit`)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Editar
-            </Button>
+            {can(user?.role, 'createLicitacion') && (
+              <Button variant="outline" onClick={() => router.push(`/licitaciones/new?planId=${plan.id}`)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Licitación con esta iniciativa
+              </Button>
+            )}
+            {can(user?.role, 'openSala') && (
+              <Button variant="outline" onClick={() => router.push(`/sala/new?planId=${plan.id}`)}>
+                <Scale className="mr-2 h-4 w-4" />
+                Sala con esta iniciativa
+              </Button>
+            )}
+            {can(user?.role, 'createInitiative') && (
+              <Button onClick={() => router.push(`/sourcing-plan/${plan.id}/edit`)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Editar
+              </Button>
+            )}
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { can } from '@/lib/navigation'
 import { useRouter, useParams } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { ExpedientePanel } from '@/components/expediente-panel'
@@ -373,6 +374,7 @@ export default function LicitacionDetailPage() {
             </div>
           </div>
           <div className="flex space-x-2">
+            {can(user?.role, 'openSala') && (
             <Button
               variant="outline"
               onClick={() => {
@@ -384,17 +386,22 @@ export default function LicitacionDetailPage() {
             >
               Abrir sala
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/licitaciones/${licitacionId}/edit`)}
-            >
-              <Edit className="mr-2 h-4 w-4" />
-              Editar
-            </Button>
-            <Button variant="outline" onClick={handleDeleteLicitacion}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </Button>
+            )}
+            {can(user?.role, 'createLicitacion') && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/licitaciones/${licitacionId}/edit`)}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Editar
+                </Button>
+                <Button variant="outline" onClick={handleDeleteLicitacion}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Eliminar
+                </Button>
+              </>
+            )}
           </div>
         </div>
 

@@ -27,6 +27,8 @@ export function VersionSelector({ tone = 'default', fullWidth = false }: Version
   const [isOpen, setIsOpen] = useState(false)
   const [companies, setCompanies] = useState<CompanyOption[]>([])
   const [selectedCompany, setSelectedCompany] = useState<CompanyOption | null>(null)
+  const [supplierName, setSupplierName] = useState<string | null>(null)
+  const [isSupplier, setIsSupplier] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -39,11 +41,24 @@ export function VersionSelector({ tone = 'default', fullWidth = false }: Version
 
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('id, company_id')
+          .select('id, company_id, role, supplier_id')
           .eq('id', user.id)
           .single()
 
         if (profileError || !profile) throw new Error('Perfil no encontrado')
+        // Un proveedor se identifica con su propia razón social; la empresa compradora que lo
+        // invitó se muestra solo como relación, no como una empresa que pueda cambiar.
+        if (profile.supplier_id || profile.role === 'supplier') {
+          setIsSupplier(true)
+          if (profile.supplier_id) {
+            const { data: own } = await supabase
+              .from('suppliers')
+              .select('fantasy_name, legal_name')
+              .eq('id', profile.supplier_id)
+              .maybeSingle()
+            setSupplierName(own?.fantasy_name || own?.legal_name || null)
+          }
+        }
         if (!profile.company_id) {
           setCompanies([])
           setSelectedCompany(null)
@@ -77,7 +92,10 @@ export function VersionSelector({ tone = 'default', fullWidth = false }: Version
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const hasMultiple = companies.length > 1
+  const hasMultiple = !isSupplier && companies.length > 1
+  const label = isSupplier
+    ? supplierName || 'Mi empresa proveedora'
+    : selectedCompany?.name || (loading ? 'Cargando...' : 'Sin empresa')
 
   const buttonClasses =
     tone === 'sidebar'
@@ -94,7 +112,7 @@ export function VersionSelector({ tone = 'default', fullWidth = false }: Version
         >
           <Building2 className="mr-2 h-3 w-3" />
           <span className="hidden sm:inline">
-            {selectedCompany?.name || (loading ? 'Cargando...' : 'Sin empresa')}
+            {label}
           </span>
           <ChevronDown className="ml-1 h-3 w-3" />
         </Button>
@@ -120,6 +138,11 @@ export function VersionSelector({ tone = 'default', fullWidth = false }: Version
               {selectedCompany?.id === company.id && <div className="h-2 w-2 rounded-full bg-primary" />}
             </DropdownMenuItem>
           ))
+        ) : isSupplier ? (
+          <DropdownMenuItem className="flex items-center space-x-3 p-3 text-xs text-muted-foreground">
+            <Building2 className="h-4 w-4" />
+            <span>{selectedCompany ? `Invitado por ${selectedCompany.name}` : 'Tus invitaciones aparecen en Mis procesos'}</span>
+          </DropdownMenuItem>
         ) : (
           <DropdownMenuItem className="flex items-center space-x-3 p-3 text-xs text-muted-foreground">
             <Building2 className="h-4 w-4" />

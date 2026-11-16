@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { can } from '@/lib/navigation'
 import { useParams, useRouter } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -308,6 +309,7 @@ export default function SalaDetailPage() {
     )
   }
 
+  const canManage = can(session.role, 'openSala')
   const showAmounts = buyerCanReadBidContent(event)
   const invitedIds = new Set(invites.map(item => item.supplier_id))
   const ranking = [...bids].sort((a, b) => a.amount - b.amount)
@@ -330,15 +332,15 @@ export default function SalaDetailPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {event.status === 'draft' && <Button onClick={() => setStatus('open')}>Abrir sala</Button>}
-            {event.status === 'open' && <Button variant="outline" onClick={() => setStatus('closed')}>Cerrar recepción</Button>}
-            {event.modality === 'sealed' && event.status === 'closed' && !event.offers_opened_at && (
+            {can(session.role, 'openSala') && event.status === 'draft' && <Button onClick={() => setStatus('open')}>Abrir sala</Button>}
+            {can(session.role, 'openSala') && event.status === 'open' && <Button variant="outline" onClick={() => setStatus('closed')}>Cerrar recepción</Button>}
+            {can(session.role, 'openSala') && event.modality === 'sealed' && event.status === 'closed' && !event.offers_opened_at && (
               <Button onClick={openEnvelopes}>Abrir sobres</Button>
             )}
             {event.offers_opened_at && (
               <Button variant="outline" onClick={() => router.push(`/sala/${eventId}/evaluacion`)}>Evaluar ofertas</Button>
             )}
-            {event.modality === 'rounds' && event.status === 'open' && (
+            {can(session.role, 'openSala') && event.modality === 'rounds' && event.status === 'open' && (
               <Button variant="secondary" onClick={nextRound}>Abrir siguiente ronda</Button>
             )}
           </div>
@@ -360,7 +362,7 @@ export default function SalaDetailPage() {
               <div key={item.id} className="space-y-2 text-sm">
                 <p>{supplierName(item.supplier_id)}: {item.question}</p>
                 <p className="text-muted-foreground">{item.answer || 'Sin respuesta'} · {item.visibility === 'shared' ? 'compartida' : 'privada'}</p>
-                {!item.answer && (
+                {canManage && !item.answer && (
                   <>
                     <Input value={answers[item.id] || ''} onChange={input => setAnswers(prev => ({ ...prev, [item.id]: input.target.value }))} placeholder="Respuesta" />
                     <div className="flex gap-2">
@@ -399,7 +401,7 @@ export default function SalaDetailPage() {
                   <p className="text-sm text-petrol-blue">
                     {supplierName(inviteRow.supplier_id)} · {inviteRow.status}
                   </p>
-                  {inviteRow.contact_email && (
+                  {canManage && inviteRow.contact_email && (
                     <Button type="button" size="sm" variant="outline" onClick={() => invite(inviteRow.supplier_id, inviteRow.contact_email || '')}>
                       Reenviar acceso
                     </Button>
@@ -407,6 +409,8 @@ export default function SalaDetailPage() {
                 </div>
               ))}
               {invites.length === 0 && <p className="text-xs text-petrol-blue/50">Nadie invitado todavía.</p>}
+              {canManage && (
+              <>
               {accessLink && (
                 <div className="rounded-xl bg-white/60 p-3">
                   <p className="text-xs text-petrol-blue/60">Enlace de acceso, por si el correo no sale:</p>
@@ -450,6 +454,8 @@ export default function SalaDetailPage() {
                   </div>
                 ))}
               </div>
+              </>
+              )}
             </CardContent>
           </Card>
 

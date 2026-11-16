@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { can } from '@/lib/navigation'
 import { useRouter, useParams } from 'next/navigation'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -318,16 +319,18 @@ export default function SupplierDetailPage() {
               <p className="text-muted-foreground">{supplier.legal_name}</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Button onClick={() => router.push(`/suppliers/${supplier.id}/edit`)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Editar
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteSupplier}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar
-            </Button>
-          </div>
+          {can(user?.role, 'writeSuppliers') && (
+            <div className="flex items-center space-x-2">
+              <Button onClick={() => router.push(`/suppliers/${supplier.id}/edit`)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Editar
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteSupplier}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Status Badge */}
