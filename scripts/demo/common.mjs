@@ -1,4 +1,9 @@
-// Utilidades compartidas de la demostración. Todo corre contra el Supabase LOCAL: si la URL no es local, se aborta.
+// Utilidades compartidas de la demostración «XPEND Company S.A. (DEMO)».
+//
+// Dos destinos, ambos explícitos:
+//   local (predeterminado)  Supabase local. Permite reiniciar la demostración.
+//   prod                    Supabase de producción. Exige DEMO_TARGET=prod, la confirmación DEMO_CONFIRM y .demo/prod.env.
+//                           Solo escribe en la empresa de demostración que este script crea; NUNCA borra ni reinicia nada.
 import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -6,8 +11,14 @@ import { createClient } from '@supabase/supabase-js'
 
 export const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 export const DEMO_DIR = `${ROOT}.demo`
-export const CREDENTIALS_FILE = `${DEMO_DIR}/credenciales-demo.local.json`
-export const COMPANY_NAME = 'Industrias Andinas Demo S.A.'
+export const TARGET = process.env.DEMO_TARGET === 'prod' ? 'prod' : 'local'
+export const CREDENTIALS_FILE = `${DEMO_DIR}/credenciales-demo.${TARGET}.json`
+export const PROD_PROJECT_REF = 'qtncgtqgvilbjhrvzoxe'
+export const PROD_CONFIRM_PHRASE = 'escribir-solo-en-xpend-company-demo'
+
+export const COMPANY_NAME = 'XPEND Company S.A. (DEMO)'
+export const DEMO_KEY = 'xpend-company-demo-v1'
+export const LEGACY_DEMO_NAMES = ['Industrias Andinas Demo S.A.']
 export const DEMO_DOMAIN = 'xpend-demo.test'
 
 export function readEnv(path) {
@@ -19,23 +30,32 @@ export function readEnv(path) {
   return values
 }
 
-const env = readEnv(`${ROOT}.env.local`)
-export const local = { url: env.NEXT_PUBLIC_SUPABASE_URL, anon: env.NEXT_PUBLIC_SUPABASE_ANON_KEY, service: env.SUPABASE_SERVICE_ROLE_KEY }
-if (!/^http:\/\/(127\.0\.0\.1|localhost)/.test(local.url || '')) {
-  throw new Error('La demostración solo corre contra el Supabase local. No se modificó nada.')
+const envFile = TARGET === 'prod' ? `${DEMO_DIR}/prod.env` : `${ROOT}.env.local`
+if (!existsSync(envFile)) throw new Error(`Falta ${envFile}`)
+const env = readEnv(envFile)
+export const supabaseEnv = { url: env.NEXT_PUBLIC_SUPABASE_URL, anon: env.NEXT_PUBLIC_SUPABASE_ANON_KEY, service: env.SUPABASE_SERVICE_ROLE_KEY }
+export const local = supabaseEnv
+
+if (TARGET === 'local' && !/^http:\/\/(127\.0\.0\.1|localhost)/.test(supabaseEnv.url || '')) {
+  throw new Error('El destino local exige un Supabase local. No se modificó nada.')
+}
+if (TARGET === 'prod') {
+  if (!(supabaseEnv.url || '').includes(PROD_PROJECT_REF)) throw new Error('DEMO_TARGET=prod solo escribe en el proyecto Supabase definitivo. No se modificó nada.')
+  if (process.env.DEMO_CONFIRM !== PROD_CONFIRM_PHRASE) throw new Error(`Falta la confirmación explícita: DEMO_CONFIRM=${PROD_CONFIRM_PHRASE}`)
+  if (process.argv.includes('--reset')) throw new Error('El reinicio no existe en producción. Ver docs/demo/RECONSTRUIR-DEMO.md.')
 }
 
-export const adminHeaders = { apikey: local.service, Authorization: `Bearer ${local.service}`, 'Content-Type': 'application/json' }
-export const serviceClient = createClient(local.url, local.service, { auth: { persistSession: false, autoRefreshToken: false } })
+export const adminHeaders = { apikey: supabaseEnv.service, Authorization: `Bearer ${supabaseEnv.service}`, 'Content-Type': 'application/json' }
+export const serviceClient = createClient(supabaseEnv.url, supabaseEnv.service, { auth: { persistSession: false, autoRefreshToken: false } })
 
 export function randomPassword() {
   return `Demo-${randomBytes(15).toString('base64url')}`
 }
 
 export async function authAdmin(path, init = {}) {
-  const response = await fetch(`${local.url}/auth/v1/admin/${path}`, { ...init, headers: { ...adminHeaders, ...(init.headers || {}) } })
+  const response = await fetch(`${supabaseEnv.url}/auth/v1/admin/${path}`, { ...init, headers: { ...adminHeaders, ...(init.headers || {}) } })
   const text = await response.text()
-  if (!response.ok) throw new Error(`auth ${path}: ${response.status} ${text}`)
+  if (!response.ok) throw new Error(`auth ${path}: ${response.status} ${text.slice(0, 200)}`)
   return text ? JSON.parse(text) : null
 }
 
@@ -50,7 +70,7 @@ export async function findUser(email) {
 }
 
 export async function signedIn(email, password) {
-  const client = createClient(local.url, local.anon, { auth: { persistSession: false, autoRefreshToken: false } })
+  const client = createClient(supabaseEnv.url, supabaseEnv.anon, { auth: { persistSession: false, autoRefreshToken: false } })
   const { error } = await client.auth.signInWithPassword({ email, password })
   if (error) throw new Error(`No se pudo iniciar sesión como ${email}: ${error.message}`)
   return client
@@ -62,7 +82,7 @@ export function saveCredentials(data) {
 }
 
 export function loadCredentials() {
-  if (!existsSync(CREDENTIALS_FILE)) throw new Error('No hay credenciales de demostración. Ejecuta primero: npm run demo:seed')
+  if (!existsSync(CREDENTIALS_FILE)) throw new Error(`No hay credenciales de demostración (${TARGET}). Ejecuta primero: npm run demo:seed`)
   return JSON.parse(readFileSync(CREDENTIALS_FILE, 'utf8'))
 }
 

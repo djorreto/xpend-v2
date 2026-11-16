@@ -128,6 +128,10 @@ test('el Inicio no simula indicadores que todavía no existen', () => {
   const inicio = read('app/dashboard/page.tsx')
   assert.doesNotMatch(inicio, /MonthlyTrendChart|data=\{\[\]\}/)
   assert.doesNotMatch(inicio, /meta anual|atrasad[oa]s? del plan|hito comprometido/i)
-  assert.match(inicio, /realizedSavingsLabel\(\)/)
+  // Los ahorros del Inicio vienen del tablero de gestión, que usa la clasificación común (savings.ts) y nunca el ahorro tipeado.
+  assert.match(inicio, /ManagementDashboard/)
   assert.doesNotMatch(inicio, /realized_savings|actual_savings_amount\s*\)/)
+  const management = read('components/management-dashboard.tsx')
+  assert.match(management, /summarizeSavings/)
+  assert.doesNotMatch(management, /realized_savings|actual_savings_amount\s*\)/)
 })

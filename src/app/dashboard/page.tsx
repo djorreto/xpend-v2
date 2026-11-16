@@ -14,14 +14,11 @@ import { formatCurrency } from '@/lib/utils'
 import { describeSpendSource, type SpendSourceInfo } from '@/lib/spend-sources'
 import { can, roleLabel } from '@/lib/navigation'
 import { MyPortfolio } from '@/components/my-portfolio'
-import {
-  SAVINGS_LABELS,
-  loadPlanSavingsLinks,
-  realizedSavingsLabel,
-  savingsByCurrency,
-  validatedSavingsLabel,
-  type CurrencySavings,
-} from '@/lib/procurement-flow'
+import { ManagementDashboard } from '@/components/management-dashboard'
+import { PlanAnualCard } from '@/components/plan-anual-card'
+import { AdminPerspective } from '@/components/admin-perspective'
+import { PerspectiveSwitcher } from '@/components/perspective-switcher'
+import { availablePerspectives, resolvePerspective, type Perspective } from '@/lib/perspective'
 import {
   BUCKET_LABELS,
   BUCKET_ORDER,
@@ -52,7 +49,9 @@ export default function InicioPage() {
   const [viewer, setViewer] = useState<Viewer | null>(null)
   const [companyName, setCompanyName] = useState<string>()
   const [raw, setRaw] = useState<WorkspaceRaw>(EMPTY_WORKSPACE)
-  const [planSavings, setPlanSavings] = useState<CurrencySavings[] | null>(null)
+  const [perspective, setPerspective] = useState<Perspective | null>(null)
+  const [viewAs, setViewAs] = useState('')
+  const [people, setPeople] = useState<{ id: string; name: string; role: string }[]>([])
   const [spend, setSpend] = useState<SpendSourceInfo | null>(null)
   const [healthIssues, setHealthIssues] = useState<{ title: string; detail: string }[]>([])
   const [loading, setLoading] = useState(true)
@@ -95,26 +94,20 @@ export default function InicioPage() {
         return
       }
 
-      const year = new Date().getFullYear()
-      const [company, workspace, source, planRows] = await Promise.all([
+      const [company, workspace, source, team] = await Promise.all([
         supabase.from('companies').select('name').eq('id', profile.company_id).single(),
         loadWorkspaceRaw(supabase, profile.company_id, profile.role),
         can(profile.role, 'readSpend') ? describeSpendSource(supabase, profile.company_id) : Promise.resolve(null),
-        can(profile.role, 'approve')
-          ? supabase.from('sourcing_plans')
-              .select('id, currency, projected_savings_amount, actual_savings_amount, status')
-              .eq('company_id', profile.company_id)
-              .eq('plan_year', year)
+        can(profile.role, 'manageTeams')
+          ? supabase.from('profiles').select('id, full_name, email, role').eq('company_id', profile.company_id).is('supplier_id', null).in('role', ['super_admin', 'admin', 'manager', 'analyst'])
           : Promise.resolve(null),
       ])
       setCompanyName(company.data?.name)
       setRaw(workspace)
       setSpend(source)
-      if (planRows && !planRows.error) {
-        const rows = planRows.data || []
-        const links = await loadPlanSavingsLinks(supabase, rows.map(row => row.id))
-        setPlanSavings(savingsByCurrency(rows, links))
-      }
+      setPeople(((team?.data || []) as { id: string; full_name: string | null; email: string; role: string }[]).map(item => ({ id: item.id, name: item.full_name || item.email, role: item.role })))
+      const stored = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('vista') || window.localStorage.getItem('xpend.perspective')
+      setPerspective(resolvePerspective(stored, profile.role))
       if (can(profile.role, 'administer')) {
         fetch('/api/health/integrations')
           .then(response => response.json())
@@ -157,17 +150,31 @@ export default function InicioPage() {
   const me = viewer.id
   const supervisor = can(role, 'approve')
   const readOnly = role === 'viewer'
+  const perspectives = availablePerspectives(role)
+  const multi = perspectives.length > 1
+  const current: Perspective = perspective && perspectives.includes(perspective) ? perspective : (perspectives[0] || 'trabajo')
+  const showWork = !multi || current === 'trabajo'
+  const showMgmt = multi && current === 'gerencia'
+  const showAdmin = multi && current === 'administracion'
+  // «Ver el portafolio de otra persona» solo cambia el filtro visual: la identidad y los permisos siguen siendo los propios.
+  const focusId = viewAs && people.some(item => item.id === viewAs) ? viewAs : me
+  const focusPerson = focusId === me ? null : people.find(item => item.id === focusId) || null
+  const focusRole = focusPerson?.role || role
   const processes = buildProcesses(raw, me, role)
   const companyActive = processes.filter(item => item.active)
-  const queue = readOnly ? [] : workQueue(raw, me, role)
+  const queue = readOnly ? [] : workQueue(raw, focusId, focusRole)
   const grouped = queueByBucket(queue)
-  const continueItem = readOnly ? null : continueWhereLeft(raw, me, role)
+  const continueItem = readOnly ? null : continueWhereLeft(raw, focusId, focusRole)
   const activity = activityByType(raw, role)
   const year = new Date().getFullYear()
   const toApprove = approvals(raw, me, role)
   const attention = supervisor ? needsAttention(raw, me, role) : []
-  const initiatives = myInitiatives(raw, me, role)
-  const dates = upcomingDates(raw, { me, onlyMine: !supervisor && !readOnly })
+  const initiatives = myInitiatives(raw, focusId, focusRole)
+  const dates = upcomingDates(raw, { me: focusId, onlyMine: multi ? current === 'trabajo' : !supervisor && !readOnly })
+  const changePerspective = (next: Perspective) => {
+    setPerspective(next)
+    try { window.localStorage.setItem('xpend.perspective', next) } catch { /* sin almacenamiento: la elección vale solo en esta visita */ }
+  }
   const firstName = viewer.name.split(/[\s@]/)[0]
   const noData = processes.length === 0 && raw.plans.length === 0
 
@@ -200,9 +207,15 @@ export default function InicioPage() {
 
   const subtitle = readOnly
     ? 'Tu perfil es de consulta: puedes revisar procesos, plan y proveedores, pero no crear ni aprobar.'
-    : supervisor
-      ? 'Lo que está pasando en abastecimiento y lo que espera tu aprobación.'
-      : 'Lo que tienes abierto, lo que requiere tu acción y cómo seguir.'
+    : showMgmt
+      ? 'Cómo va el área: plan, metas, ahorros, atrasos y carga del equipo. Cada número se abre hasta lo que lo respalda.'
+      : showAdmin
+        ? 'Usuarios, equipos, categorías y configuración de la empresa activa.'
+        : multi
+          ? 'Tu trabajo como comprador: lo que tienes abierto, lo que requiere tu acción y cómo seguir.'
+          : supervisor
+            ? 'Lo que está pasando en abastecimiento y lo que espera tu aprobación.'
+            : 'Lo que tienes abierto, lo que requiere tu acción y cómo seguir.'
 
   return (
     <MainLayout user={layoutUser} companyName={companyName}>
@@ -215,15 +228,16 @@ export default function InicioPage() {
             <h1 className="mt-1">Hola, {firstName}</h1>
             <p className="mt-1 max-w-2xl text-[13px] text-petrol-blue/75">{subtitle}</p>
           </div>
+          <PerspectiveSwitcher options={perspectives} value={current} onChange={changePerspective} />
         </header>
 
-        {healthIssues.length > 0 && (
+        {(!multi || showAdmin) && healthIssues.length > 0 && (
           <BlockCard title="Para que funcione" description="Piezas que hay que corregir antes de confiar en la operación.">
             <ItemList items={healthIssues.map(issue => ({ id: issue.title, title: issue.title, detail: issue.detail }))} empty="" />
           </BlockCard>
         )}
 
-        {continueItem && (
+        {showWork && continueItem && (
           <Link
             href={continueItem.href}
             className="glass-card flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-accent-mint p-4 hover:-translate-y-0.5"
@@ -241,7 +255,7 @@ export default function InicioPage() {
           </Link>
         )}
 
-        {quickActions.length > 0 && (
+        {showWork && quickActions.length > 0 && (
           <section aria-labelledby="acciones-rapidas" className="space-y-2">
             <h2 id="acciones-rapidas" className="text-[13px] font-medium text-petrol-blue/70">Comenzar algo nuevo</h2>
             <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
@@ -257,9 +271,44 @@ export default function InicioPage() {
           </section>
         )}
 
-        {!readOnly && viewer.companyId && <MyPortfolio userId={viewer.id} role={role} companyId={viewer.companyId} />}
+        {showMgmt && viewer.companyId && (
+          <div className="space-y-4" data-testid="vista-gerencia">
+            <ManagementDashboard session={{ userId: viewer.id, name: viewer.name, email: viewer.email, role, companyId: viewer.companyId, companyName, supplierId: null }} embedded />
+            <PlanAnualCard companyId={viewer.companyId} year={year} />
+          </div>
+        )}
 
-        {noData && (
+        {showAdmin && viewer.companyId && <AdminPerspective companyId={viewer.companyId} role={role} />}
+
+        {showWork && multi && (
+          <section className="glass-chip flex flex-wrap items-center gap-3 p-3" data-testid="ver-portafolio-de">
+            <label htmlFor="ver-portafolio" className="text-[12.5px] font-medium text-petrol-blue">Ver el portafolio de</label>
+            <select id="ver-portafolio" className={'h-8 rounded-xl border border-petrol-blue/15 bg-white/80 px-3 text-[13px] text-petrol-blue'} value={focusPerson ? focusPerson.id : ''} onChange={event => setViewAs(event.target.value)}>
+              <option value="">Yo ({firstName})</option>
+              {people.filter(item => item.id !== me).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+            <p className="text-[12px] text-petrol-blue/75">
+              {focusPerson
+                ? `Estás viendo el trabajo de ${focusPerson.name} en modo consulta. No es tu trabajo y tus permisos no cambian.`
+                : 'Muestra solo lo que está asignado a tu usuario. Puedes consultar el portafolio de otra persona del equipo sin cambiar de identidad.'}
+            </p>
+          </section>
+        )}
+
+        {showWork && !readOnly && viewer.companyId && (
+          multi && !focusPerson && queue.length === 0 && initiatives.length === 0 ? (
+            <BlockCard title="Mis categorías e iniciativas" description="Lo que está asignado a tu usuario.">
+              <div data-testid="mi-trabajo-vacio"><EmptyHint>
+                No tienes categorías, iniciativas ni procesos asignados a tu usuario. Un gerente puede asignártelos. Para recorrer el trabajo del equipo,
+                elige a una persona en «Ver el portafolio de»: es una consulta, no se te atribuye.
+              </EmptyHint></div>
+            </BlockCard>
+          ) : (
+            <MyPortfolio userId={focusId} role={focusRole} companyId={viewer.companyId} />
+          )
+        )}
+
+        {showWork && noData && (
           <BlockCard title="Primeros pasos con XPEND" description="Tres módulos, un mismo hilo: del gasto a la adjudicación y el contrato.">
             <div className="grid gap-3 md:grid-cols-3">
               {[
@@ -277,6 +326,7 @@ export default function InicioPage() {
           </BlockCard>
         )}
 
+        {(!multi || showMgmt) && (
         <section aria-labelledby="actividad" className="space-y-2">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 id="actividad" className="text-[15px] font-medium text-petrol-blue">Actividad por tipo de registro</h2>
@@ -290,20 +340,21 @@ export default function InicioPage() {
             ))}
           </div>
         </section>
+        )}
 
         <div className="grid gap-4 lg:grid-cols-2">
-          {supervisor && (
+          {supervisor && (!multi || showMgmt) && (
             <BlockCard title={`Aprobaciones pendientes (${toApprove.length})`} description="Bases por publicar, decisiones del comité y versiones de contrato que esperan a un gerente.">
               <ItemList items={toApprove} empty="No hay aprobaciones pendientes." />
             </BlockCard>
           )}
-          {supervisor && (
+          {supervisor && (!multi || showMgmt) && (
             <BlockCard title="Atención en toda la empresa" description="Procesos detenidos más de 14 días e iniciativas sin responsable o sin proceso, de cualquier persona." action={{ label: 'Ver plan', href: '/sourcing-plan' }}>
               <ItemList items={attention} empty="Nada detenido. Todas las iniciativas abiertas tienen responsable y proceso." />
             </BlockCard>
           )}
 
-          {!readOnly ? (
+          {showAdmin ? null : !readOnly ? (showWork ? (
             <BlockCard
               title="Tu trabajo"
               description="Un solo criterio para todo: cada elemento está en un grupo y dice por qué."
@@ -326,13 +377,13 @@ export default function InicioPage() {
                 </div>
               )}
             </BlockCard>
-          ) : (
+          ) : null) : (
             <BlockCard title="Procesos activos de la empresa" description="RFx, licitaciones y salas en curso." action={{ label: 'Ver todos', href: '/procesos' }}>
               <ItemList items={processItems(companyActive)} empty="No hay procesos activos." />
             </BlockCard>
           )}
 
-          {!readOnly && (
+          {!readOnly && showWork && (
             <BlockCard title="Mis iniciativas asignadas" description="Todas tus iniciativas abiertas del plan, con o sin proceso asociado." action={{ label: 'Plan de abastecimiento', href: '/sourcing-plan' }}>
               <ItemList
                 items={initiatives.map(item => ({ id: item.id, title: item.title, detail: item.detail, href: item.next.href, cta: item.next.label }))}
@@ -341,6 +392,7 @@ export default function InicioPage() {
             </BlockCard>
           )}
 
+          {!showAdmin && (
           <BlockCard
             title="Próximas fechas"
             description={`Fechas cargadas en licitaciones, salas, iniciativas${can(role, 'readContracts') ? ' y contratos' : ''}${supervisor || readOnly ? '' : ' tuyas'}, próximos 45 días.`}
@@ -351,38 +403,9 @@ export default function InicioPage() {
               limit={8}
             />
           </BlockCard>
-
-          {supervisor && planSavings && (
-            <BlockCard title={`Plan de abastecimiento ${year}`} description="Ahorros por moneda, sin conversión." action={{ label: 'Abrir plan', href: '/sourcing-plan' }}>
-              {planSavings.length === 0 ? (
-                <EmptyHint>{SAVINGS_LABELS.noInfo}. Todavía no hay iniciativas con montos este año.</EmptyHint>
-              ) : (
-                <div className="space-y-3">
-                  {planSavings.map(row => (
-                    <div key={row.currency} className="grid grid-cols-3 gap-2 text-[12px]">
-                      <div className="glass-chip p-3">
-                        <p className="text-petrol-blue/75">{SAVINGS_LABELS.target}</p>
-                        <p className="mt-1 text-[14px] font-medium text-petrol-blue">{row.target != null ? formatCurrency(row.target, row.currency) : SAVINGS_LABELS.noInfo}</p>
-                      </div>
-                      <div className="glass-chip p-3">
-                        <p className="text-petrol-blue/75">{SAVINGS_LABELS.negotiated}</p>
-                        <p className="mt-1 text-[14px] font-medium text-petrol-blue">{row.negotiated != null ? formatCurrency(row.negotiated, row.currency) : SAVINGS_LABELS.noInfo}</p>
-                        <p className="text-[12px] text-petrol-blue/75">{validatedSavingsLabel(row.negotiated != null)}</p>
-                      </div>
-                      <div className="glass-chip p-3">
-                        <p className="text-petrol-blue/75">{SAVINGS_LABELS.realized}</p>
-                        <p className="mt-1 text-[14px] font-medium text-petrol-blue/75">{realizedSavingsLabel()}</p>
-                        <p className="text-[12px] text-petrol-blue/75">Aún no se mide</p>
-                      </div>
-                    </div>
-                  ))}
-                  <p className="text-[12px] text-petrol-blue/75">El objetivo es una meta, no un resultado. El negociado sale de las adjudicaciones del comité.</p>
-                </div>
-              )}
-            </BlockCard>
           )}
 
-          {spend && (
+          {spend && (!multi || showMgmt) && (
             <BlockCard title="Gasto" description={spend.label} action={{ label: 'Resumen y análisis', href: '/spend' }}>
               {spend.needsReview > 0 ? (
                 <ItemList
@@ -400,21 +423,9 @@ export default function InicioPage() {
             </BlockCard>
           )}
 
-          {can(role, 'administer') && (
-            <BlockCard title="Administración" description="Usuarios, roles y configuración de la empresa.">
-              <div className="flex flex-wrap gap-2">
-                {[
-                  ['Usuarios', '/users'],
-                  ['Roles y permisos', '/administracion/roles'],
-                  ['Configuración', '/settings'],
-                ].map(([label, href]) => (
-                  <Link key={href} href={href} className="rounded-full border border-petrol-blue/15 bg-white/70 px-3 py-1.5 text-[12.5px] font-medium text-petrol-blue hover:bg-white">{label}</Link>
-                ))}
-              </div>
-            </BlockCard>
-          )}
         </div>
 
+        {!showAdmin && (
         <BlockCard title="Dónde encontrar cada cosa">
           <div className="grid gap-2 text-[12.5px] sm:grid-cols-2 lg:grid-cols-4">
             {[
@@ -437,6 +448,7 @@ export default function InicioPage() {
           </div>
           <p className="mt-3 text-[12px] text-petrol-blue/75">¿Dudas? ANA, el asistente, está disponible abajo a la derecha en todas las pantallas.</p>
         </BlockCard>
+        )}
       </div>
     </MainLayout>
   )

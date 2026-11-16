@@ -171,10 +171,21 @@ try {
     }
     if (role === 'manager' || role === 'admin') {
       check(`${role}: aprobaciones y atención`, inicio.includes('Aprobaciones pendientes') && inicio.includes('Atención en toda la empresa'))
-      check(`${role}: plan del año sin ahorro realizado inventado`, inicio.includes('Ahorro objetivo') && inicio.includes('Ahorro realizado') && !/Ahorro realizado\s*\n?\s*(USD|CLP|\$)/.test(inicio))
-      check(`${role}: acción nueva licitación`, hasLicitacionAction > 0)
+      // Desde la Etapa 6 el Inicio tiene perspectivas: Gerencia (predeterminada), Mi trabajo y, para administradores, Administración.
+      await page.goto(`${base}/dashboard?vista=trabajo`, { waitUntil: 'domcontentloaded' })
+      await page.getByText('Comenzar algo nuevo').first().waitFor({ timeout: 20000 }).catch(() => undefined)
+      await page.waitForTimeout(1500)
+      const trabajo = await page.locator('body').innerText()
+      const trabajoLicitacion = await page.getByRole('link', { name: /Nueva licitación/ }).count()
+      check(`${role}: plan del año sin ahorro realizado inventado`, /Metas y ahorro/.test(inicio) && /Realizado en el año|Sin información/.test(inicio) && !/Ahorro realizado\s*\n?\s*(USD|CLP|\$)/.test(inicio + trabajo))
+      check(`${role}: acción nueva licitación`, hasLicitacionAction + trabajoLicitacion > 0)
+      if (role === 'admin') {
+        await page.goto(`${base}/dashboard?vista=administracion`, { waitUntil: 'domcontentloaded' })
+        await page.getByTestId('vista-administracion').waitFor({ timeout: 20000 })
+        check('admin: tarjeta de administración', (await page.locator('body').innerText()).includes('Roles y permisos'))
+      }
+      await page.goto(`${base}/dashboard`, { waitUntil: 'domcontentloaded' })
     }
-    if (role === 'admin') check('admin: tarjeta de administración', inicio.includes('Roles y permisos'))
 
     for (const route of routesByRole[role]) {
       const response = await page.goto(`${base}${route}`, { waitUntil: 'domcontentloaded' })

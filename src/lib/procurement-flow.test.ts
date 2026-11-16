@@ -216,7 +216,6 @@ test('las pantallas con ahorro usan la clasificación común y no leen el ahorro
   for (const file of [
     'app/sourcing-plan/page.tsx',
     'app/sourcing-plan/[id]/page.tsx',
-    'app/dashboard/page.tsx',
     'app/comite/page.tsx',
     'app/licitaciones/page.tsx',
     'app/licitaciones/[id]/page.tsx',

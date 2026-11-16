@@ -14,7 +14,8 @@
     "test:live": "node --test src/lib/live/*.live.ts",
     "demo:seed": "node scripts/demo/seed.mjs",
     "demo:flow": "node scripts/demo/flow.mjs",
-    "demo:tour": "node scripts/demo/tour.mjs"
+    "demo:qa": "node scripts/demo/qa.mjs",
+    "demo:ana": "node scripts/demo/ana.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.53",

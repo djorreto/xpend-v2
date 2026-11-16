@@ -115,6 +115,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, email, mailed: false })
   }
 
+  // Las empresas de demostración y los dominios reservados (.test, .invalid…) nunca reciben correo real.
+  const { data: company } = await supabaseAdmin.from('companies').select('settings').eq('id', profile.company_id).maybeSingle()
+  const reservedDomain = /\.(test|invalid|example|localhost)$/i.test(email.split('@')[1] || '')
+  if (reservedDomain || (company?.settings as { demo?: boolean } | null)?.demo === true) {
+    return NextResponse.json({ ok: true, email, mailed: false, demo: true })
+  }
+
   const message = accessEmail({
     title: 'Te invitaron a una sala de ofertas',
     intro: `${supplier.fantasy_name} quedó invitado a “${event.title}” en Xpend. Entra con este enlace para ofertar.`,

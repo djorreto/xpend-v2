@@ -1,32 +1,24 @@
-// Recorre por la interfaz el proceso completo de la iniciativa "Mantención de equipos críticos":
-// bases (RFx) → licitación → sala de ofertas → evaluación → comité → adjudicación → contrato → declaración, validación,
-// evidencia y reconocimiento del ahorro, y luego verifica el panel de gestión. Requiere: npm run demo:seed y la app en marcha.
-// Es el guion técnico de la demostración: cada paso es lo que haría una persona.
+// Recorre por la interfaz los casos de punta a punta de «XPEND Company S.A. (DEMO)»: cada paso es lo que haría una persona.
+//   A  Mantención preventiva (USD): bases → licitación → sala → ofertas → evaluación → comité → adjudicación → contrato → ahorro validado y reconocido.
+//   T  Enlaces y telefonía (CLP): igual, y el ahorro queda declarado, pendiente de validación.
+//   B  Desarrollo y soporte de aplicaciones (USD): tres oferentes, evaluación y recomendación; queda a la espera del comité.
+// Uso: npm run demo:flow [-- A T B]   Requiere la siembra y la aplicación en marcha (XPEND_DEMO_BASE).
 import { existsSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { chromium } from 'playwright'
-import { DEMO_DIR, loadCredentials, serviceClient } from './common.mjs'
+import { DEMO_DIR, TARGET, addDays, loadCredentials, today } from './common.mjs'
+import { FLOWS, INITIATIVES } from './dataset.mjs'
 import { BASE, body, check, login, setReactValue, shot, summary } from './browser.mjs'
 
 const creds = loadCredentials()
-const DONE_MARK = `${DEMO_DIR}/flujo-ejecutado.json`
-if (existsSync(DONE_MARK) && !process.argv.includes('--force')) {
-  console.log('El recorrido ya se ejecutó sobre estos datos. Para repetirlo: npm run demo:seed -- --reset && npm run demo:flow')
-  process.exit(0)
-}
-
+const wanted = process.argv.slice(2).filter(arg => FLOWS[arg])
+const cases = wanted.length ? wanted : ['A', 'T', 'B']
 const work = mkdtempSync(join(tmpdir(), 'xpend-demo-'))
-const planId = creds.planIds.mant
-const licitacionId = 'LIC-DEMO-MANT'
-const title = 'Mantención de equipos críticos'
-const SUPPLIERS = [
-  { key: 'alfa', name: 'Servicios Industriales Norte', amount: 150000, nda: true, text: 'Ejecución con equipo propio y cobertura en toda la planta.' },
-  { key: 'beta', name: 'MantenPro Chile', amount: 130000, nda: true, text: 'Ejecución con subcontrato parcial de especialidades.' },
-  { key: 'gamma', name: 'TecnoMant Andes', amount: 90000, nda: false, text: 'Oferta sin NDA aceptado.' },
-]
+const money = (amount) => String(amount).replace(/\B(?=(\d{3})+(?!\d))/g, '[.,]?')
+const t0 = today()
 
-async function supplierOffer(browser, supplier) {
+async function supplierOffer(browser, spec, supplier, eventId) {
   const session = await login(browser, creds.users[`supplier_${supplier.key}`])
   const page = session.page
   try {
@@ -41,14 +33,14 @@ async function supplierOffer(browser, supplier) {
     await page.getByRole('button', { name: 'Aceptar NDA' }).click()
     await page.getByText('NDA aceptado para esta versión.').waitFor()
     await page.locator('#technical').fill(supplier.text)
-    await page.locator('#requirement').fill('Cumple habilitación, equipo propio y reporte mensual.')
-    await setReactValue(page.locator('input[placeholder="Partida"]').first(), 'Mantención mensual')
+    await page.locator('#requirement').fill('Cumple habilitación, equipo propio y reporte periódico.')
+    await setReactValue(page.locator('input[placeholder="Partida"]').first(), 'Servicio contratado')
     await setReactValue(page.locator('input[placeholder="Precio"]').first(), String(supplier.amount))
-    await page.getByText(`Total $${supplier.amount.toLocaleString('en-US')}`).waitFor({ timeout: 8000 })
+    await page.getByText(new RegExp(`Total\\s*[A-Z]*\\s*\\$?${money(supplier.amount)}`)).first().waitFor({ timeout: 8000 })
     const technical = join(work, `${supplier.key}-tecnica.txt`)
     const economic = join(work, `${supplier.key}-economica.txt`)
-    writeFileSync(technical, supplier.text)
-    writeFileSync(economic, `Total ${supplier.amount}`)
+    writeFileSync(technical, `${supplier.text}\n(Documento ficticio de demostración)`)
+    writeFileSync(economic, `Total ${supplier.amount} ${spec.currency} (documento ficticio de demostración)`)
     await page.locator('#technical-file').setInputFiles(technical)
     await page.locator('#economic-file').setInputFiles(economic)
     await page.getByRole('button', { name: 'Presentar oferta' }).click()
@@ -59,231 +51,244 @@ async function supplierOffer(browser, supplier) {
   }
 }
 
-let eventId = ''
-let awardId = ''
-let contractId = ''
+async function runCase(browser, code) {
+  const spec = FLOWS[code]
+  const marker = `${DEMO_DIR}/flujo-${TARGET}-${code}.json`
+  if (existsSync(marker) && !process.argv.includes('--force')) {
+    console.log(`Caso ${code}: ya ejecutado sobre estos datos (${marker}).`)
+    return
+  }
+  const initiative = INITIATIVES.find(item => item.key === spec.plan)
+  const title = initiative.title
+  const planId = creds.planIds[spec.plan]
+  const licitacionId = spec.licitacion
+  const target = Math.round((initiative.spend * initiative.pct) / 100)
+  const offering = spec.suppliers.filter(item => item.nda)
+  const winner = spec.suppliers.find(item => item.name === spec.recommend)
+  const negotiated = spec.baseline - winner.amount
+  let current = `${code}/inicio`
+  let lastPage = null
+  let eventId = ''
+  let awardId = ''
+  let contractId = ''
+  console.log(`\n=== Caso ${code}: ${title} ===`)
+  try {
+    // 1) La responsable abre su iniciativa y prepara las bases.
+    current = `${code}/bases`
+    const owner = await login(browser, creds.users[spec.responsible])
+    const op = owner.page
+    await op.goto(`${BASE}/sourcing-plan/${planId}`, { waitUntil: 'networkidle' })
+    check(`${code}: iniciativa con responsables y plan de hitos`, /Responsables/.test(await body(op)) && /Hitos/.test(await body(op)))
+    await op.goto(`${BASE}/rfx-maker/new?planId=${planId}`, { waitUntil: 'domcontentloaded' })
+    await op.waitForFunction(expected => document.querySelector('#title')?.value.includes(expected), title)
+    await op.locator('#alcance').fill(spec.scope)
+    await op.locator('#requisitos').fill(spec.requirements)
+    await op.getByRole('button', { name: 'Crear y llenar' }).click()
+    await op.waitForURL(/\/rfx-maker\/(?!new)[^/]+$/)
+    check(`${code}: bases (RFx) creadas por la responsable`, true)
+    await owner.context.close()
+
+    // 2) La administradora publica la licitación y abre la sala de ofertas.
+    current = `${code}/licitación y sala`
+    const andrea = await login(browser, creds.users.admin)
+    const ap = andrea.page
+    lastPage = ap
+    await ap.goto(`${BASE}/licitaciones/new?planId=${planId}`, { waitUntil: 'domcontentloaded' })
+    await ap.locator('#id').fill(licitacionId)
+    await ap.locator('#name').fill(title)
+    await ap.locator('button', { hasText: title }).first().waitFor()
+    await ap.getByRole('button', { name: 'Crear Licitación' }).click()
+    await ap.waitForURL(new RegExp(`/licitaciones/${licitacionId}$`))
+    check(`${code}: licitación creada y enlazada a la iniciativa`, true)
+
+    await ap.goto(`${BASE}/sala/new?planId=${planId}&licitacionId=${licitacionId}`, { waitUntil: 'domcontentloaded' })
+    const seeded = await ap.waitForFunction(expected => Array.from(document.querySelectorAll('input')).some(input => input.value.includes(expected)), title, { timeout: 15000 }).then(() => true).catch(() => false)
+    if (!seeded) {
+      const fields = ap.locator('input:not([type]), input[type="text"]')
+      await fields.nth(0).fill(title)
+      await fields.nth(1).fill(spec.currency)
+      await fields.nth(2).fill(licitacionId)
+    }
+    await ap.getByRole('button', { name: 'Crear sala' }).click()
+    await ap.waitForURL(/\/sala\/[0-9a-f-]{36}$/)
+    eventId = ap.url().split('/').pop()
+    await ap.getByPlaceholder('Texto del NDA').fill('Las bases técnicas de este proceso son confidenciales y no pueden compartirse. Proceso ficticio de demostración.')
+    await ap.getByRole('button', { name: 'Exigir NDA' }).click()
+    await ap.locator('textarea:not([placeholder])').first().fill(`Bases técnicas confidenciales: ${title}. Documento ficticio de demostración.`)
+    await ap.getByRole('button', { name: 'Publicar documento' }).click()
+    await ap.getByText('Documento publicado').waitFor()
+    for (const supplier of spec.suppliers) {
+      await ap.getByLabel('Buscar proveedor del directorio').fill(supplier.name)
+      const input = ap.getByPlaceholder(`Correo de ${supplier.name}`)
+      await input.locator('xpath=..').getByRole('button', { name: 'Invitar' }).click()
+      await ap.getByText(`${supplier.name} · invited`).waitFor()
+    }
+    await ap.getByRole('button', { name: 'Abrir sala' }).click()
+    await ap.getByRole('button', { name: 'Cerrar recepción' }).waitFor()
+    check(`${code}: sala abierta con NDA y ${spec.suppliers.length} proveedores invitados`, true)
+
+    // 3) Los proveedores ofertan desde su portal.
+    current = `${code}/ofertas`
+    for (const supplier of spec.suppliers) await supplierOffer(browser, spec, supplier, eventId)
+    await ap.goto(`${BASE}/sala/${eventId}`, { waitUntil: 'domcontentloaded' })
+    await ap.getByText('Los sobres siguen cerrados').waitFor()
+    const sealed = await body(ap)
+    check(`${code}: sobres cerrados, se cuentan ${offering.length} ofertas sin mostrar montos`, sealed.includes(`${offering.length} ofertas`) && !new RegExp(`\\$${money(offering[0].amount)}`).test(sealed))
+    await ap.getByRole('button', { name: 'Cerrar recepción' }).click()
+    await ap.getByRole('button', { name: 'Abrir sobres' }).waitFor()
+    await ap.getByRole('button', { name: 'Abrir sobres' }).click()
+    await ap.getByText('Sobres abiertos').waitFor()
+
+    // 4) Evaluación y recomendación.
+    current = `${code}/evaluación`
+    await ap.goto(`${BASE}/sala/${eventId}/evaluacion`, { waitUntil: 'domcontentloaded' })
+    await ap.getByRole('button', { name: 'Guardar modelo' }).click()
+    await ap.getByText('Modelo guardado').waitFor()
+    await ap.locator('#criterion-name').fill('Experiencia')
+    await ap.locator('#criterion-weight').fill('100')
+    await ap.getByRole('button', { name: 'Agregar criterio' }).click()
+    await ap.getByText('Experiencia · técnico 100%').waitFor()
+    const blockOf = name => ap.locator('div.space-y-2').filter({ has: ap.locator('p.font-medium', { hasText: name }) })
+    for (const supplier of offering) {
+      const [score, reason] = spec.scores[supplier.key]
+      await setReactValue(blockOf(supplier.name).locator('input[placeholder="0 a 100"]'), score)
+      await blockOf(supplier.name).locator('input[placeholder="Justificación"]').fill(reason)
+      await ap.waitForTimeout(800)
+    }
+    await ap.getByRole('button', { name: 'Cerrar evaluación' }).click()
+    await ap.getByText('Evaluación cerrada').waitFor()
+    await ap.getByPlaceholder('Justificación técnica').fill(`${spec.recommend} obtiene el mejor puntaje técnico.`)
+    await ap.getByPlaceholder('Justificación económica').fill(`La oferta de ${spec.recommend} es conveniente frente a la línea base del proceso.`)
+    await ap.getByRole('button', { name: `Recomendar ${spec.recommend}` }).click()
+    await ap.getByText('Recomendación lista').waitFor()
+    check(`${code}: evaluación cerrada y recomendación emitida`, true)
+    await shot(ap, `flujo-${code}-recomendacion`)
+    if (spec.stopAfter) {
+      await andrea.context.close()
+      writeFileSync(marker, JSON.stringify({ at: new Date().toISOString(), planId, licitacionId, eventId }, null, 2))
+      return
+    }
+
+    // 5) Expediente de decisión y comité.
+    current = `${code}/comité`
+    await ap.getByRole('button', { name: 'Preparar comité' }).click()
+    await ap.waitForURL(new RegExp(`/sala/${eventId}/decision`))
+    await ap.locator('p', { hasText: 'Ahorro objetivo' }).first().waitFor()
+    const dossier = await body(ap)
+    check(`${code}: expediente con objetivo y estimado separados del realizado`, new RegExp(money(target)).test(dossier) && new RegExp(money(negotiated)).test(dossier) && dossier.includes('sin evidencia posterior'))
+    await ap.getByPlaceholder('Riesgos').fill('La oferta recomendada no es necesariamente la más baja.')
+    await ap.getByPlaceholder('Excepciones').fill('Sin excepción de autoaprobación.')
+    await ap.getByPlaceholder('Observaciones').fill('El comité aprueba con una cuenta distinta de quien recomienda.')
+    await ap.getByRole('button', { name: 'Enviar a comité' }).click()
+    await ap.getByText('Expediente enviado').waitFor()
+
+    const carolina = await login(browser, creds.users[spec.committeeKey])
+    const cp = carolina.page
+    await cp.goto(`${BASE}/sala/${eventId}/decision`, { waitUntil: 'domcontentloaded' })
+    const value = await cp.locator('select option', { hasText: spec.recommend }).getAttribute('value')
+    await cp.locator('select').selectOption(value)
+    await cp.getByPlaceholder('Justificación u observación').fill('Apruebo la recomendación por la evaluación técnica.')
+    await cp.getByRole('button', { name: 'Aprobar recomendación' }).click()
+    await cp.getByText('Voto registrado').waitFor()
+    check(`${code}: el comité aprueba una persona distinta de quien recomienda`, true)
+
+    // 6) Adjudicación formal y contrato.
+    current = `${code}/adjudicación y contrato`
+    await ap.reload({ waitUntil: 'domcontentloaded' })
+    await ap.getByPlaceholder('Condiciones o reservas de la adjudicación').fill('Adjudicación total del alcance ofertado.')
+    await ap.getByRole('button', { name: 'Adjudicar' }).click()
+    await ap.getByText('Adjudicación formal').waitFor()
+    await ap.getByRole('button', { name: 'Generar contrato' }).click()
+    await ap.waitForURL(/\/contratos\/desde-adjudicacion/)
+    awardId = new URL(ap.url()).searchParams.get('award') || ''
+    const createTemplate = ap.getByRole('button', { name: 'Crear plantilla de servicio' })
+    const generate = ap.getByRole('button', { name: 'Generar borrador' })
+    await Promise.race([createTemplate.waitFor(), ap.waitForFunction(() => Array.from(document.querySelectorAll('button')).some(button => button.textContent === 'Generar borrador' && !button.disabled))])
+    if (await createTemplate.count()) {
+      await createTemplate.click()
+      await ap.waitForFunction(() => Array.from(document.querySelectorAll('button')).some(button => button.textContent === 'Generar borrador' && !button.disabled))
+    }
+    const start = addDays(t0, spec.contract.startOffset)
+    await ap.getByPlaceholder('Código').fill(spec.contract.code)
+    await ap.getByPlaceholder('Fecha de inicio').fill(start)
+    await ap.getByPlaceholder('Fecha de término').fill(addDays(start, 365 * (code === 'T' ? 2 : 1)))
+    await ap.getByPlaceholder('Plazo de preaviso').fill(spec.contract.notice)
+    await ap.getByPlaceholder('Periodicidad').fill('mensual')
+    await ap.getByPlaceholder('Renovación').fill('manual')
+    await generate.click()
+    await ap.waitForURL(/\/contratos\/[0-9a-f-]{36}$/)
+    contractId = ap.url().split('/').pop()
+    await ap.getByRole('button', { name: 'Enviar esta versión a revisión' }).click()
+    await ap.getByText('Versión 1 · in_review', { exact: true }).waitFor()
+    await cp.goto(`${BASE}/contratos/${contractId}`, { waitUntil: 'domcontentloaded' })
+    await cp.getByRole('button', { name: 'Aprobar esta versión' }).click()
+    await cp.locator('p').filter({ hasText: /^Versión 1 · approved/ }).waitFor()
+    check(`${code}: adjudicación formal y contrato aprobado por otra persona`, true)
+    await carolina.context.close()
+    await andrea.context.close()
+
+    // 7) Control de ahorros: declara la responsable; valida y reconoce otra persona.
+    current = `${code}/ahorros`
+    const declarer = await login(browser, creds.users[spec.responsible])
+    const sp = declarer.page
+    await sp.goto(`${BASE}/ahorros`, { waitUntil: 'networkidle' })
+    await sp.getByRole('tab', { name: /Por declarar/ }).click()
+    await sp.getByTestId('pendientes-declarar').waitFor()
+    await sp.getByTestId('pendientes-declarar').locator('li').filter({ hasText: title }).getByRole('button', { name: 'Declarar ahorro' }).click()
+    const form = sp.getByTestId('form-declarar')
+    await form.waitFor()
+    check(`${code}: la declaración parte del negociado comparable`, new RegExp(money(negotiated)).test(await form.innerText()))
+    await form.getByLabel('Nota de la declaración').fill(`Precio adjudicado frente a la línea base de ${spec.currency} ${spec.baseline.toLocaleString('en-US')}.`)
+    await form.getByRole('button', { name: 'Declarar para validación' }).click()
+    await sp.getByText('Ahorro declarado.').waitFor()
+    await sp.getByRole('tab', { name: /Por validar/ }).click()
+    check(`${code}: quien declara no puede validar`, (await sp.getByRole('button', { name: 'Validar ahorro' }).count()) === 0 && /otra persona/.test(await body(sp)))
+    await declarer.context.close()
+
+    if (spec.savings === 'validate') {
+      const gonzalo = await login(browser, creds.users.manager)
+      const gp = gonzalo.page
+      await gp.goto(`${BASE}/ahorros`, { waitUntil: 'networkidle' })
+      await gp.getByRole('tab', { name: /Por validar/ }).click()
+      const toValidate = gp.getByTestId('tarjeta-validar').filter({ hasText: title })
+      await toValidate.getByLabel('Metodología de validación').fill('Comparación del precio adjudicado con la línea base documentada y la cotización vigente del año anterior')
+      await toValidate.getByRole('button', { name: 'Validar ahorro' }).click()
+      await gp.getByText('Ahorro validado.').waitFor()
+      await gp.getByRole('tab', { name: /Validados/ }).click()
+      const card = gp.getByTestId('tarjeta-validado').filter({ hasText: title })
+      await card.waitFor()
+      const evidence = join(work, `cotizacion-comparativa-${code}.txt`)
+      writeFileSync(evidence, 'Cotización comparativa ficticia para la demostración.')
+      await card.getByLabel('Archivo de evidencia').setInputFiles(evidence)
+      await card.getByLabel('Descripción de la evidencia').fill('Cotización comparativa (documento ficticio)')
+      await card.getByRole('button', { name: 'Subir evidencia' }).click()
+      await gp.getByText('Evidencia agregada.').waitFor()
+      await card.getByLabel('Evidencia que respalda').selectOption({ index: 1 })
+      await card.getByLabel('Monto a reconocer').fill(String(spec.recognize))
+      await card.getByRole('button', { name: 'Reconocer mes' }).click()
+      await gp.getByText('Ahorro reconocido.').waitFor()
+      await shot(gp, `flujo-${code}-ahorro-reconocido`)
+      check(`${code}: validado por otra persona, con evidencia y primer reconocimiento`, true)
+      await gonzalo.context.close()
+    }
+    writeFileSync(marker, JSON.stringify({ at: new Date().toISOString(), planId, licitacionId, eventId, awardId, contractId }, null, 2))
+  } catch (error) {
+    if (lastPage) {
+      await shot(lastPage, `fallo-${code}`).catch(() => undefined)
+      console.error((await body(lastPage).catch(() => '')).slice(0, 1200))
+    }
+    console.error(`\nFalló en el paso «${current}»: ${error instanceof Error ? error.message.split('\n')[0] : error}`)
+    process.exitCode = 1
+    throw error
+  }
+}
+
 const browser = await chromium.launch({ headless: true })
-let current = 'inicio'
-let lastPage = null
 try {
-  // 1) La compradora responsable abre su iniciativa y prepara las bases.
-  current = 'bases'
-  const valentina = await login(browser, creds.users.buyer1)
-  const vp = valentina.page
-  await vp.goto(`${BASE}/sourcing-plan/${planId}`, { waitUntil: 'networkidle' })
-  const detail = await body(vp)
-  check('iniciativa: responsables y plan de hitos visibles', /Responsables/.test(detail) && /Hitos/.test(detail))
-  await shot(vp, 'flujo-01-iniciativa')
-  await vp.goto(`${BASE}/rfx-maker/new?planId=${planId}`, { waitUntil: 'domcontentloaded' })
-  await vp.waitForFunction(expected => {
-    const input = document.querySelector('#title')
-    return input && input.value.includes(expected)
-  }, title)
-  await vp.locator('#alcance').fill('Mantención preventiva y correctiva mensual de los equipos críticos de planta.')
-  await vp.locator('#requisitos').fill('Técnicos certificados, repuestos originales y reporte mensual de disponibilidad.')
-  await vp.getByRole('button', { name: 'Crear y llenar' }).click()
-  await vp.waitForURL(/\/rfx-maker\/(?!new)[^/]+$/)
-  check('bases (RFx) creadas por la compradora responsable', true)
-  await valentina.context.close()
-
-  // 2) La administradora publica la licitación y abre la sala de ofertas.
-  current = 'licitación y sala'
-  const andrea = await login(browser, creds.users.admin)
-  const ap = andrea.page
-  lastPage = ap
-  await ap.goto(`${BASE}/licitaciones/new?planId=${planId}`, { waitUntil: 'domcontentloaded' })
-  await ap.locator('#id').fill(licitacionId)
-  await ap.locator('#name').fill(title)
-  await ap.locator('button', { hasText: title }).first().waitFor()
-  await ap.getByRole('button', { name: 'Crear Licitación' }).click()
-  await ap.waitForURL(new RegExp(`/licitaciones/${licitacionId}$`))
-  check('licitación creada y enlazada a la iniciativa', true)
-
-  await ap.goto(`${BASE}/sala/new?planId=${planId}&licitacionId=${licitacionId}`, { waitUntil: 'domcontentloaded' })
-  const seeded = await ap.waitForFunction(expected => [...document.querySelectorAll('input')].some(input => input.value.includes(expected)), title, { timeout: 15000 }).then(() => true).catch(() => false)
-  if (!seeded) {
-    const fields = ap.locator('input:not([type]), input[type="text"]')
-    await fields.nth(0).fill(title)
-    await fields.nth(1).fill('USD')
-    await fields.nth(2).fill(licitacionId)
-  }
-  await ap.getByRole('button', { name: 'Crear sala' }).click()
-  await ap.waitForURL(/\/sala\/[0-9a-f-]{36}$/)
-  eventId = ap.url().split('/').pop()
-  await ap.getByPlaceholder('Texto del NDA').fill('Las bases técnicas de este proceso son confidenciales y no pueden compartirse.')
-  await ap.getByRole('button', { name: 'Exigir NDA' }).click()
-  await ap.locator('textarea:not([placeholder])').first().fill('Bases técnicas confidenciales de la mantención de equipos críticos.')
-  await ap.getByRole('button', { name: 'Publicar documento' }).click()
-  await ap.getByText('Documento publicado').waitFor()
-  for (const supplier of SUPPLIERS) {
-    const input = ap.getByPlaceholder(`Correo de ${supplier.name}`)
-    await input.locator('xpath=..').getByRole('button', { name: 'Invitar' }).click()
-    await ap.getByText(`${supplier.name} · invited`).waitFor()
-  }
-  await ap.getByRole('button', { name: 'Abrir sala' }).click()
-  await ap.getByRole('button', { name: 'Cerrar recepción' }).waitFor()
-  await shot(ap, 'flujo-02-sala')
-  check('sala de ofertas abierta con NDA y tres proveedores invitados', true)
-
-  // 3) Los proveedores ofertan desde su portal.
-  current = 'ofertas'
-  for (const supplier of SUPPLIERS) await supplierOffer(browser, supplier)
-  await ap.goto(`${BASE}/sala/${eventId}`, { waitUntil: 'domcontentloaded' })
-  await ap.getByText('Los sobres siguen cerrados').waitFor()
-  const sealed = await body(ap)
-  check('sobres cerrados: se cuentan las ofertas sin mostrar montos', sealed.includes('2 ofertas') && !sealed.includes('$150,000.00'))
-  await ap.getByRole('button', { name: 'Cerrar recepción' }).click()
-  await ap.getByRole('button', { name: 'Abrir sobres' }).waitFor()
-  await ap.getByRole('button', { name: 'Abrir sobres' }).click()
-  await ap.getByText('Sobres abiertos').waitFor()
-
-  // 4) Evaluación y recomendación.
-  current = 'evaluación'
-  await ap.goto(`${BASE}/sala/${eventId}/evaluacion`, { waitUntil: 'domcontentloaded' })
-  await ap.getByRole('button', { name: 'Guardar modelo' }).click()
-  await ap.getByText('Modelo guardado').waitFor()
-  await ap.locator('#criterion-name').fill('Experiencia')
-  await ap.locator('#criterion-weight').fill('100')
-  await ap.getByRole('button', { name: 'Agregar criterio' }).click()
-  await ap.getByText('Experiencia · técnico 100%').waitFor()
-  const blockOf = name => ap.locator('div.space-y-2').filter({ has: ap.locator('p.font-medium', { hasText: name }) })
-  await setReactValue(blockOf('Servicios Industriales Norte').locator('input[placeholder="0 a 100"]'), '90')
-  await blockOf('Servicios Industriales Norte').locator('input[placeholder="Justificación"]').fill('Equipo propio y cobertura completa.')
-  await setReactValue(blockOf('MantenPro Chile').locator('input[placeholder="0 a 100"]'), '76')
-  await blockOf('MantenPro Chile').locator('input[placeholder="Justificación"]').fill('Cumple, con parte del trabajo subcontratada.')
-  await ap.getByRole('button', { name: 'Cerrar evaluación' }).click()
-  await ap.getByText('Evaluación cerrada').waitFor()
-  await ap.getByPlaceholder('Justificación técnica').fill('Servicios Industriales Norte tiene mejor cobertura técnica.')
-  await ap.getByPlaceholder('Justificación económica').fill('MantenPro es más barata, pero el modelo técnico pondera la experiencia.')
-  await ap.getByRole('button', { name: 'Recomendar Servicios Industriales Norte' }).click()
-  await ap.getByText('Recomendación lista').waitFor()
-  check('evaluación cerrada y recomendación emitida', true)
-
-  // 5) Expediente de decisión y comité.
-  current = 'comité'
-  await ap.getByRole('button', { name: 'Preparar comité' }).click()
-  await ap.waitForURL(new RegExp(`/sala/${eventId}/decision`))
-  await ap.locator('p', { hasText: 'Ahorro objetivo: $20,000.00' }).waitFor()
-  const dossier = await body(ap)
-  check('expediente: objetivo, estimado y realizado separados', dossier.includes('$20,000.00') && dossier.includes('$50,000.00') && dossier.includes('sin evidencia posterior'))
-  await ap.getByPlaceholder('Riesgos').fill('La oferta recomendada no es la más baja.')
-  await ap.getByPlaceholder('Excepciones').fill('Sin excepción de autoaprobación.')
-  await ap.getByPlaceholder('Observaciones').fill('El comité aprueba con una cuenta distinta de quien recomienda.')
-  await ap.getByRole('button', { name: 'Enviar a comité' }).click()
-  await ap.getByText('Expediente enviado').waitFor()
-
-  const carolina = await login(browser, creds.users.committee)
-  const cp = carolina.page
-  await cp.goto(`${BASE}/sala/${eventId}/decision`, { waitUntil: 'domcontentloaded' })
-  const value = await cp.locator('select option', { hasText: 'Servicios Industriales Norte' }).getAttribute('value')
-  await cp.locator('select').selectOption(value)
-  await cp.getByPlaceholder('Justificación u observación').fill('Apruebo la recomendación por la evaluación técnica.')
-  await cp.getByRole('button', { name: 'Aprobar recomendación' }).click()
-  await cp.getByText('Voto registrado').waitFor()
-  check('comité: aprueba una persona distinta de quien recomienda', true)
-
-  // 6) Adjudicación formal y contrato.
-  current = 'adjudicación y contrato'
-  await ap.reload({ waitUntil: 'domcontentloaded' })
-  await ap.getByPlaceholder('Condiciones o reservas de la adjudicación').fill('Adjudicación total del alcance ofertado.')
-  await ap.getByRole('button', { name: 'Adjudicar' }).click()
-  await ap.getByText('Adjudicación formal').waitFor()
-  await ap.getByRole('button', { name: 'Generar contrato' }).click()
-  await ap.waitForURL(/\/contratos\/desde-adjudicacion/)
-  awardId = new URL(ap.url()).searchParams.get('award') || ''
-  const year = new Date().getFullYear()
-  const createTemplate = ap.getByRole('button', { name: 'Crear plantilla de servicio' })
-  const generate = ap.getByRole('button', { name: 'Generar borrador' })
-  await Promise.race([createTemplate.waitFor(), ap.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Generar borrador' && !button.disabled))])
-  if (await createTemplate.count()) {
-    // Primera vez en la empresa: se crea la plantilla de servicio aprobada que luego reutilizan todos los contratos.
-    await createTemplate.click()
-    await ap.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Generar borrador' && !button.disabled))
-  }
-  await ap.getByPlaceholder('Código').fill('CTR-DEMO-MANT-001')
-  await ap.getByPlaceholder('Fecha de inicio').fill(`${year}-12-01`)
-  await ap.getByPlaceholder('Fecha de término').fill(`${year + 1}-12-01`)
-  await ap.getByPlaceholder('Plazo de preaviso').fill('60')
-  await ap.getByPlaceholder('Periodicidad').fill('mensual')
-  await ap.getByPlaceholder('Renovación').fill('manual')
-  await generate.click()
-  await ap.waitForURL(/\/contratos\/[0-9a-f-]{36}$/)
-  contractId = ap.url().split('/').pop()
-  await ap.getByRole('button', { name: 'Enviar esta versión a revisión' }).click()
-  await ap.getByText('Versión 1 · in_review', { exact: true }).waitFor()
-  await cp.goto(`${BASE}/contratos/${contractId}`, { waitUntil: 'domcontentloaded' })
-  await cp.getByRole('button', { name: 'Aprobar esta versión' }).click()
-  await cp.locator('p').filter({ hasText: /^Versión 1 · approved/ }).waitFor()
-  await shot(cp, 'flujo-03-contrato')
-  check('adjudicación formal y contrato aprobado por otra persona', true)
-  await carolina.context.close()
-
-  // 7) Control de ahorros: declara la responsable, valida otra persona, evidencia y reconocimiento.
-  current = 'ahorros'
-  const valentina2 = await login(browser, creds.users.buyer1)
-  const sp = valentina2.page
-  await sp.goto(`${BASE}/adjudicaciones`, { waitUntil: 'networkidle' })
-  await sp.getByRole('link', { name: 'Ahorro: declarar o ver' }).first().click()
-  await sp.getByTestId('pendientes-declarar').waitFor()
-  await sp.getByRole('button', { name: 'Declarar ahorro' }).first().click()
-  const form = sp.getByTestId('form-declarar')
-  await form.waitFor()
-  check('ahorros: la declaración parte del negociado comparable (USD 50.000)', (await form.innerText()).includes('50,000'))
-  await form.getByLabel('Nota de la declaración').fill('Precio adjudicado frente a la línea base de USD 200.000.')
-  await form.getByRole('button', { name: 'Declarar para validación' }).click()
-  await sp.getByText('Ahorro declarado.').waitFor()
-  await sp.getByRole('tab', { name: /Por validar/ }).click()
-  check('ahorros: quien declara no puede validar', (await sp.getByRole('button', { name: 'Validar ahorro' }).count()) === 0 && /otra persona/.test(await body(sp)))
-  await valentina2.context.close()
-
-  const gonzalo = await login(browser, creds.users.manager)
-  const gp = gonzalo.page
-  await gp.goto(`${BASE}/ahorros`, { waitUntil: 'networkidle' })
-  await gp.getByRole('tab', { name: /Por validar/ }).click()
-  const toValidate = gp.getByTestId('tarjeta-validar').filter({ hasText: title })
-  await toValidate.getByLabel('Metodología de validación').fill('Comparación del precio adjudicado con la línea base documentada y la cotización vigente del año anterior')
-  await toValidate.getByRole('button', { name: 'Validar ahorro' }).click()
-  await gp.getByText('Ahorro validado.').waitFor()
-  await gp.getByRole('tab', { name: /Validados/ }).click()
-  const card = gp.getByTestId('tarjeta-validado').filter({ hasText: title })
-  await card.waitFor()
-  const evidence = join(work, 'cotizacion-comparativa.txt')
-  writeFileSync(evidence, 'Cotización comparativa ficticia para la demostración.')
-  await card.getByLabel('Archivo de evidencia').setInputFiles(evidence)
-  await card.getByLabel('Descripción de la evidencia').fill('Cotización comparativa')
-  await card.getByRole('button', { name: 'Subir evidencia' }).click()
-  await gp.getByText('Evidencia agregada.').waitFor()
-  await card.getByLabel('Evidencia que respalda').selectOption({ index: 1 })
-  await card.getByLabel('Monto a reconocer').fill('20000')
-  await card.getByRole('button', { name: 'Reconocer mes' }).click()
-  await gp.getByText('Ahorro reconocido.').waitFor()
-  await shot(gp, 'flujo-04-ahorro-reconocido')
-  check('ahorros: validado por otra persona, con evidencia y primer reconocimiento', true)
-
-  // 8) El panel de gestión refleja todo, con su trazabilidad.
-  current = 'panel de gestión'
-  await gp.goto(`${BASE}/gestion`, { waitUntil: 'networkidle' })
-  const savings = await gp.getByTestId('gestion-ahorros').innerText()
-  check('gestión: USD con meta, negociado 50.000, validado 50.000 y realizado 20.000', /USD[\s\S]*\$36,000\.00[\s\S]*\$50,000\.00[\s\S]*\$20,000\.00/.test(savings), savings.replace(/\s+/g, ' ').slice(0, 220))
-  await shot(gp, 'flujo-05-gestion')
-  await gp.goto(`${BASE}/sourcing-plan/${planId}`, { waitUntil: 'networkidle' })
-  const after = await body(gp)
-  check('iniciativa: hitos con fechas reales derivadas del proceso', /Adjudicación|Comité/.test(after))
-  await shot(gp, 'flujo-06-iniciativa-hitos')
-  await gonzalo.context.close()
-  await andrea.context.close()
-
-  writeFileSync(DONE_MARK, JSON.stringify({ at: new Date().toISOString(), planId, licitacionId, eventId, awardId, contractId }, null, 2))
-  console.log(JSON.stringify({ planId, licitacionId, eventId, awardId, contractId }))
-} catch (error) {
-  if (lastPage) {
-    await shot(lastPage, 'fallo').catch(() => undefined)
-    console.error((await body(lastPage).catch(() => '')).slice(0, 1500))
-  }
-  console.error(`\nFalló en el paso «${current}»: ${error instanceof Error ? error.message.split('\n')[0] : error}`)
-  process.exitCode = 1
+  for (const code of cases) await runCase(browser, code)
+} catch {
+  // el detalle ya se imprimió; se corta la secuencia para no encadenar datos incompletos
 } finally {
   await browser.close()
 }
 summary()
-void serviceClient

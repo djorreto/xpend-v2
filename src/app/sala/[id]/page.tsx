@@ -44,6 +44,7 @@ export default function SalaDetailPage() {
   const [offers, setOffers] = useState<AdhesionOffer[]>([])
   const [lineName, setLineName] = useState('')
   const [inviteEmail, setInviteEmail] = useState<Record<string, string>>({})
+  const [supplierQuery, setSupplierQuery] = useState('')
   const [accessLink, setAccessLink] = useState<string | null>(null)
   const [submissions, setSubmissions] = useState<{ supplier_id: string; status: string; version: number }[]>([])
   const [questions, setQuestions] = useState<{ id: string; supplier_id: string; question: string; answer: string | null; visibility: string }[]>([])
@@ -440,7 +441,8 @@ export default function SalaDetailPage() {
                 <Button type="button" variant="outline" onClick={createSupplier}>Agregar e invitar</Button>
               </div>
               <div className="space-y-2 pt-2">
-                {catalog.filter(supplier => !invitedIds.has(supplier.id)).slice(0, 8).map(supplier => (
+                <Input placeholder="Buscar proveedor del directorio" aria-label="Buscar proveedor del directorio" value={supplierQuery} onChange={input => setSupplierQuery(input.target.value)} />
+                {catalog.filter(supplier => !invitedIds.has(supplier.id) && supplier.fantasy_name.toLowerCase().includes(supplierQuery.trim().toLowerCase())).slice(0, 8).map(supplier => (
                   <div key={supplier.id} className="flex gap-2">
                     <Input
                       type="email"
