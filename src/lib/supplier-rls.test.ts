@@ -48,6 +48,7 @@ const INTERNAL_TABLES = [
   'si_plan_items', 'si_procurement_plans', 'si_uploads', 'si_spend_lines', 'si_spend_groups',
   'si_spend_decisions', 'si_categories', 'si_learning_rules',
   'spend_data', 'spend_closures', 'reports', 'report_templates', 'service_invoices',
+  'licitacion_documents',
 ]
 
 async function count(client: SupabaseClient, table: string) {
@@ -81,6 +82,7 @@ test('un proveedor no lee ni escribe RFx internos ni oportunidades de gasto; los
   const { id: _id, created_at: _c, updated_at: _u, ...rfxBase } = baseRfx.data as Record<string, unknown>
   const rfxPayload = { ...rfxBase, project_code: `${tag}-rfx`, title: `${tag} rfx` }
   let uploadId: string | undefined
+  let documentId: string | undefined
   let planId: string | undefined
   try {
     // Datos de gasto de la compradora (se crean con service role y se borran al final).
@@ -98,6 +100,15 @@ test('un proveedor no lee ni escribe RFx internos ni oportunidades de gasto; los
       plan_id: planId, company_id: companyId, category: tag, total_spend: 1000, supplier_count: 1, strategy: 'compete',
     }).select('id').single()
     assert.equal(item.error, null, item.error?.message)
+
+    // La licitación debe ser una que el proveedor SÍ puede ver (invitado): la fuga ocurre sobre sus documentos internos.
+    const licitacion = await supplier.from('licitaciones').select('id').limit(1).single()
+    assert.equal(licitacion.error, null, 'el proveedor de prueba no tiene una licitación invitada')
+    const document = await admin.from('licitacion_documents').insert({
+      licitacion_id: licitacion.data?.id, name: `${tag}.pdf`, file_path: `rls/${tag}.pdf`, file_size: 1, mime_type: 'application/pdf',
+    }).select('id').single()
+    assert.equal(document.error, null, document.error?.message)
+    documentId = document.data?.id
 
     // 1. El proveedor no ve nada de las tablas internas.
     const leaks: string[] = []
@@ -128,8 +139,13 @@ test('un proveedor no lee ni escribe RFx internos ni oportunidades de gasto; los
     const deleteItem = await supplier.from('si_plan_items').delete().eq('plan_id', planId as string).select('id')
     assert.equal(deleteItem.data?.length ?? 0, 0, 'el proveedor pudo borrar oportunidades')
 
+    const docUpdate = await supplier.from('licitacion_documents').update({ name: 'manipulado' }).eq('id', documentId as string).select('id')
+    assert.equal(docUpdate.data?.length ?? 0, 0, 'el proveedor pudo editar documentos de licitación')
+
     // 4. Los perfiles internos conservan su acceso.
     for (const [label, client] of [['comprador (admin)', buyer], ['gerente', manager], ['consulta', viewer]] as const) {
+      const docs = await client.from('licitacion_documents').select('id').eq('id', documentId as string)
+      assert.equal(docs.data?.length, 1, `${label} perdió acceso a licitacion_documents`)
       assert.ok(await count(client, 'rfx_projects') > 0, `${label} perdió acceso a rfx_projects`)
       const items = await client.from('si_plan_items').select('id').eq('category', tag)
       assert.equal(items.data?.length, 1, `${label} perdió acceso a si_plan_items`)
@@ -154,6 +170,7 @@ test('un proveedor no lee ni escribe RFx internos ni oportunidades de gasto; los
     if (planId) await admin.from('si_plan_items').delete().eq('plan_id', planId)
     if (planId) await admin.from('si_procurement_plans').delete().eq('id', planId)
     if (uploadId) await admin.from('si_uploads').delete().eq('id', uploadId)
+    if (documentId) await admin.from('licitacion_documents').delete().eq('id', documentId)
     await admin.from('rfx_projects').delete().like('project_code', `${tag}%`)
   }
 })
