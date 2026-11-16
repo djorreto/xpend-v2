@@ -12,6 +12,10 @@
 --   * los perfiles internos siguen exactamente como estaban.
 -- No toca datos ni esquema de tablas. Es idempotente.
 --
+-- licitacion_documents: sus políticas leen por empresa (cualquier perfil con el company_id de la
+-- licitación). El código no la usa para proveedores; los documentos de bases que ven los proveedores
+-- salen del bucket `documents` con private.supplier_may_read_tender (por invitación), no de esta tabla.
+--
 -- Rollback (solo si fuera necesario):
 --   drop policy if exists <tabla>_no_supplier on public.<tabla>;   -- para cada tabla de la lista
 
@@ -43,7 +47,8 @@ begin
     'rfx_audit_log', 'rfx_templates', 'rfx_template_variables', 'rfx_company_policies',
     'si_plan_items', 'si_procurement_plans', 'si_uploads', 'si_spend_lines', 'si_spend_groups',
     'si_spend_decisions', 'si_categories', 'si_learning_rules',
-    'spend_data', 'spend_closures', 'reports', 'report_templates', 'service_invoices'
+    'spend_data', 'spend_closures', 'reports', 'report_templates', 'service_invoices',
+    'licitacion_documents'
   ]
   loop
     -- Si una tabla no existe en este entorno, se omite en lugar de abortar la migración.
