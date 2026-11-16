@@ -214,7 +214,7 @@ try {
   check('API proveedor: no lee planes, contratos, ahorros, gasto ni adjudicaciones', supplierView.every(result => (result.count || 0) === 0))
   const viewerWrite = await clients.viewer.from('sourcing_plans').insert({ company_id: companyId, plan_year: year, quarter: 'Q1', initiative_type: 'licitacion', title: 'No debería crearse', status: 'planned' })
   check('API viewer: no puede crear iniciativas', Boolean(viewerWrite.error))
-  const buyerAssign = await clients.buyer1.rpc('assign_category', { p_category: creds.categoryIds.mant, p_manager: creds.ids.buyer1, p_backup: null, p_team: null })
+  const buyerAssign = await clients.buyer1.rpc('assign_category', { p_category: creds.categoryIds.mant, p_manager: creds.ids.buyer1, p_backup: creds.ids.buyer2, p_team: null, p_reason: 'Prueba de permisos' })
   check('API comprador: no puede reasignar categorías', Boolean(buyerAssign.error), buyerAssign.error?.message)
   const pendingId = data.validations.find(v => v.status === 'declared')?.id
   const selfValidate = await clients.buyer3.rpc('validate_savings', { p_validation: pendingId, p_validated: 1, p_method: 'Intento de autovalidación', p_note: null })

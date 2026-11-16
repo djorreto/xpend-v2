@@ -19,7 +19,8 @@ Rama de trabajo: `fase-1/flujo-inicial`. Cada etapa es un commit.
 | 3 | Plan anual (borrador/comprometido), metas, siete hitos S2C | `20261117100000` | Publicada |
 | 4 | Control de ahorros: declarado, validado, realizado, evidencia, auditoría | `20261117200000` | Publicada |
 | 5 | Gestión del equipo y «Mi portafolio» | sin migración | Publicada |
-| 12 | Demostración reproducible (solo local) | sin migración | Local, documentada en `docs/demo/GUION-DEMO.md` |
+| 12 | Demostración reproducible | sin migración | Local y producción, ver «Etapa 6» abajo |
+| 6 | Super Admin multivista, selector de empresa y empresa demo | `20261118000000` (`etapa6_demo_tenants`) | Publicada (`417619d`) |
 
 ## Migraciones aplicadas en Cloud (todas aditivas, sin borrar ni reescribir datos)
 
@@ -55,3 +56,29 @@ Aplicadas con `apply_migration` (una transacción cada una) en este orden: `etap
 - La evidencia de ahorros la sube solo un gerente o administrador; el viewer no ve evidencia ni auditoría.
 - Existe la declaración manual (sin comité), marcada «Manual, no pasó por comité».
 - No se mide el consumo de modelos de Cursor desde el entorno.
+
+## Etapa 6 — Cierre de la V1 comercial (Super Admin multivista y empresa demo)
+
+- Código: commit `417619d` en `main` y `fase-1/flujo-inicial`. Producción `xpend-v3-cf3bgttj2` (www.xpend.cl). Rollback inmediato: promover `xpend-v3-pkjzr8g01`
+  (compatible: la migración es aditiva). Los commits posteriores solo tocan scripts de demostración y documentación.
+- Migración aditiva `etapa6_demo_tenants`: tablas `tenant_access` (lista blanca por usuario) y `tenant_switch_log` (inmutable), ambas con RLS, y funciones
+  `list_my_tenants()` y `switch_tenant(uuid)` (`SECURITY DEFINER`, `search_path` fijo, sin acceso para `anon`). No se reescribió ninguna política de RLS.
+- Perspectivas del Inicio: Gerencia, Mi trabajo y Administración (`?vista=`, recordada en el navegador). Cambian la vista, no la identidad ni los permisos.
+- Selector de empresa (`TenantBar`): visible solo para quien tiene más de una empresa en `tenant_access`; la empresa demo se marca «DEMO».
+- Empresa «XPEND Company S.A. (DEMO)»: separada de la real; 16 perfiles, 6 categorías, 18 iniciativas, 12 licitaciones, 5 contratos, 39 proveedores,
+  902 líneas de gasto, 4 validaciones de ahorro y 14 reconocimientos, 32 archivos ficticios. IA externa apagada.
+- Aislamiento verificado antes y después de la carga: la empresa real conserva exactamente sus registros (4 perfiles, 3 licitaciones, 5 iniciativas, 2 proveedores,
+  4 RFx), la Super Admin sigue con su empresa de origen, `tenant_access` tiene solo dos filas y `tenant_switch_log` está vacío.
+- Verificación: local 157/157 pruebas unitarias y de base de datos, 122/122 UX, flujos A/T/B 37/37, QA 65/65, ANA 11/11. Producción: QA 50/50 y ANA 11/11 con cuentas ficticias.
+- Costo incremental: USD 0 (mismo Supabase y Vercel; sin Groq para la demo).
+- Guion: `docs/demo/GUION-DEMO.md`. Reconstrucción y reglas de borrado: `docs/demo/RECONSTRUIR-DEMO.md`.
+
+### Limitaciones de la Etapa 6
+
+- La interfaz de la Super Admin en producción no pudo recorrerse por mí (no hay credenciales suyas); sí se probó con simulación de sus permisos en la base
+  (`list_my_tenants`) y completa en local con una Super Admin de prueba.
+- `switch_tenant` mueve de forma persistente el puntero de empresa activa de la Super Admin hasta que vuelva a elegir su empresa; al iniciar sesión sigue en su empresa de origen.
+- No hay reinicio automático de la demo en producción (solo procedimiento manual con confirmación).
+- ANA no responde sobre ahorros negociados/realizados, procesos atrasados ni iniciativas del equipo (no lee esos módulos todavía).
+- El caso A de producción tiene un evento auditado extra de «evaluación reabierta» (se reabrió para corregir un puntaje que no se guardó).
+- Durante el ensayo local, una empresa demo sin el interruptor correcto de IA externa produjo una llamada al modelo con datos ficticios (unos 280 tokens, solo local); corregido y verificado en producción (`external_ai = {"enabled": false}`).

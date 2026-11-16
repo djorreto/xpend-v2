@@ -7,7 +7,7 @@ import { existsSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { chromium } from 'playwright'
-import { DEMO_DIR, TARGET, addDays, loadCredentials, today } from './common.mjs'
+import { DEMO_DIR, TARGET, addDays, loadCredentials, serviceClient, today } from './common.mjs'
 import { FLOWS, INITIATIVES } from './dataset.mjs'
 import { BASE, body, check, login, setReactValue, shot, summary } from './browser.mjs'
 
@@ -72,7 +72,20 @@ async function runCase(browser, code) {
   let awardId = ''
   let contractId = ''
   console.log(`\n=== Caso ${code}: ${title} ===`)
+  // Reanudación: si la sala ya abrió sobres (una ejecución anterior se cortó), se retoma desde la evaluación sin repetir nada.
+  const existingEvent = (await serviceClient.from('offer_events').select('id, offers_opened_at').eq('company_id', creds.companyId).eq('licitacion_id', licitacionId).maybeSingle()).data
+  const resume = Boolean(existingEvent?.offers_opened_at)
+  let andrea
+  let ap
   try {
+    if (resume) {
+      console.log('Se reanuda desde la evaluación: la sala ya tiene los sobres abiertos.')
+      eventId = existingEvent.id
+      andrea = await login(browser, creds.users.admin)
+      ap = andrea.page
+      lastPage = ap
+    }
+    if (!resume) {
     // 1) La responsable abre su iniciativa y prepara las bases.
     current = `${code}/bases`
     const owner = await login(browser, creds.users[spec.responsible])
@@ -90,8 +103,8 @@ async function runCase(browser, code) {
 
     // 2) La administradora publica la licitación y abre la sala de ofertas.
     current = `${code}/licitación y sala`
-    const andrea = await login(browser, creds.users.admin)
-    const ap = andrea.page
+    andrea = await login(browser, creds.users.admin)
+    ap = andrea.page
     lastPage = ap
     await ap.goto(`${BASE}/licitaciones/new?planId=${planId}`, { waitUntil: 'domcontentloaded' })
     await ap.locator('#id').fill(licitacionId)
@@ -138,29 +151,48 @@ async function runCase(browser, code) {
     await ap.getByRole('button', { name: 'Abrir sobres' }).waitFor()
     await ap.getByRole('button', { name: 'Abrir sobres' }).click()
     await ap.getByText('Sobres abiertos').waitFor()
+    }
 
     // 4) Evaluación y recomendación.
     current = `${code}/evaluación`
-    await ap.goto(`${BASE}/sala/${eventId}/evaluacion`, { waitUntil: 'domcontentloaded' })
-    await ap.getByRole('button', { name: 'Guardar modelo' }).click()
-    await ap.getByText('Modelo guardado').waitFor()
-    await ap.locator('#criterion-name').fill('Experiencia')
-    await ap.locator('#criterion-weight').fill('100')
-    await ap.getByRole('button', { name: 'Agregar criterio' }).click()
-    await ap.getByText('Experiencia · técnico 100%').waitFor()
-    const blockOf = name => ap.locator('div.space-y-2').filter({ has: ap.locator('p.font-medium', { hasText: name }) })
-    for (const supplier of offering) {
-      const [score, reason] = spec.scores[supplier.key]
-      await setReactValue(blockOf(supplier.name).locator('input[placeholder="0 a 100"]'), score)
-      await blockOf(supplier.name).locator('input[placeholder="Justificación"]').fill(reason)
-      await ap.waitForTimeout(800)
+    await ap.goto(`${BASE}/sala/${eventId}/evaluacion`, { waitUntil: 'networkidle' })
+    const recommended = async () => (await ap.getByRole('button', { name: 'Preparar comité' }).count()) > 0
+    if (!(await recommended())) {
+      // Si una ejecución anterior cerró la evaluación sin todos los puntajes, se usa la reapertura excepcional del producto (queda en la auditoría).
+      if (await ap.getByRole('button', { name: 'Reabrir evaluación' }).count()) {
+        await ap.getByRole('button', { name: 'Reabrir evaluación' }).click()
+        await ap.getByRole('button', { name: 'Cerrar evaluación' }).waitFor()
+      }
+      if (!(await ap.getByText('Experiencia · técnico 100%').count())) {
+        await ap.getByRole('button', { name: 'Guardar modelo' }).click()
+        await ap.getByText('Modelo guardado').waitFor()
+        await ap.locator('#criterion-name').fill('Experiencia')
+        await ap.locator('#criterion-weight').fill('100')
+        await ap.getByRole('button', { name: 'Agregar criterio' }).click()
+        await ap.getByText('Experiencia · técnico 100%').waitFor()
+      }
+      await ap.waitForLoadState('networkidle')
+      await ap.waitForTimeout(2000)
+      const blockOf = name => ap.locator('div.space-y-2').filter({ has: ap.locator('p.font-medium', { hasText: name }) })
+      // Los puntajes viven en el formulario hasta cerrar la evaluación: se escriben y se leen de vuelta antes de cerrar.
+      for (let attempt = 1; attempt <= 5; attempt += 1) {
+        for (const supplier of offering) {
+          const [score, reason] = spec.scores[supplier.key]
+          await setReactValue(blockOf(supplier.name).locator('input[placeholder="0 a 100"]'), score)
+          await blockOf(supplier.name).locator('input[placeholder="Justificación"]').fill(reason)
+        }
+        await ap.waitForTimeout(1200)
+        const saved = await Promise.all(offering.map(async supplier => (await blockOf(supplier.name).locator('input[placeholder="0 a 100"]').inputValue()) === spec.scores[supplier.key][0]))
+        if (saved.every(Boolean)) break
+        if (attempt === 5) throw new Error('Los puntajes no quedaron en el formulario')
+      }
+      await ap.getByRole('button', { name: 'Cerrar evaluación' }).click()
+      await ap.getByText('Evaluación cerrada').waitFor()
+      await ap.getByPlaceholder('Justificación técnica').fill(`${spec.recommend} obtiene el mejor puntaje técnico.`)
+      await ap.getByPlaceholder('Justificación económica').fill(`La oferta de ${spec.recommend} es conveniente frente a la línea base del proceso.`)
+      await ap.getByRole('button', { name: `Recomendar ${spec.recommend}` }).click()
+      await ap.getByText('Recomendación lista').waitFor()
     }
-    await ap.getByRole('button', { name: 'Cerrar evaluación' }).click()
-    await ap.getByText('Evaluación cerrada').waitFor()
-    await ap.getByPlaceholder('Justificación técnica').fill(`${spec.recommend} obtiene el mejor puntaje técnico.`)
-    await ap.getByPlaceholder('Justificación económica').fill(`La oferta de ${spec.recommend} es conveniente frente a la línea base del proceso.`)
-    await ap.getByRole('button', { name: `Recomendar ${spec.recommend}` }).click()
-    await ap.getByText('Recomendación lista').waitFor()
     check(`${code}: evaluación cerrada y recomendación emitida`, true)
     await shot(ap, `flujo-${code}-recomendacion`)
     if (spec.stopAfter) {
