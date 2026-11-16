@@ -11,7 +11,9 @@
     "test:fase0:e2e": "node scripts/fase-0-e2e.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:live": "node --test src/lib/live/*.live.ts"
+    "test:live": "node --test src/lib/live/*.live.ts",
+    "demo:seed": "node scripts/demo/seed.mjs",
+    "demo:flow": "node scripts/demo/flow.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.53",

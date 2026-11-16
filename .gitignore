@@ -53,3 +53,6 @@ supabase/.branches
 supabase/.env
 
 
+
+# demostración local (credenciales generadas)
+/.demo/

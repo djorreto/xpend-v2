@@ -44,7 +44,7 @@ export async function loadSavings(
       .eq('company_id', companyId)
       .order('awarded_at', { ascending: false })
       .limit(500),
-    supabase.from('sourcing_plan_licitaciones').select('licitacion_id, plan:sourcing_plans(id, title, category_id, responsible_user_id, backup_user_id, team_id)').eq('company_id', companyId).limit(1000),
+    supabase.from('sourcing_plan_licitaciones').select('licitacion_id, plan:sourcing_plans(id, company_id, title, category_id, responsible_user_id, backup_user_id, team_id)').limit(2000),
     supabase
       .from('savings_validations')
       .select('id, award_id, licitacion_id, sourcing_plan_id, category_id, owner_user_id, team_id, source_kind, currency, baseline_amount, awarded_amount, declared_amount, nature, recurrence, start_date, end_date, validated_amount, method, status, declared_by, declared_at, declare_note, validated_by, validated_at, review_note')
@@ -62,11 +62,11 @@ export async function loadSavings(
     supabase.from('licitaciones').select('id, name, baseline_amount, baseline_currency, awarded_amount').eq('company_id', companyId).not('baseline_amount', 'is', null).not('awarded_amount', 'is', null).limit(500),
   ])
 
-  type PlanRef = { id: string; title: string | null; category_id: string | null; responsible_user_id: string | null; backup_user_id: string | null; team_id: string | null }
+  type PlanRef = { id: string; company_id: string; title: string | null; category_id: string | null; responsible_user_id: string | null; backup_user_id: string | null; team_id: string | null }
   const planByLicitacion = new Map<string, PlanRef>()
   for (const link of links.data || []) {
     const plan = one(link.plan as never) as PlanRef | null
-    if (plan && link.licitacion_id && !planByLicitacion.has(link.licitacion_id)) planByLicitacion.set(link.licitacion_id, plan)
+    if (plan && plan.company_id === companyId && link.licitacion_id && !planByLicitacion.has(link.licitacion_id)) planByLicitacion.set(link.licitacion_id, plan)
   }
 
   const awards: AwardRow[] = (awardRows.data || []).map(row => {
