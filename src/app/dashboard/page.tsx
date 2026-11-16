@@ -340,7 +340,7 @@ export default function InicioPage() {
 
           <BlockCard
             title="Próximas fechas"
-            description={`Fechas cargadas en licitaciones, salas, contratos e iniciativas${supervisor || readOnly ? '' : ' tuyas'}, próximos 45 días.`}
+            description={`Fechas cargadas en licitaciones, salas, iniciativas${can(role, 'readContracts') ? ' y contratos' : ''}${supervisor || readOnly ? '' : ' tuyas'}, próximos 45 días.`}
           >
             <ItemList
               items={dates.map(item => ({ id: item.id, title: `${formatDate(item.date)} · ${item.label}`, detail: item.title, href: item.href }))}

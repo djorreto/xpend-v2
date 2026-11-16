@@ -10,7 +10,8 @@
     "test": "node --test src/lib/*.test.ts",
     "test:fase0:e2e": "node scripts/fase-0-e2e.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:live": "node --test src/lib/live/*.live.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.53",

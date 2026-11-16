@@ -273,46 +273,48 @@ test('ANA lee los registros locales, cita el contrato y no llama a un modelo', a
   `)
 })
 
-test('Groq narra un contrato ficticio y registra los tokens', async () => {
-  if (!process.env.GROQ_API_KEY) throw new Error('Define GROQ_API_KEY para la prueba local')
+test('con un modelo simulado, ANA registra tokens y no cambia la evidencia ni el puntaje (sin llamada real)', async () => {
   const keys = localKeys()
   const buyer = createClient(keys.API_URL, keys.ANON_KEY, { auth: { persistSession: false } })
   const login = await buyer.auth.signInWithPassword({ email: 'buyer.fase0@xpend.test', password: buyerPassword() })
   assert.equal(login.error, null)
   const buyerId = login.data.user?.id
   const { data: profile } = await buyer.from('profiles').select('company_id').eq('id', buyerId).single()
-  const created = await buyer.from('contracts').insert({
-    company_id: profile?.company_id,
-    code: `CTR-ANA-FICT-${Date.now()}`,
-    name: 'Contrato ficticio',
-    origin: 'upload',
-    status: 'draft',
-    created_by: buyerId,
-  }).select('id').single()
+  const created = await buyer.from('contracts').insert({ company_id: profile?.company_id, code: `CTR-ANA-MOCK-${Date.now()}`, name: 'Contrato ficticio', origin: 'upload', status: 'draft', created_by: buyerId }).select('id').single()
   assert.equal(created.error, null)
-  await buyer.from('contract_versions').insert({
-    contract_id: created.data?.id,
-    company_id: profile?.company_id,
-    version: 1,
-    status: 'draft',
-    body: 'Texto ficticio. Taller Demo debe avisar con 30 dias de anticipacion para no renovar el servicio de prueba.',
-    created_by: buyerId,
-  })
+  await buyer.from('contract_versions').insert({ contract_id: created.data?.id, company_id: profile?.company_id, version: 1, status: 'draft', body: 'Texto ficticio. Taller Demo debe avisar con 30 dias de anticipacion para no renovar el servicio de prueba.', created_by: buyerId })
+  let calls = 0
   try {
-    const result = await runAna(buyer, '¿Con cuánta anticipación hay que avisar?', {
-      module: 'contrato',
-      recordId: created.data?.id,
-      label: 'Contrato ficticio',
-    }, { useModel: true })
+    const result = await runAna(buyer, '¿Con cuánta anticipación hay que avisar?', { module: 'contrato', recordId: created.data?.id, label: 'Contrato ficticio' }, {
+      useModel: true,
+      readUsage: async () => ({ companyCalls: 0, userCalls: 0, companyTokens: 0 }),
+      complete: async input => {
+        calls += 1
+        assert.match(input.prompt, /EVIDENCIA AUTORIZADA/)
+        return { text: 'Se debe avisar con 30 días de anticipación.', inputTokens: 120, outputTokens: 20 }
+      },
+    })
     assert.equal(result.error, undefined)
+    assert.equal(calls, 1)
     assert.equal(result.answer.modelCalled, true)
     assert.match(result.answer.text, /30/)
-    const { data: row } = await buyer.from('ana_interactions').select('model, tokens, input_tokens, output_tokens, model_called').eq('id', result.interactionId).single()
-    assert.equal(row?.model_called, true)
-    assert.equal(row?.model, 'qwen/qwen3.8-27b')
-    assert.equal(Number(row?.tokens) > 0, true)
-    assert.equal(Number(row?.tokens), Number(row?.input_tokens) + Number(row?.output_tokens))
+    const { data: row } = await buyer.from('ana_interactions').select('model_called, tokens, input_tokens, output_tokens').eq('id', result.interactionId).single()
+    assert.deepEqual([row?.model_called, Number(row?.tokens), Number(row?.input_tokens), Number(row?.output_tokens)], [true, 140, 120, 20])
   } finally {
     await buyer.from('contracts').delete().eq('id', created.data?.id)
   }
+})
+
+test('si se agotó la cuota diaria, ANA no llama al modelo y lo dice', async () => {
+  const keys = localKeys()
+  const buyer = createClient(keys.API_URL, keys.ANON_KEY, { auth: { persistSession: false } })
+  assert.equal((await buyer.auth.signInWithPassword({ email: 'buyer.fase0@xpend.test', password: buyerPassword() })).error, null)
+  let calls = 0
+  const result = await runAna(buyer, '¿Qué contratos hay?', { module: 'contrato', label: 'Contratos' }, {
+    useModel: true,
+    readUsage: async () => ({ companyCalls: 999, userCalls: 999, companyTokens: 0 }),
+    complete: async () => { calls += 1; return { text: 'no debería llamarse', inputTokens: 1, outputTokens: 1 } },
+  })
+  assert.equal(calls, 0)
+  assert.equal(result.answer.modelCalled, false)
 })

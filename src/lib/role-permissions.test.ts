@@ -95,8 +95,7 @@ async function tryInsert(admin: SupabaseClient, client: SupabaseClient, probe: P
 
 const ROLES = ['admin', 'manager', 'analyst', 'viewer'] as const
 
-// Defectos de RLS ya existentes (no introducidos por Etapa 1) que se informaron y esperan autorización para corregirse en Cloud.
-const KNOWN_DB_GAPS = ['viewer:createRfx']
+
 
 test('la interfaz solo ofrece a cada rol acciones de creación que la base de datos acepta', async () => {
   const { admin, clients, companyId } = await setup()
@@ -110,12 +109,12 @@ test('la interfaz solo ofrece a cada rol acciones de creación que la base de da
       if (allowedByDb && !shownByApp) gaps.push(`${role}:${probe.capability}`)
     }
   }
-  // La base puede ser más permisiva que la interfaz solo donde está documentado (ver los `todo` de abajo).
-  assert.deepEqual(gaps.filter(gap => !KNOWN_DB_GAPS.includes(gap)), [])
+  // La base nunca es más permisiva que la interfaz: el viewer es de solo lectura y los demás roles coinciden.
+  assert.deepEqual(gaps, [])
   await admin.from('contracts').delete().like('code', `${MARK}%`)
 })
 
-test('el perfil de consulta lee adjudicaciones y decisiones; ningún perfil interno ve de más ni de menos', async () => {
+test('el perfil de consulta lee adjudicaciones y decisiones como el resto de perfiles internos', async () => {
   const { clients } = await setup()
   const counts: Record<string, number[]> = {}
   for (const role of ROLES) {
@@ -132,17 +131,73 @@ test('el perfil de consulta lee adjudicaciones y decisiones; ningún perfil inte
   assert.deepEqual(counts.manager, counts.admin)
 })
 
-test('el perfil de consulta no puede crear RFx directamente', { todo: 'Defecto RLS conocido: rfx_projects_insert_company solo exige la empresa. Propuesta en docs/etapa1/propuesta-rls-roles.sql' }, async () => {
+const WRITE_TABLES = [
+  'rfx_projects', 'rfx_templates', 'rfx_company_policies', 'report_templates', 'reports', 'service_invoices',
+  'si_categories', 'si_learning_rules', 'si_plan_items', 'si_procurement_plans', 'si_spend_decisions',
+  'si_spend_groups', 'si_spend_lines', 'si_uploads', 'spend_closures', 'spend_data', 'procurement_dossiers',
+  'sourcing_plans', 'licitaciones', 'offer_events', 'suppliers', 'contracts', 'contract_versions',
+]
+
+test('el perfil de consulta no escribe en ninguna tabla de negocio: crear, editar y borrar quedan rechazados', async () => {
   const { admin, clients, companyId } = await setup()
-  const probe = PROBES.find(item => item.capability === 'createRfx')!
-  assert.equal(await tryInsert(admin, clients.viewer, probe, companyId, `viewer-todo-${Date.now()}`), false)
+  for (const table of WRITE_TABLES) {
+    const inserted = await clients.viewer.from(table).insert({ company_id: companyId })
+    assert.ok(inserted.error, `${table}: el viewer pudo insertar`)
+    assert.notEqual(inserted.error?.code, '23502', `${table}: RLS dejó pasar la fila hasta las restricciones de columna`)
+    const { data: any } = await admin.from(table).select('*').limit(1)
+    const row = any?.[0] as Record<string, unknown> | undefined
+    if (!row?.id) continue
+    const updated = await clients.viewer.from(table).update({ id: row.id }).eq('id', row.id as string).select('id')
+    assert.equal(updated.data?.length ?? 0, 0, `${table}: el viewer pudo editar`)
+    const deleted = await clients.viewer.from(table).delete().eq('id', row.id as string).select('id')
+    assert.equal(deleted.data?.length ?? 0, 0, `${table}: el viewer pudo borrar`)
+    const stillThere = await admin.from(table).select('id').eq('id', row.id as string)
+    assert.equal(stillThere.data?.length, 1, `${table}: la fila ya no existe`)
+  }
 })
 
-test('el perfil de consulta no puede borrar contratos directamente', { todo: 'Defecto RLS conocido: las políticas ALL de contratos no restringen DELETE por rol. Propuesta en docs/etapa1/propuesta-rls-roles.sql' }, async () => {
+test('el perfil de consulta no lee contratos ni sus documentos; los demás perfiles internos sí', async () => {
+  const { admin, clients } = await setup()
+  const contractTables = ['contracts', 'contract_versions', 'contract_documents', 'contract_extractions', 'contract_findings', 'contract_clauses', 'contract_templates', 'contract_policies', 'contract_reviews']
+  for (const table of contractTables) {
+    const viewer = await clients.viewer.from(table).select('*', { count: 'exact', head: true })
+    assert.equal(viewer.error, null, table)
+    assert.equal(viewer.count ?? 0, 0, `${table}: el viewer lee filas`)
+  }
+  const { count: contracts } = await admin.from('contracts').select('*', { count: 'exact', head: true })
+  assert.ok((contracts ?? 0) > 0, 'debe haber contratos para que la prueba sea significativa')
+  for (const role of ['admin', 'manager', 'analyst']) {
+    const seen = await clients[role].from('contracts').select('*', { count: 'exact', head: true })
+    assert.equal(seen.count, contracts, `${role} debe seguir viendo los contratos`)
+  }
+})
+
+test('storage: el perfil de consulta no sube ni borra archivos y no lee documentos de contratos', async () => {
   const { admin, clients, companyId } = await setup()
-  const probe = PROBES.find(item => item.capability === 'writeContracts')!
-  const { data } = await admin.from('contracts').insert(probe.row(companyId, `del-${Date.now()}`)).select('id').single()
-  const { data: deleted } = await clients.viewer.from('contracts').delete().eq('id', data!.id).select('id')
-  await admin.from('contracts').delete().eq('id', data!.id)
-  assert.equal(deleted?.length ?? 0, 0)
+  const path = `${companyId}/contratos/${MARK}/${Date.now()}-contrato.txt`
+  const seeded = await admin.storage.from('documents').upload(path, new Blob(['contrato ficticio']), { upsert: true })
+  assert.equal(seeded.error, null)
+  try {
+    assert.ok((await clients.viewer.storage.from('documents').download(path)).error, 'el viewer descargó un contrato')
+    assert.equal((await clients.admin.storage.from('documents').download(path)).error, null, 'el administrador debe poder descargarlo')
+    const upload = await clients.viewer.storage.from('documents').upload(`${companyId}/rfx/${MARK}-${Date.now()}.txt`, new Blob(['x']))
+    assert.ok(upload.error, 'el viewer subió un archivo')
+    const removed = await clients.viewer.storage.from('documents').remove([path])
+    assert.equal(removed.data?.length ?? 0, 0, 'el viewer borró un archivo')
+    assert.equal((await admin.storage.from('documents').download(path)).error, null, 'el archivo debe seguir existiendo')
+  } finally {
+    await admin.storage.from('documents').remove([path])
+  }
+})
+
+test('el perfil de consulta conserva lo que usa: marcar sus notificaciones y consultar ANA', async () => {
+  const { clients } = await setup()
+  const notifications = await clients.viewer.from('notifications').select('id').limit(1)
+  assert.equal(notifications.error, null)
+  const me = (await clients.viewer.auth.getUser()).data.user!.id
+  const profile = await clients.viewer.from('profiles').select('id, role').eq('id', me).single()
+  const selfUpdate = await clients.viewer.from('profiles').update({ role: 'admin' }).eq('id', me).select('role')
+  assert.ok(selfUpdate.error || selfUpdate.data?.length === 0, 'un viewer no puede subirse el rol')
+  assert.equal(profile.error, null)
+  assert.equal(profile.data?.role, 'viewer')
 })

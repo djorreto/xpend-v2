@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabase'
+import { can } from '@/lib/navigation'
 import { templatePlaceholders, templateStructure } from '@/lib/rfx-sections'
 
 export const runtime = 'nodejs'
@@ -14,8 +15,9 @@ export async function POST() {
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   if (!supabaseAdmin) return NextResponse.json({ error: 'Falta la service role' }, { status: 503 })
 
-  const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', session.user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('company_id, role').eq('id', session.user.id).single()
   if (!profile?.company_id) return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
+  if (!can(profile.role, 'createRfx')) return NextResponse.json({ error: 'Tu perfil no puede preparar bases.' }, { status: 403 })
 
   const { data: existing } = await supabaseAdmin
     .from('rfx_templates')
