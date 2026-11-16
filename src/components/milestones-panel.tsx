@@ -114,7 +114,7 @@ export function MilestonesPanel({ plan, role, userId }: { plan: PlanLite; role: 
                   <th className="py-2 pr-3 font-medium">Hito</th>
                   <th className="py-2 pr-3 font-medium">Original</th>
                   <th className="py-2 pr-3 font-medium">Comprometida</th>
-                  <th className="py-2 pr-3 font-medium">Real</th>
+                  <th className="py-2 pr-3 font-medium">Fecha real</th>
                   <th className="py-2 pr-3 font-medium">Estado</th>
                   <th className="py-2 pr-3 font-medium">Desviación</th>
                   <th className="py-2 pr-3 font-medium">Causa</th>

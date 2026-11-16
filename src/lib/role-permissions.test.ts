@@ -157,14 +157,14 @@ test('el perfil de consulta no escribe en ninguna tabla de negocio: crear, edita
 })
 
 test('el perfil de consulta no lee contratos ni sus documentos; los demás perfiles internos sí', async () => {
-  const { admin, clients } = await setup()
+  const { admin, clients, companyId } = await setup()
   const contractTables = ['contracts', 'contract_versions', 'contract_documents', 'contract_extractions', 'contract_findings', 'contract_clauses', 'contract_templates', 'contract_policies', 'contract_reviews']
   for (const table of contractTables) {
     const viewer = await clients.viewer.from(table).select('*', { count: 'exact', head: true })
     assert.equal(viewer.error, null, table)
     assert.equal(viewer.count ?? 0, 0, `${table}: el viewer lee filas`)
   }
-  const { count: contracts } = await admin.from('contracts').select('*', { count: 'exact', head: true })
+  const { count: contracts } = await admin.from('contracts').select('*', { count: 'exact', head: true }).eq('company_id', companyId)
   assert.ok((contracts ?? 0) > 0, 'debe haber contratos para que la prueba sea significativa')
   for (const role of ['admin', 'manager', 'analyst']) {
     const seen = await clients[role].from('contracts').select('*', { count: 'exact', head: true })

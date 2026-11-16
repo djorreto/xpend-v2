@@ -140,8 +140,8 @@ const routesByRole = {
 }
 
 try {
-  const rfxId = await borrow('rfx_projects', 'status=eq.draft&archived_at=is.null&order=updated_at.desc')
-  const planId = await borrow('sourcing_plans', 'status=eq.planned&is_spot=eq.false&plan_year=eq.2026&order=updated_at.desc')
+  const rfxId = await borrow('rfx_projects', `company_id=eq.${manager.company_id}&status=eq.draft&archived_at=is.null&order=updated_at.desc`)
+  const planId = await borrow('sourcing_plans', `company_id=eq.${manager.company_id}&status=eq.planned&is_spot=eq.false&plan_year=eq.2026&order=updated_at.desc`)
   check('datos locales asignados al comprador', Boolean(rfxId && planId), `rfx ${rfxId ? 'sí' : 'no'} · iniciativa ${planId ? 'sí' : 'no'}`)
 
   for (const role of ['admin', 'manager', 'analyst', 'viewer']) {
@@ -353,8 +353,8 @@ try {
 
   {
     const [lic] = await rest('licitaciones?select=id&id=eq.LIC-F1B-MANT')
-    const [sala] = await rest('offer_events?select=id&order=created_at.desc&limit=1')
-    const [supplier] = await rest('suppliers?select=id&limit=1')
+    const [sala] = await rest(`offer_events?select=id&company_id=eq.${manager.company_id}&order=created_at.desc&limit=1`)
+    const [supplier] = await rest(`suppliers?select=id&company_id=eq.${manager.company_id}&limit=1`)
     const writeButtons = { lic: /^(Abrir sala|Editar|Eliminar)$/, sala: /^(Abrir sala|Cerrar recepción|Abrir sobres|Abrir siguiente ronda|Reenviar acceso|Agregar e invitar|Invitar|Publicar documento|Exigir NDA|Responder en privado|Publicar aclaración)$/, supplier: /^(Editar|Eliminar)$/ }
     for (const role of ['manager', 'analyst', 'viewer']) {
       const { context, page } = await login(role, { width: 1280, height: 900 })

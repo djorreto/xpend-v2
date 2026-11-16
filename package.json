@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --test src/lib/*.test.ts",
+    "test": "node --test --test-concurrency=1 src/lib/*.test.ts",
     "test:fase0:e2e": "node scripts/fase-0-e2e.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
