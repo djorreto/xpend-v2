@@ -103,7 +103,10 @@ export default function PlanAnualPage() {
         if (stored.team) setTeamState(stored.team)
         if (stored.category) setCategoryState(stored.category)
       } catch { /* preferencias ilegibles: se usan las de por defecto */ }
-      if (appSession.companyId) await refresh(appSession, year)
+      const urlYear = Number(new URLSearchParams(window.location.search).get('anio'))
+      const initialYear = Number.isInteger(urlYear) && urlYear >= 2000 && urlYear <= 2100 ? urlYear : year
+      if (initialYear !== year) setYear(initialYear)
+      if (appSession.companyId) await refresh(appSession, initialYear)
       setLoading(false)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps

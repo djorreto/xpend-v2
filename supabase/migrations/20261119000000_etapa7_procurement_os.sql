@@ -244,6 +244,11 @@ begin
     new.completed_by := coalesce(v_uid, new.completed_by);
   end if;
   if new.status <> 'done' and old.status = 'done' then new.actual_end := null; end if;
+  if (new.actual_start is distinct from old.actual_start and new.actual_start > current_date)
+     or (new.actual_end is distinct from old.actual_end and new.actual_end > current_date)
+     or (new.actual_start is not null and new.actual_end is not null and new.actual_end < new.actual_start) then
+    raise exception 'Las fechas reales no pueden ser futuras ni terminar antes de comenzar.';
+  end if;
   if new.status <> 'blocked' then new.block_cause := null; new.block_note := null; end if;
   if (new.committed_start is distinct from old.committed_start or new.committed_end is distinct from old.committed_end)
      and old.committed_end is not null then

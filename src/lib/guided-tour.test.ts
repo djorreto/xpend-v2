@@ -8,8 +8,10 @@ test('los pasos válidos apuntan a pantallas internas y registros reales', () =>
   const { steps, errors } = parseSteps([
     { key: 'gasto', title: 'Gasto', body: 'De dónde parte todo.', href: '/gastos' },
     { key: 'proyecto', title: 'Proyecto', body: 'Plan de trabajo.', href: `/proyectos/${id}?tab=gantt`, record: { table: 'sourcing_projects', id }, target: 'gantt-proyecto' },
+    { key: 'rfx', title: 'RFx', body: 'Expediente del proceso.', href: '/licitaciones/DEMO-XC-FM-STGO', record: { table: 'licitaciones', id: 'DEMO-XC-FM-STGO' } },
   ])
   assert.deepEqual(errors, [])
+  assert.equal(parseSteps([{ key: 'x1', title: 'Inyección', body: 'Id inválido', href: '/x', record: { table: 'licitaciones', id: "a' or 1=1" } }]).errors.length, 1)
   assert.equal(steps[1].record?.table, 'sourcing_projects')
   assert.equal(steps[1].target, 'gantt-proyecto')
 })

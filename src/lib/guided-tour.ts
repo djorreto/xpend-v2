@@ -2,8 +2,8 @@
 // el recorrido solo navega y lee; nunca crea, cambia ni borra datos de negocio.
 
 export const TOUR_TABLES = [
-  'spend_records', 'procurement_categories', 'sourcing_plans', 'initiatives', 'sourcing_projects', 'project_deliverables',
-  'licitaciones', 'licitacion_salas', 'evaluations', 'award_decisions', 'contracts', 'economic_baselines', 'savings_validations',
+  'si_uploads', 'procurement_categories', 'annual_plans', 'sourcing_plans', 'sourcing_projects', 'project_deliverables',
+  'licitaciones', 'offer_events', 'evaluations', 'award_decisions', 'contracts', 'economic_baselines', 'savings_validations',
 ] as const
 export type TourTable = (typeof TOUR_TABLES)[number]
 
@@ -19,7 +19,8 @@ export type TourStep = {
 export type TourAudience = 'internal' | 'supplier'
 export type TourRow = { id: string; tour_key: string; name: string; description: string | null; audience: TourAudience; enabled: boolean; steps: unknown }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// Las licitaciones usan códigos de texto (p. ej. DEMO-XC-FM-STGO); el resto, UUID.
+const RECORD_ID = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[A-Za-z0-9][A-Za-z0-9._-]{1,79})$/i
 const INTERNAL_ROLES = ['super_admin', 'admin', 'manager', 'analyst', 'viewer']
 
 export function parseSteps(raw: unknown): { steps: TourStep[]; errors: string[] } {
@@ -41,7 +42,7 @@ export function parseSteps(raw: unknown): { steps: TourStep[]; errors: string[] 
     let record: TourStep['record']
     if (step.record !== undefined && step.record !== null) {
       const value = step.record as Record<string, unknown>
-      if (!TOUR_TABLES.includes(value.table as TourTable) || typeof value.id !== 'string' || !UUID.test(value.id)) errors.push(`${label}: el registro de referencia no es válido.`)
+      if (!TOUR_TABLES.includes(value.table as TourTable) || typeof value.id !== 'string' || !RECORD_ID.test(value.id)) errors.push(`${label}: el registro de referencia no es válido.`)
       else record = { table: value.table as TourTable, id: value.id, label: typeof value.label === 'string' ? value.label : undefined }
     }
     const target = typeof step.target === 'string' && /^[a-z0-9-]{2,60}$/.test(step.target) ? step.target : undefined

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { AlertTriangle, ArrowRight, CalendarDays, CheckCircle2, Columns, FileText, Flag, LayoutList, Plus, Users } from 'lucide-react'
 import { MainLayout } from '@/components/layout/main-layout'
 import { LoadingSpinner } from '@/components/ui/loading'
@@ -64,6 +64,11 @@ export default function ProjectPage() {
   const [newTask, setNewTask] = useState({ stage: '', title: '', start: '', end: '' })
   const [notice, setNotice] = useState<string | null>(null)
   const today = todayISO()
+  const urlTab = useSearchParams().get('tab')
+
+  useEffect(() => {
+    if (urlTab && TABS.some(item => item.id === urlTab)) setTabState(urlTab as TabId)
+  }, [urlTab])
 
   const setTab = (next: TabId, extra?: Record<string, string>) => {
     setTabState(next)

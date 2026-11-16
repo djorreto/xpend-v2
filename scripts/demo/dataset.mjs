@@ -179,3 +179,135 @@ export function spendLines(category, rand, currentYear, nowMonth) {
   }
   return lines
 }
+
+// ---- Escenario Facility Management (scripts/demo/facility.mjs + demo:flow F) ---------------------------------------------
+const doc = (deliverable, by, file, title, body, extra = {}) => ({ deliverable, by, file, title, body, ...extra })
+
+export const FACILITY = {
+  category: { name: 'Facility Management', subs: [{ key: 'aseo', name: 'Aseo e higiene' }, { key: 'asc', name: 'Ascensores' }, { key: 'clima', name: 'Climatización' }, { key: 'seg', name: 'Seguridad y vigilancia' }] },
+  suppliers: [
+    { key: 'limpiezatotal', id: 'xc-dir-limpieza-total', fantasy: 'Limpieza Total', legal: 'Limpieza Total SpA', rut: '76.211.430-K', portal: true },
+    { key: 'higiene', id: 'xc-sup-higiene', fantasy: 'Higiene Integral Chile', legal: 'Higiene Integral Chile SpA', rut: '76.845.120-3', portal: true },
+    { key: 'brillo', id: 'xc-sup-brillo', fantasy: 'Brillo Servicios', legal: 'Brillo Servicios Ltda.', rut: '77.230.448-6', portal: true },
+    { key: 'aseopro', id: 'xc-dir-aseo-pro', fantasy: 'Aseo Pro', legal: 'Aseo Pro SpA', rut: '76.318.004-K' },
+    { key: 'austral', id: 'xc-dir-aseo-austral', fantasy: 'Aseo Austral', legal: 'Servicios de Aseo Austral SpA', rut: '76.554.901-2' },
+    { key: 'ascensores', id: 'xc-dir-ascensores-andinos', fantasy: 'Ascensores Andinos', legal: 'Ascensores Andinos S.A.', rut: '96.771.230-5' },
+    { key: 'frio', id: 'xc-dir-frio-industrial', fantasy: 'Frío Industrial', legal: 'Frío Industrial SpA', rut: '76.330.982-1' },
+  ],
+  initiatives: [
+    { key: 'fmaseo', title: 'Renovación de servicios de aseo 2027', cat: 'aseo', spend: 486_000_000, pct: 8, status: 'in_progress', owner: 'buyer4', backup: 'buyer3', quarter: 'Q1', start: -80, end: 150,
+      description: 'Renovar los tres contratos de aseo (Santiago, Norte y Sur) antes de su vencimiento, con un estándar de servicio nacional y menor costo total. Iniciativa ficticia (DEMO).' },
+    { key: 'fmsanit', title: 'Sanitización y control de plagas 2027', cat: 'aseo', spend: 48_000_000, pct: 6, status: 'in_progress', owner: 'buyer4', backup: 'buyer3', quarter: 'Q1', start: -18, end: 60,
+      description: 'Contratar sanitización y control de plagas para plantas y bodegas con un solo proveedor. Iniciativa ficticia (DEMO).' },
+    { key: 'fmasc', title: 'Mantención de ascensores 2027', cat: 'asc', spend: 96_000_000, pct: 7, status: 'planned', owner: 'buyer1', backup: 'buyer4', quarter: 'Q1', start: 10, end: 130,
+      description: 'Licitar la mantención preventiva y correctiva de los 14 ascensores y montacargas. Iniciativa ficticia (DEMO).' },
+    { key: 'fmclima', title: 'Climatización y HVAC 2027', cat: 'clima', spend: 120_000_000, pct: 6, status: 'planned', owner: 'buyer1', backup: 'buyer4', quarter: 'Q2', start: 45, end: 200,
+      description: 'Mantención de equipos de climatización de oficinas y salas eléctricas. Iniciativa ficticia (DEMO).',
+      milestones: { inicio: 45, preparacion_rfx: 60, invitacion: 80, recepcion: 100, evaluacion: 115, comite_adjudicacion: 125, formalizacion: 140 } },
+  ],
+  contracts: [
+    { key: 'stgo', code: 'CTR-XC-ASEO-STGO', name: 'Aseo Santiago', counterparty: 'Limpieza Total SpA', supplier: 'xc-dir-limpieza-total', start: -655, end: 75, amount: 235_200_000, cat: 'aseo', owner: 'buyer4',
+      object: 'Servicio de aseo e higiene de oficinas centrales y centro de distribución de Santiago.', scope: 'Oficinas centrales (Las Condes) y centro de distribución (Pudahuel); dotación de 38 personas.' },
+    { key: 'norte', code: 'CTR-XC-ASEO-NORTE', name: 'Aseo Norte', counterparty: 'Aseo Pro SpA', supplier: 'xc-dir-aseo-pro', start: -625, end: 105, amount: 132_000_000, cat: 'aseo', owner: 'buyer4',
+      object: 'Servicio de aseo e higiene de instalaciones de la zona norte y bodega Quilicura.', scope: 'Planta Antofagasta, oficinas La Serena y bodega Quilicura; dotación de 21 personas.' },
+    { key: 'sur', code: 'CTR-XC-ASEO-SUR', name: 'Aseo Sur', counterparty: 'Servicios de Aseo Austral SpA', supplier: 'xc-dir-aseo-austral', start: -590, end: 140, amount: 118_800_000, cat: 'aseo', owner: 'buyer4',
+      object: 'Servicio de aseo e higiene de instalaciones de la zona sur.', scope: 'Planta Concepción y bodega Puerto Montt; dotación de 19 personas.' },
+    { key: 'asc', code: 'CTR-XC-ASC-001', name: 'Mantención de ascensores', counterparty: 'Ascensores Andinos S.A.', supplier: 'xc-dir-ascensores-andinos', start: -660, end: 70, amount: 84_000_000, cat: 'asc', owner: 'buyer1',
+      object: 'Mantención preventiva y correctiva de ascensores y montacargas.', scope: '14 equipos en oficinas centrales y plantas.' },
+    { key: 'clima', code: 'CTR-XC-CLIMA-001', name: 'Climatización oficinas centrales', counterparty: 'Frío Industrial SpA', supplier: 'xc-dir-frio-industrial', start: -700, end: 95, amount: 112_000_000, cat: 'clima', owner: 'buyer1',
+      object: 'Mantención de equipos de climatización y HVAC.', scope: 'Oficinas centrales y salas eléctricas de plantas.' },
+  ],
+  licitaciones: [
+    { id: 'DEMO-XC-FM-RFI-001', name: 'RFI identificación de proveedores de aseo', type: 'RFI', stages: ['bases_review', 'published'], published: -50,
+      description: 'Solicitud de información para identificar proveedores con cobertura nacional de aseo e higiene. Proceso ficticio (DEMO).',
+      document: { file: 'rfi-proveedores-aseo.pdf', title: 'RFI · Identificación de proveedores de aseo', body: 'Objetivo: conocer proveedores con capacidad de prestar servicios de aseo e higiene en Santiago, zona norte y zona sur.\n\nInformación solicitada:\n1. Cobertura geográfica y sedes propias.\n2. Dotación actual y capacidad de reemplazo en 4 horas.\n3. Certificaciones (ISO 9001, ISO 14001) e insumos certificados.\n4. Tres clientes de referencia con más de 30 personas de dotación.\n5. Estados financieros de los dos últimos años.\n\nPlazo de respuesta: 10 días hábiles desde la invitación. La respuesta no obliga a ninguna de las partes.' } },
+    { id: 'DEMO-XC-FM-RFP-REG', name: 'RFP aseo regiones (Norte y Sur)', type: 'RFP', baseline: 250_800_000, stages: ['bases_review'], closing: 30,
+      description: 'Licitación de aseo para la zona norte y sur, que consolida los contratos Aseo Norte y Aseo Sur. Proceso ficticio (DEMO).',
+      document: { file: 'rfp-regiones-bases-anexos-formulario-contrato.pdf', title: 'RFP aseo regiones · Bases, anexos, formulario de cotización y contrato borrador', body: 'BASES ADMINISTRATIVAS\nProceso de licitación privada por invitación. Consultas hasta el día 7; respuestas el día 12; ofertas el día 30.\n\nBASES TÉCNICAS\nSedes: planta Antofagasta, oficinas La Serena, planta Concepción y bodega Puerto Montt. Frecuencias por recinto en el Anexo 1.\nDotación mínima de 36 personas y supervisión en terreno en cada planta.\n\nANEXO 1 · Pautas y frecuencias por recinto.\nANEXO 2 · Declaración jurada de cumplimiento laboral y previsional.\nANEXO 3 · FORMULARIO DE COTIZACIÓN: precio mensual por sede, insumos mensuales por sede, hora extra de dotación y costo de reemplazo.\n\nCONTRATO BORRADOR\nObjeto, vigencia de 24 meses, precio mensual reajustable por IPC cada 12 meses, multas por incumplimiento de pautas (2% por punto bajo 95%, tope 10%) y término anticipado con 60 días de aviso.' } },
+  ],
+  projects: [
+    { key: 'nacional', initiative: 'fmaseo', title: 'Contratación nacional de aseo', template: 'completa', owner: 'buyer4', start: -80, priority: 1,
+      description: 'Proyecto de sourcing para reemplazar los contratos de aseo de Santiago, Norte y Sur: RFP Santiago (urgente, vence primero) y RFP regiones que consolida Norte y Sur.',
+      assign: { a8: 'buyer3', a9: 'manager', a11: 'manager', a25: 'committee', a27: 'buyer3' },
+      done: ['a1', 'a2', 'a3', 'a4', 'a5', 'a10', 'a11', 'a6', 'a7', 'a8', 'a12'], slip: { a3: 3, a7: 2 },
+      inProgress: ['a14'],
+      block: { key: 'a15', cause: 'area_solicitante', note: 'Operaciones aún no confirma la dotación por sede de regiones; sin ese dato no se pueden responder las consultas.' },
+      reschedule: { key: 'a16', start: 2, end: 16, cause: 'proveedor', reason: 'Los oferentes de regiones pidieron extender la visita técnica a las plantas de Antofagasta y Concepción.' },
+      documents: [
+        doc('gasto_referencia', 'buyer4', 'gasto-referencia-aseo-2025-2026.pdf', 'Gasto de referencia · Aseo e higiene 2025-2026', 'Gasto anual 2025 en aseo e higiene: 243.000.000 CLP en tres contratos.\n\nSantiago (Limpieza Total): 117.600.000 CLP · 38 personas.\nNorte (Aseo Pro): 66.000.000 CLP · 21 personas.\nSur (Aseo Austral): 59.400.000 CLP · 19 personas.\n\nHallazgos: precios por persona dispares entre zonas (hasta 14%), insumos facturados aparte en Norte y Sur, sin indicadores de calidad comunes y vencimientos escalonados entre febrero y abril de 2027.' ),
+        doc('iniciativas_ahorro', 'buyer4', 'linea-base-e-iniciativas-de-ahorro.pdf', 'Línea base económica e iniciativas de ahorro', 'Línea base: precios mensuales vigentes por sede reajustados 4,5% (IPC proyectado) e insumos reajustados 3%.\n\nIniciativas:\n1. Estándar nacional de pautas y frecuencias (elimina sobrefrecuencias en oficinas).\n2. Insumos incluidos en el precio con canasta certificada.\n3. Consolidar Norte y Sur en un solo proceso de regiones.\n4. Bodega Quilicura pasa al contrato de Santiago (20% del alcance de Aseo Norte).\n\nAhorro anual esperado: 6% a 9% sobre la línea base, en CLP.'),
+        doc('estrategia_categoria', 'buyer4', 'estrategia-categoria-aseo-v1.pdf', 'Estrategia de categoría · Aseo e higiene (v1)', 'Estrategia propuesta: un solo proceso nacional con adjudicación única.\nRiesgo: concentración en un proveedor y menor competencia en regiones.', {
+          approver: 'manager', request: 'Estrategia para revisión antes de preparar bases.',
+          reject: doc('estrategia_categoria', 'buyer4', 'estrategia-categoria-aseo-v2.pdf', 'Estrategia de categoría · Aseo e higiene (v2)', 'Estrategia aprobada para ejecución:\n\n1. RFP Santiago primero (el contrato vence antes) con adjudicación a un proveedor.\n2. RFP regiones que consolida Norte y Sur, con opción de adjudicar por zona.\n3. Lista corta: Limpieza Total, Higiene Integral Chile y Brillo Servicios para Santiago; cinco proveedores para regiones según el RFI.\n4. Evaluación técnica (60%) antes de la económica (40%); umbral técnico de 70 puntos.\n5. Contrato a 24 meses con multas por pautas y reemplazo de dotación en 4 horas.') }),
+        doc('pliego', 'buyer4', 'bases-tecnicas-administrativas-aseo.pdf', 'Bases técnicas y administrativas · Aseo nacional', 'Bases comunes para el RFP Santiago y el RFP regiones.\n\nAlcance, sedes y frecuencias (Anexo 1); requisitos de dotación y supervisión; insumos certificados incluidos; indicadores de calidad (inspección mensual con pauta de 40 puntos); multas y término anticipado; formulario de cotización por sede; contrato tipo a 24 meses.', { approver: 'manager', request: 'Bases listas para publicar el RFP Santiago.' }),
+        doc('estrategia_cierre', 'buyer4', 'estrategia-negociacion-final-regiones.pdf', 'Estrategia de negociación final · Regiones', 'Si las ofertas de regiones superan la línea base en más de 5%, se abre una ronda final con los dos mejores puntajes técnicos y se negocia el costo de reemplazo de dotación y la canasta de insumos.', { approver: 'manager', request: 'Para tenerla aprobada antes de abrir las ofertas de regiones.', pending: true }),
+      ],
+      baseline: { title: 'Línea base nacional de aseo 2027', scope: 'Servicio integral de aseo e higiene en Santiago, zona norte y zona sur; mismo alcance y frecuencias.', conditions: 'Precios vigentes reajustados por IPC proyectado 4,5%; insumos 3%. Cantidades: 12 meses.',
+        lines: [
+          { item: 'Servicio integral de aseo · Santiago', unit: 'mes', specification: 'Oficinas centrales y centro de distribución; 38 personas', reference_price: 10_050_000, adjustment_pct: 4.5, projected_qty: 12 },
+          { item: 'Servicio integral de aseo · Norte', unit: 'mes', specification: 'Antofagasta, La Serena y Quilicura; 21 personas', reference_price: 5_500_000, adjustment_pct: 4.5, projected_qty: 12 },
+          { item: 'Servicio integral de aseo · Sur', unit: 'mes', specification: 'Concepción y Puerto Montt; 19 personas', reference_price: 4_950_000, adjustment_pct: 4.5, projected_qty: 12 },
+          { item: 'Insumos y consumibles certificados', unit: 'mes', specification: 'Canasta común para todas las sedes', reference_price: 1_850_000, adjustment_pct: 3, projected_qty: 12 },
+        ] },
+      comments: [
+        { by: 'buyer4', task: 'a14', mentions: ['manager'], body: '@Gonzalo Pérez los oferentes de regiones pidieron extender la visita técnica. Propongo mover la recepción de propuestas dos semanas; Santiago sigue en plazo.' },
+        { by: 'manager', task: 'a14', mentions: ['buyer4'], body: '@Diego Navarro de acuerdo. Reprogramo con causa «proveedor» y pido a Operaciones que confirme la dotación por sede.' },
+        { by: 'buyer3', deliverable: 'pliego', mentions: ['buyer4'], body: '@Diego Navarro revisé el contrato tipo: agregué la cláusula de reemplazo de dotación en 4 horas y la multa por pautas.' },
+      ],
+      contracts: [['stgo', 'affected', 'Vence antes del inicio del nuevo servicio'], ['norte', 'affected', 'Se licita en el RFP regiones; Quilicura pasa a Santiago'], ['sur', 'affected', 'Se licita en el RFP regiones']] },
+    { key: 'sanit', initiative: 'fmsanit', title: 'Sanitización y control de plagas', template: 'light', owner: 'buyer4', start: -18, priority: 2,
+      description: 'Proceso simple con metodología Light: un proveedor para plantas y bodegas.',
+      baseline: { title: 'Referencia económica sanitización', scope: 'Sanitización mensual y control de plagas en 6 recintos.', conditions: 'Cotizaciones vigentes 2026.',
+        lines: [{ item: 'Sanitización y control de plagas por recinto', unit: 'recinto-mes', specification: '6 recintos, frecuencia mensual', reference_price: 620_000, adjustment_pct: 4, projected_qty: 72 }] },
+      document: doc('referencia', 'buyer4', 'referencia-sanitizacion.pdf', 'Referencia económica · Sanitización y control de plagas', 'Gasto 2026: 44.640.000 CLP en tres proveedores por recinto. Referencia: 620.000 CLP por recinto al mes, reajustada 4%.', { approver: 'manager', request: 'Referencia para aprobar.' }) },
+    { key: 'asc', initiative: 'fmasc', title: 'Mantención de ascensores 2027', template: 'completa', owner: 'buyer1', start: 10, priority: 2,
+      description: 'Proyecto planificado: comienza en diez días, antes del vencimiento del contrato vigente.',
+      contracts: [['asc', 'affected', 'Vence en 70 días; el proceso debe terminar antes']] },
+  ],
+  flowLicitacion: 'DEMO-XC-FM-STGO',
+  successorStart: 76,
+  winner: 'Higiene Integral Chile',
+  awardedPrices: { 1: 9_450_000 },
+  afterFlowDocuments: [
+    doc('matriz_evaluacion', 'buyer4', 'matriz-evaluacion-rfp-santiago.pdf', 'Matriz de evaluación técnica y económica · RFP Santiago', 'Ponderación: técnica 60%, económica 40%; umbral técnico 70.\n\nHigiene Integral Chile: técnica 89 · oferta 226.800.000 CLP (24 meses).\nLimpieza Total: técnica 78 · oferta 238.000.000 CLP.\nBrillo Servicios: sin NDA aceptado; no presentó oferta.\n\nResultado: Higiene Integral Chile obtiene el mejor puntaje combinado.'),
+    doc('recomendacion_adjudicacion', 'buyer4', 'recomendacion-adjudicacion-rfp-santiago.pdf', 'Resultado y recomendación de adjudicación · RFP Santiago', 'Se recomienda adjudicar a Higiene Integral Chile por 226.800.000 CLP en 24 meses (9.450.000 CLP al mes), 10% bajo la línea base de Santiago.\nRiesgos: transición de dotación desde el proveedor actual; se mitiga con un plan de implementación de 30 días.', { approver: 'committee', request: 'Recomendación para el comité.' }),
+    doc('acta_contratos', 'buyer3', 'acta-adjudicacion-y-contrato-santiago-demo.pdf', 'Acta de adjudicación y contrato formalizado · Santiago (DEMO)', 'Acta: el comité aprobó la recomendación con una persona distinta de quien recomendó. Adjudicación formal registrada en XPEND.\n\nContrato CTR-XC-FM-STGO: generado desde la adjudicación, revisado y aprobado por otra persona. Inicio del servicio al vencer el contrato Aseo Santiago.\n\nDocumento ficticio: no tiene validez legal ni firma electrónica.'),
+    doc('plan_implementacion', 'buyer4', 'plan-implementacion-aseo-santiago.pdf', 'Plan de implementación · Aseo Santiago', 'Semana 1: kick-off con Operaciones y el proveedor; levantamiento de pautas por recinto.\nSemana 2: traspaso de dotación y entrega de insumos certificados.\nSemana 3: inicio del servicio con supervisión reforzada.\nSemana 4: primera inspección mensual con pauta de 40 puntos y reporte de indicadores.'),
+    doc('brechas_acciones', 'buyer4', 'plan-acciones-correctivas-transicion.pdf', 'Plan de acciones correctivas · Transición Santiago (borrador)', 'Brechas detectadas en la visita de transición:\n1. Bodega Quilicura sin pauta de frecuencias → definirla antes del inicio.\n2. Insumos del proveedor saliente sin certificación → reemplazo en la semana 2.\n3. Turno noche sin supervisor → el nuevo contrato exige supervisión 24/7.\nResponsable: Category Manager de Servicios Generales. Seguimiento mensual en el proyecto.'),
+  ],
+  tours: (ref) => [
+    { tour_key: 'principal', name: 'Del gasto al ahorro: Facility Management', audience: 'internal', enabled: true,
+      description: 'Diez pasos sobre el caso de aseo: gasto, categoría, plan, proyecto, Gantt, RFx, ofertas, contratos, ahorro y atención gerencial.',
+      steps: [
+        { key: 'gasto', title: 'Todo parte del gasto', body: 'XPEND carga y clasifica el gasto. Aquí se ve cuánto se gasta en aseo, con quién y en qué moneda: es la base de la oportunidad.', href: '/spend', ...(ref.upload ? { record: { table: 'si_uploads', id: ref.upload, label: 'Carga de gasto histórico' } } : {}) },
+        { key: 'categoria', title: 'Categoría Facility Management', body: 'Las categorías ordenan el gasto y tienen responsable. Aseo e higiene es una subcategoría con su propio Category Manager.', href: '/equipos', record: { table: 'procurement_categories', id: ref.category, label: 'Aseo e higiene' } },
+        { key: 'plan', title: 'Plan anual 2027', body: 'La iniciativa «Renovación de servicios de aseo 2027» vive en el plan con su meta de ahorro. La vista Árbol muestra categoría, iniciativa, proyecto, RFx y contratos.', href: '/plan-anual?anio=2027&vista=arbol', record: { table: 'sourcing_plans', id: ref.plan, label: 'Renovación de servicios de aseo 2027' }, target: 'vista-arbol' },
+        { key: 'proyecto', title: 'Proyecto «Contratación nacional de aseo»', body: 'Metodología Completa: 8 etapas y 29 actividades. El resumen dice qué falta, quién lo hace y cuál es la siguiente acción.', href: `/proyectos/${ref.project}`, record: { table: 'sourcing_projects', id: ref.project, label: 'Contratación nacional de aseo' }, target: 'siguiente-accion' },
+        { key: 'gantt', title: 'Gantt y entregables', body: 'Barras con fecha comprometida, línea original, atrasos, bloqueos y dependencias. Una reprogramación queda con causa y motivo.', href: `/proyectos/${ref.project}?tab=gantt`, record: { table: 'sourcing_projects', id: ref.project }, target: 'gantt-proyecto' },
+        { key: 'rfx', title: 'Procesos RFx del proyecto', body: 'RFI para conocer el mercado, RFP Santiago ya adjudicado y RFP regiones en preparación. Los hitos del Gantt se cumplen con estos registros, no a mano.', href: `/proyectos/${ref.project}?tab=rfx`, record: { table: 'licitaciones', id: ref.licitacion, label: 'RFP aseo Santiago' } },
+        { key: 'ofertas', title: 'Ofertas y evaluación', body: 'Sobres cerrados hasta la apertura, NDA obligatorio y evaluación técnica antes de la económica. El proveedor sin NDA no pudo ofertar.', href: ref.event ? `/sala/${ref.event}/evaluacion` : `/licitaciones/${ref.licitacion}`, ...(ref.event ? { record: { table: 'offer_events', id: ref.event, label: 'Sala RFP Santiago' } } : {}) },
+        { key: 'contratos', title: 'Contratos anteriores y nuevos', body: 'Situación anterior, proceso y nueva situación: Aseo Santiago se reemplaza y el 20% de Aseo Norte pasa al nuevo contrato. Los anteriores siguen vigentes hasta su término.', href: `/proyectos/${ref.project}?tab=contratos`, record: { table: 'sourcing_projects', id: ref.project }, target: 'situacion-contratos' },
+        { key: 'ahorro', title: 'Línea base y ahorro', body: 'Ahorro anualizado = (precio de referencia ajustado − precio adjudicado) × cantidad proyectada. La línea base formal se aprobó antes de publicar; el ahorro realizado requiere validación de otra persona.', href: `/proyectos/${ref.project}?tab=ahorro`, ...(ref.baseline ? { record: { table: 'economic_baselines', id: ref.baseline, label: 'Línea base nacional de aseo 2027' } } : {}) },
+        { key: 'atencion', title: 'Lo que requiere tu atención', body: 'La gerencia ve atrasos, bloqueos, aprobaciones detenidas y contratos por vencer sin renovación, con la explicación y el enlace para resolverlos.', href: '/dashboard?vista=gerencia', target: 'atencion-gerencia' },
+      ] },
+    { tour_key: 'proveedor', name: 'Portal de proveedores', audience: 'supplier', enabled: true,
+      description: 'Cómo un proveedor ve sus invitaciones, acepta el NDA y presenta su oferta.',
+      steps: [
+        { key: 'portal', title: 'Tus procesos', body: 'Aquí aparecen solo las invitaciones de tu empresa. No ves otras ofertas ni documentos internos.', href: '/sala' },
+        { key: 'nda', title: 'NDA antes de los documentos', body: 'Las bases técnicas y el formulario de oferta se habilitan al aceptar el NDA de la versión vigente.', href: ref.event ? `/sala/${ref.event}/participar` : '/sala' },
+      ] },
+  ],
+}
+
+FLOWS.F = {
+  plan: 'fmaseo', name: 'RFP aseo Santiago', licitacion: 'DEMO-XC-FM-STGO', currency: 'CLP', baseline: 252_000_000, overrideBaseline: true, committeeKey: 'committee', responsible: 'buyer4', savings: 'declare', recognize: 0,
+  suppliers: [
+    { key: 'limpiezatotal', name: 'Limpieza Total', amount: 238_000_000, nda: true, text: 'Continuidad del servicio actual con 38 personas y supervisión diurna.' },
+    { key: 'higiene', name: 'Higiene Integral Chile', amount: 226_800_000, nda: true, text: 'Dotación de 40 personas, maquinaria propia, supervisión 24/7 y control de calidad mensual con indicadores.' },
+    { key: 'brillo', name: 'Brillo Servicios', amount: 205_000_000, nda: false, text: 'Oferta sin NDA aceptado.' },
+  ],
+  scores: { limpiezatotal: ['78', 'Cumple, sin supervisión nocturna.'], higiene: ['89', 'Mejor plan de calidad, maquinaria propia y dotación de reemplazo.'] },
+  recommend: 'Higiene Integral Chile', contract: { code: 'CTR-XC-FM-STGO', startOffset: 76, notice: '60', years: 2 },
+  scope: 'Servicio integral de aseo e higiene de oficinas centrales, centro de distribución y bodega Quilicura en Santiago durante 24 meses.',
+  requirements: 'Dotación mínima de 40 personas, supervisión 24/7, insumos certificados incluidos y reporte mensual de indicadores de calidad.',
+}

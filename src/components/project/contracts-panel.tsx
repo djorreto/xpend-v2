@@ -18,7 +18,7 @@ export const RELATION_LABEL: Record<string, string> = {
   partial_replacement: 'Reemplazo parcial',
   complementary: 'Complementario',
 }
-const CONTRACT_STATUS: Record<string, string> = { draft: 'Borrador', in_review: 'En revisión', active: 'Vigente', expired: 'Vencido', terminated: 'Terminado' }
+export const CONTRACT_STATUS: Record<string, string> = { draft: 'Borrador', in_review: 'En revisión', active: 'Vigente', expired: 'Vencido', terminated: 'Terminado' }
 const END_REASON: Record<string, string> = { expired: 'Venció', terminated_early: 'Término anticipado', replaced: 'Reemplazado', partially_replaced: 'Reemplazado en parte', no_replacement: 'Término sin reemplazo' }
 
 export type ContractLite = { id: string; code: string | null; name: string; counterparty_name: string | null; status: string; starts_on: string | null; ends_on: string | null; signed_on: string | null; terminated_on: string | null; end_reason: string | null; currency: string | null; amount: number | null; licitacion_id: string | null }

@@ -126,7 +126,7 @@ export function Topbar({ user, onOpenMobileMenu }: TopbarProps) {
           {/* User menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full" aria-label="Menú de usuario">
                 <Avatar className="h-8 w-8">
                   {user?.avatar ? (
                     <AvatarImage src={user.avatar} alt={user?.name} />

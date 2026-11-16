@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ContractHistory } from '@/components/project/contracts-panel'
+import { CONTRACT_STATUS, ContractHistory } from '@/components/project/contracts-panel'
+
 import { MainLayout } from '@/components/layout/main-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,6 +16,8 @@ import { supabaseBrowser } from '@/lib/supabase'
 import { loadAppSession, type AppSession } from '@/lib/offer-room'
 import { errorMessage } from '@/lib/errors'
 import { formatCurrency } from '@/lib/utils'
+
+const ORIGIN_LABEL: Record<string, string> = { award: 'adjudicación', builder: 'redactado en XPEND', upload: 'documento cargado' }
 
 type Extraction = {
   id: string
@@ -263,7 +266,7 @@ export default function ContratoPage() {
         <div>
           <h1>{String(contract.code)} · {String(contract.name)}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Estado {String(contract.status)} · origen {String(contract.origin)} · monto {shownAmount}
+            {CONTRACT_STATUS[String(contract.status)] || String(contract.status)} · origen {ORIGIN_LABEL[String(contract.origin)] || String(contract.origin)} · monto {shownAmount}
             {contract.ends_on ? ` · termina ${String(contract.ends_on)}` : ''}
           </p>
         </div>

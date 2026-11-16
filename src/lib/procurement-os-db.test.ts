@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { randomUUID } from 'node:crypto'
 import { COMPLETE, scheduleTasks } from './methodology.ts'
 import { localSql, outsiders, setup } from './testing/local-db.ts'
 
@@ -107,6 +108,9 @@ test('proyecto Completa: plan de 29 actividades, reprogramación con historial, 
     assert.equal((await analyst.from('project_tasks').update({ status: 'done' }).eq('id', a1.id)).error, null)
     const doneA1 = (await analyst.from('project_tasks').select('actual_end, completed_by').eq('id', a1.id).single()).data!
     assert.ok(doneA1.actual_end && doneA1.completed_by === profiles[analystEmail])
+    assert.match((await analyst.from('project_tasks').update({ actual_end: '2999-01-01' }).eq('id', a1.id)).error?.message || '', /no pueden ser futuras/)
+    assert.match((await analyst.from('project_tasks').update({ actual_start: '2000-01-02', actual_end: '2000-01-01' }).eq('id', a1.id)).error?.message || '', /terminar antes de comenzar/)
+    assert.equal((await analyst.from('project_tasks').update({ actual_start: '2000-01-01', actual_end: '2000-01-02' }).eq('id', a1.id)).error, null, 'fechas reales pasadas y ordenadas')
     assert.ok((await viewer.from('project_tasks').update({ status: 'done' }).eq('id', a1.id).select('id')).data?.length === 0 || true)
     assert.equal((await admin.from('project_tasks').select('status').eq('id', a1.id).single()).data?.status, 'done')
 
@@ -271,5 +275,45 @@ test('metodologías: Custom desde Completa, validación, versiones y asignación
     await admin.from('methodology_templates').update({ based_on_id: null }).eq('company_id', companyId).like('name', `${MARK}%`)
     await admin.from('methodology_templates').delete().eq('company_id', companyId).like('name', `${MARK}%`)
     await admin.from('procurement_categories').delete().eq('id', categoryId)
+  }
+})
+
+test('recorridos guiados: solo en empresas demo, proveedor solo el suyo y solo administración los edita', async () => {
+  const { admin, clients, companyId, profiles, adminEmail } = await setup()
+  const { manager, analyst, viewer, admin: tenantAdmin } = clients
+  const { supplier, otherTenant } = await outsiders()
+  const steps = [{ key: 'inicio', title: 'Inicio', body: 'Punto de partida.', href: '/dashboard' }]
+  const company = (await admin.from('companies').select('settings').eq('id', companyId).single()).data!
+  const settings = (company.settings || {}) as Record<string, unknown>
+  assert.notEqual(settings.demo, true, 'la empresa de prueba no es demo')
+  assert.match((await admin.from('demo_tours').insert({ company_id: companyId, tour_key: 'etapa7-x', name: 'No demo', steps }).select('id')).error?.message || '', /empresas de demostración/)
+  try {
+    assert.equal((await admin.from('companies').update({ settings: { ...settings, demo: true } }).eq('id', companyId)).error, null)
+    const inserted = await admin.from('demo_tours').insert([
+      { company_id: companyId, tour_key: 'etapa7-interno', name: `${MARK} interno`, audience: 'internal', steps },
+      { company_id: companyId, tour_key: 'etapa7-proveedor', name: `${MARK} proveedor`, audience: 'supplier', steps },
+    ]).select('id, audience')
+    assert.equal(inserted.error, null, inserted.error?.message)
+    const internalId = inserted.data!.find(row => row.audience === 'internal')!.id
+
+    const keys = async (client: typeof admin) => ((await client.from('demo_tours').select('tour_key').eq('company_id', companyId)).data || []).map(row => row.tour_key).sort()
+    assert.deepEqual(await keys(viewer), ['etapa7-interno', 'etapa7-proveedor'])
+    assert.deepEqual(await keys(supplier), ['etapa7-proveedor'], 'el proveedor no ve el recorrido interno')
+    assert.deepEqual(await keys(otherTenant), [], 'otra empresa no ve nada')
+
+    for (const client of [analyst, manager, viewer, supplier]) {
+      await client.from('demo_tours').update({ name: 'Cambiado' }).eq('id', internalId)
+    }
+    assert.equal((await admin.from('demo_tours').select('name').eq('id', internalId).single()).data?.name, `${MARK} interno`, 'solo administración edita')
+    assert.ok((await tenantAdmin.from('demo_tours').insert({ company_id: companyId, tour_key: 'etapa7-nuevo', name: 'Nuevo', steps })).error, 'no se crean desde la app')
+    await tenantAdmin.from('demo_tours').delete().eq('id', internalId)
+    assert.ok((await admin.from('demo_tours').select('id').eq('id', internalId).maybeSingle()).data, 'no se borran desde la app')
+    const edited = await tenantAdmin.from('demo_tours').update({ name: `${MARK} interno editado`, enabled: false }).eq('id', internalId).select('name, enabled, updated_by')
+    assert.equal(edited.error, null, edited.error?.message)
+    assert.deepEqual(edited.data, [{ name: `${MARK} interno editado`, enabled: false, updated_by: profiles[adminEmail] }])
+    assert.ok((await tenantAdmin.from('demo_tours').update({ company_id: randomUUID() }).eq('id', internalId)).error, 'no cambia de empresa')
+  } finally {
+    await admin.from('demo_tours').delete().eq('company_id', companyId).like('tour_key', 'etapa7-%')
+    await admin.from('companies').update({ settings }).eq('id', companyId)
   }
 })
