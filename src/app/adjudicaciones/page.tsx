@@ -150,6 +150,11 @@ export default function AdjudicacionesPage() {
                           Ver decisión
                         </Link>
                       )}
+                      {award.estimated_savings != null && award.estimated_savings > 0 && (
+                        <Link href={`/ahorros?award=${award.id}`} className="rounded-full border border-petrol-blue/15 bg-white/70 px-3 py-1.5 text-[12px] text-petrol-blue hover:bg-white">
+                          {can(session.role, 'declareSavings') ? 'Ahorro: declarar o ver' : 'Ver ahorro'}
+                        </Link>
+                      )}
                       {contract && can(session.role, 'readContracts') ? (
                         <Link href={`/contratos/${contract.id}`} className="rounded-full bg-petrol-blue px-3 py-1.5 text-[12px] font-medium text-white">
                           Ver contrato{contract.code ? ` ${contract.code}` : ''}

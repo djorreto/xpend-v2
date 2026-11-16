@@ -64,3 +64,14 @@ export function supplierNdaPath(
   assertSegment(supplierId, 'El ID del proveedor')
   return `${companyId}/${supplierId}/${timestamp}-nda${extension(fileName)}`
 }
+
+export function savingsEvidencePath(
+  companyId: string,
+  validationId: string,
+  fileName: string,
+  timestamp = Date.now()
+) {
+  assertCompanyId(companyId)
+  assertSegment(validationId, 'La validación de ahorro')
+  return `${companyId}/ahorros/${validationId}/${timestamp}-evidencia${extension(fileName)}`
+}
