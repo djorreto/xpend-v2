@@ -34,6 +34,7 @@ import {
 import { FichaGate } from '@/components/ficha-gate'
 import { DossierThread } from '@/components/dossier-thread'
 import { InitiativeOwners } from '@/components/initiative-owners'
+import { MilestonesPanel } from '@/components/milestones-panel'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabaseBrowser } from '@/lib/supabase'
 import { LoadingSpinner } from '@/components/ui/loading'
@@ -127,6 +128,7 @@ export default function SourcingPlanDetailPage() {
       if (profileError || !profile) throw new Error('Perfil no encontrado')
 
       setUser({
+        id: profile.id,
         name: profile.full_name || authUser.email,
         email: authUser.email,
         role: profile.role
@@ -322,6 +324,7 @@ export default function SourcingPlanDetailPage() {
 
         <DossierThread match={{ companyId: company?.id || plan.company_id, sourcingPlanId: plan.id }} />
         <InitiativeOwners plan={plan as any} canManage={can(user?.role, 'manageTeams')} onChanged={loadPlan} />
+        {user?.id && <MilestonesPanel plan={plan as any} role={user.role} userId={user.id} />}
         <FichaGate
           planId={plan.id}
           hasOwner={Boolean(plan.responsible_user_id)}

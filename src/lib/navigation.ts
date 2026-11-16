@@ -90,6 +90,7 @@ export const NAV_SECTIONS: NavSection[] = [
     description: 'De la iniciativa a la adjudicación',
     items: [
       { id: 'plan', label: 'Plan de abastecimiento', href: '/sourcing-plan', description: 'Iniciativas del año', match: ['/sourcing-plan'] },
+      { id: 'plan-anual', label: 'Plan anual y calendario', href: '/plan-anual', description: 'Metas, hitos y fechas del año', match: ['/plan-anual'] },
       { id: 'equipos', label: 'Equipos y categorías', href: '/equipos', description: 'Quién lleva cada categoría', match: ['/equipos'] },
       { id: 'procesos', label: 'Procesos', href: '/procesos', description: 'RFx, licitaciones y salas de ofertas', match: ['/procesos', '/rfx-maker', '/licitaciones', '/sala'] },
       { id: 'adjudicaciones', label: 'Adjudicaciones', href: '/adjudicaciones', description: 'Decisiones del comité y su contrato', match: ['/adjudicaciones'] },
