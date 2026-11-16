@@ -592,7 +592,7 @@ function ValidatedCard({
           )}
           {canManage && (
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <input aria-label="Archivo de evidencia" type="file" className="text-[12px]" onChange={event => setFile(event.target.files?.[0] || null)} />
+              <input key={evidence.length} aria-label="Archivo de evidencia" type="file" className="text-[12px]" onChange={event => setFile(event.target.files?.[0] || null)} />
               <input aria-label="Descripción de la evidencia" className={`${FIELD} h-8`} placeholder="Qué demuestra (ej. factura marzo)" value={description} onChange={event => setDescription(event.target.value)} />
               <Button size="sm" variant="outline" disabled={!file} onClick={async () => { if (file && (await onUpload(file, description))) { setFile(null); setDescription('') } }}>Subir evidencia</Button>
             </div>

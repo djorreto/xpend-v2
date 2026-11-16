@@ -44,7 +44,7 @@ function resetDemo() {
     begin;
     set local session_replication_role = replica;
     do $$
-    declare c uuid; t record;
+    declare c uuid; t record; f record;
     begin
       select id into c from public.companies where name = '${COMPANY_NAME}';
       if c is null then return; end if;
@@ -54,6 +54,23 @@ function resetDemo() {
       end loop;
       delete from storage.objects where name like c::text || '/%';
       delete from public.companies where id = c;
+      -- Con los disparadores en pausa no hay cascada: se limpian las filas hijas que quedaron huérfanas (solo las de ON DELETE CASCADE).
+      for pass in 1..4 loop
+        for f in
+          select c2.conrelid::regclass as child, c2.confrelid::regclass as parent,
+            (select string_agg(format('c.%I = p.%I', a.attname, b.attname), ' and ' order by k.ord)
+               from unnest(c2.conkey, c2.confkey) with ordinality k(ck, pk, ord)
+               join pg_attribute a on a.attrelid = c2.conrelid and a.attnum = k.ck
+               join pg_attribute b on b.attrelid = c2.confrelid and b.attnum = k.pk) as cond,
+            (select string_agg(format('c.%I is not null', a.attname), ' and ')
+               from unnest(c2.conkey) ck join pg_attribute a on a.attrelid = c2.conrelid and a.attnum = ck) as nn
+          from pg_constraint c2
+          where c2.contype = 'f' and c2.confdeltype = 'c' and c2.connamespace = 'public'::regnamespace
+            and c2.confrelid in (select oid from pg_class where relnamespace = 'public'::regnamespace)
+        loop
+          execute format('delete from %s c where %s and not exists (select 1 from %s p where %s)', f.child, f.nn, f.parent, f.cond);
+        end loop;
+      end loop;
     end $$;
     commit;`
   execFileSync('docker', ['exec', '-i', 'supabase_db_xpend-v3-local', 'psql', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-q'], { input: sql, stdio: ['pipe', 'inherit', 'inherit'] })
